@@ -1,0 +1,23 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# requirements.txt — TechnoBuzz Feedback System Python dependencies
+# Install with: pip install -r requirements.txt
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Web framework
+flask==3.0.3
+
+# Environment variable loading
+python-dotenv==1.0.1
+
+# MongoDB driver
+pymongo==4.7.2
+
+# Google Gemini AI SDK (new official SDK)
+google-genai>=1.0.0
+
+# QR Code generation
+qrcode[pil]==7.4.2
+Pillow==10.3.0
+
+# Production WSGI server (optional, for deployment)
+gunicorn==22.0.0
