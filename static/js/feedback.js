@@ -20,6 +20,7 @@
    ============================================================ */
 const COMPANY_NAME = document.getElementById('companyName')?.dataset.company  || 'TechnoBuzz';
 const COMPANY_ID   = document.getElementById('companyName')?.dataset.companyId || 'TECHNOBUZZ-001';
+const BUSINESS_ID  = document.getElementById('companyName')?.dataset.businessId || 'technobuzz';
 
 const RATING_LABELS = {
   5: { emoji: '🤩', text: 'Excellent Experience!',      cls: 'r5' },
@@ -452,7 +453,7 @@ const API = {
       const response = await fetch('/generate-feedback', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ rating }),
+        body:    JSON.stringify({ rating, business_id: BUSINESS_ID }),
       });
 
       const data = await response.json();
@@ -515,6 +516,7 @@ const API = {
         company_id: COMPANY_ID,
         rating:     State.selectedRating,
         feedback:   State.selectedFeedback,
+        business_id: BUSINESS_ID,
       };
 
       const response = await fetch('/submit-feedback', {

@@ -15,7 +15,7 @@ import io
 import logging
 from flask import Blueprint, render_template, jsonify, request, Response
 
-from config import get_config
+from config import get_config, BUSINESS_REGISTRY
 from services.database_service import get_all_feedback, get_feedback_stats
 
 # ─── Blueprint ─────────────────────────────────────────────────────────────────
@@ -29,10 +29,15 @@ logger   = logging.getLogger(__name__)
 @admin_bp.route("/")
 def admin_dashboard():
     """Render the admin dashboard page."""
+    business_id = request.args.get("business", "technobuzz")
+    b_config = BUSINESS_REGISTRY.get(business_id, BUSINESS_REGISTRY["technobuzz"])
+
     return render_template(
         "admin.html",
-        company_name=config.COMPANY_NAME,
-        company_id=  config.COMPANY_ID,
+        company_name=b_config["name"],
+        company_id=  b_config["id"],
+        business_id= business_id,
+        businesses=  BUSINESS_REGISTRY,
     )
 
 
@@ -49,7 +54,9 @@ def api_stats():
     }
     """
     try:
-        stats = get_feedback_stats()
+        business_id = request.args.get("business", "technobuzz")
+        b_config = BUSINESS_REGISTRY.get(business_id, BUSINESS_REGISTRY["technobuzz"])
+        stats = get_feedback_stats(collection_name=b_config["collection"])
         return jsonify(stats), 200
     except RuntimeError as e:
         logger.error("api_stats error: %s", str(e))
@@ -70,6 +77,7 @@ def api_feedback():
         limit  (int):  Records per page, default 10
         rating (int):  Filter by star rating (1-5), optional
         search (str):  Text search in feedback field, optional
+        business (str): Business ID to filter collections
 
     Response: {
         "records": [...],
@@ -79,10 +87,13 @@ def api_feedback():
     }
     """
     try:
-        page   = max(1, int(request.args.get("page",  1)))
-        limit  = min(50, max(1, int(request.args.get("limit", 10))))
-        rating = request.args.get("rating", None)
-        search = request.args.get("search", "").strip() or None
+        page     = max(1, int(request.args.get("page",  1)))
+        limit    = min(50, max(1, int(request.args.get("limit", 10))))
+        rating   = request.args.get("rating", None)
+        search   = request.args.get("search", "").strip() or None
+        business_id = request.args.get("business", "technobuzz")
+        
+        b_config = BUSINESS_REGISTRY.get(business_id, BUSINESS_REGISTRY["technobuzz"])
 
         rating_filter = None
         if rating and rating.isdigit():
@@ -95,6 +106,7 @@ def api_feedback():
             per_page=     limit,
             rating_filter=rating_filter,
             search_query= search,
+            collection_name=b_config["collection"],
         )
         return jsonify(result), 200
 
@@ -113,7 +125,10 @@ def api_export():
     Export all feedback records as a downloadable CSV file.
     """
     try:
-        result  = get_all_feedback(page=1, per_page=10000)
+        business_id = request.args.get("business", "technobuzz")
+        b_config = BUSINESS_REGISTRY.get(business_id, BUSINESS_REGISTRY["technobuzz"])
+        
+        result  = get_all_feedback(page=1, per_page=10000, collection_name=b_config["collection"])
         records = result.get("records", [])
 
         output = io.StringIO()

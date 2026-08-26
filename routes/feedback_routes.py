@@ -13,7 +13,7 @@ Endpoints:
 import logging
 from flask import Blueprint, render_template, jsonify, request, redirect, url_for
 
-from config import get_config
+from config import get_config, BUSINESS_REGISTRY
 from utils.validators import validate_rating, validate_feedback_submission, sanitize_string
 from services.gemini_service import generate_feedback_suggestions
 from services.database_service import insert_feedback
@@ -31,19 +31,39 @@ def index():
     return redirect(url_for("feedback.feedback_page"))
 
 
-# ─── GET /feedback ────────────────────────────────────────────────────────────
-@feedback_bp.route("/feedback")
-def feedback_page():
-    """
-    Serve the main customer feedback page.
-    Company data injected into the template context.
-    """
+# ─── GET /feedback and /boardwale ──────────────────────────────────────────────
+def render_business_feedback(business_id: str):
+    """Internal helper to render the feedback page with specific business context."""
+    b_config = BUSINESS_REGISTRY.get(business_id, BUSINESS_REGISTRY["technobuzz"])
     context = {
-        "company_name":      config.COMPANY_NAME,
-        "company_id":        config.COMPANY_ID,
-        "google_review_url": config.GOOGLE_REVIEW_URL,
+        "business_id":       business_id,
+        "company_name":      b_config["name"],
+        "company_id":        b_config["id"],
+        "google_review_url": b_config["google_review_url"],
+        "logo_filename":     b_config["logo_filename"],
     }
     return render_template("feedback.html", **context)
+
+@feedback_bp.route("/feedback")
+def feedback_page():
+    return render_business_feedback("technobuzz")
+
+@feedback_bp.route("/boardwale")
+def old_boardwale_redirect():
+    """Temporary backward-compatible redirect for old QR codes/links."""
+    return redirect(url_for("feedback.boardwale_feedback_page"), code=301)
+
+@feedback_bp.route("/feedback/board_001")
+def boardwale_feedback_page():
+    return render_business_feedback("boardwale")
+
+@feedback_bp.route("/feedback/showroom_001")
+def jawa_feedback_page():
+    return render_business_feedback("jawa_showroom")
+
+@feedback_bp.route("/feedback/1")
+def rutuja_battery_feedback_page():
+    return render_business_feedback("rutuja_battery")
 
 
 # ─── POST /generate-feedback ──────────────────────────────────────────────────
@@ -69,9 +89,11 @@ def generate_feedback():
         return jsonify({"error": error_message}), 400
 
     rating = int(rating_raw)
+    business_id = data.get("business_id", "technobuzz")
+    b_config = BUSINESS_REGISTRY.get(business_id, BUSINESS_REGISTRY["technobuzz"])
 
     try:
-        suggestions = generate_feedback_suggestions(rating)
+        suggestions = generate_feedback_suggestions(rating, business_context=b_config)
 
         if not suggestions:
             return jsonify({"error": "AI returned no suggestions. Please try again."}), 500
@@ -149,6 +171,10 @@ def submit_feedback():
     company_id    = sanitize_string(data["company_id"], max_length=100)
     rating        = int(data["rating"])
     feedback_text = sanitize_string(data["feedback"],   max_length=1000)
+    business_id   = data.get("business_id", "technobuzz")
+    
+    b_config = BUSINESS_REGISTRY.get(business_id, BUSINESS_REGISTRY["technobuzz"])
+    collection_name = b_config["collection"]
 
     # ── Insert into MongoDB ────────────────────────────────────────────────────
     try:
@@ -157,6 +183,7 @@ def submit_feedback():
             company_id=   company_id,
             rating=       rating,
             feedback_text=feedback_text,
+            collection_name=collection_name,
         )
 
         if not inserted_id:

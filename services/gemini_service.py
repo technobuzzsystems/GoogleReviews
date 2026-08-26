@@ -54,11 +54,13 @@ def _get_client() -> genai.Client:
     )
 
 
-def _build_prompt(rating: int) -> str:
+def _build_prompt(rating: int, business_context: dict) -> str:
     """Build a rating-aware prompt for the Gemini model."""
-    company_name = config.COMPANY_NAME
+    company_name = business_context.get("name", config.COMPANY_NAME)
+    scope = business_context.get("scope", "Software development, web design, cloud infrastructure, network architecture, cybersecurity, and managed IT support.")
+    
     return f"""
-You are an expert at writing realistic customer feedback for an IT services provider.
+You are an expert at writing realistic customer feedback for a service provider.
 
 Your task is to generate exactly 10 customer feedback suggestions based on the provided company name and star rating.
 
@@ -69,18 +71,18 @@ Star Rating:
 {rating}/5
 
 Scope of Services:
-Software development, web design, cloud infrastructure, network architecture, cybersecurity, and managed IT support.
+{scope}
 
 IMPORTANT REQUIREMENTS
 
 1. Every response MUST sound like it was written by a real client.
 2. NEVER sound like an AI assistant.
 3. NEVER use robotic, overly formal, or generic corporate language.
-4. Write naturally, reflecting real-world business interactions with an IT vendor.
+4. Write naturally, reflecting real-world business interactions with a vendor.
 5. Every suggestion should have a different writing style and wording.
 6. Mix sentence lengths naturally.
 7. Avoid repeating phrases.
-8. Some reviews can be focused on technical bottlenecks, some on project delivery, some on communication or security patches.
+8. Some reviews can focus on specific service areas, some on delivery, some on communication or support.
 9. Do NOT number the suggestions.
 10. Return ONLY a JSON array of strings.
 11. No markdown.
@@ -92,52 +94,45 @@ TONE BASED ON STAR RATING
 
 1 STAR
 
-Generate detailed negative feedback regarding IT services.
-The client is clearly frustrated. Mention specific technical grievances:
-- buggy deployments or broken code
-- critical downtime due to poor infrastructure planning
-- missed project deadlines
-- lack of communication from the support team
-- security vulnerabilities left unpatched
-- unprofessional conduct or incompetence
+Generate detailed negative feedback.
+The client is clearly frustrated. Mention specific grievances like:
+- {business_context.get("examples_1star", "buggy deployments or broken code, critical downtime due to poor infrastructure planning, missed project deadlines, lack of communication from the support team, security vulnerabilities left unpatched, unprofessional conduct or incompetence")}
 Length: 2-4 natural sentences.
 
 2 STAR
 
 Mostly negative.
-The client had high expectations for their digital transformation or project, but felt let down. 
-Mention specific issues (e.g., slow response to support tickets, complex UI/UX in web design).
+The client had high expectations for their project, but felt let down. 
+Mention specific issues like:
+- {business_context.get("examples_2star", "slow response to support tickets, complex UI/UX in web design")}
 Length: 2-3 sentences.
 
 3 STAR
 
 Mixed opinion.
-Balanced feedback. Perhaps the technical team is skilled, but the project management is disorganized, or vice-versa.
-Mention both pros (e.g., technical expertise) and cons (e.g., billing confusion or slow response).
+Balanced feedback. Perhaps the team is skilled, but project management is disorganized, or vice-versa.
+Mention both pros and cons like:
+- {business_context.get("examples_3star", "technical team is skilled but the project management is disorganized, billing confusion or slow response")}
 Length: 2-3 sentences.
 
 4 STAR
 
 Mostly positive.
-The client is satisfied with the software or support provided.
-Mention one small area for improvement (e.g., better documentation, more frequent status updates).
+The client is satisfied with the service or support provided.
+Mention one small area for improvement like:
+- {business_context.get("examples_4star", "better documentation, more frequent status updates")}
 Length: 2-3 sentences.
 
 5 STAR
 
 Generate enthusiastic and genuine positive reviews.
 The client should sound happy with the partnership. Mention things like:
-- seamless cloud migration
-- reliable network uptime
-- intuitive design interface
-- proactive security measures
-- knowledgeable engineering team
-- project delivered ahead of schedule
+- {business_context.get("examples_5star", "seamless cloud migration, reliable network uptime, intuitive design interface, proactive security measures, knowledgeable engineering team, project delivered ahead of schedule")}
 Length: 2-4 natural sentences.
 
 WRITING STYLE
 
-Pretend every suggestion is written by a different business client.
+Pretend every suggestion is written by a different client.
 Avoid making every review have the same structure.
 Avoid repeating:
 "Great service."
@@ -253,7 +248,7 @@ def _call_model(client: genai.Client, model: str, prompt: str) -> List[str]:
     raise RuntimeError(f"All retries failed for model {model}.")
 
 
-def generate_feedback_suggestions(rating: int) -> List[str]:
+def generate_feedback_suggestions(rating: int, business_context: dict = None) -> List[str]:
     """
     Call Google Gemini AI and return 10 feedback suggestion strings.
 
@@ -262,10 +257,13 @@ def generate_feedback_suggestions(rating: int) -> List[str]:
         - Total budget across all models/retries is 45 seconds.
         - If AI generation fails, an error is raised instead of static suggestions.
     """
+    if business_context is None:
+        business_context = {}
+
     if not isinstance(rating, int) or rating < 1 or rating > 5:
         raise ValueError(f"Invalid rating '{rating}'. Must be an integer between 1 and 5.")
 
-    prompt = _build_prompt(rating)
+    prompt = _build_prompt(rating, business_context)
     client = _get_client()
 
     seen = set()

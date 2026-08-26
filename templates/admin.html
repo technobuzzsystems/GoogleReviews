@@ -578,17 +578,17 @@
       </a>
 
       <div class="nav-label" style="margin-top:12px">Actions</div>
-      <a href="/admin/api/export" class="nav-item" id="navExport" download>
+      <a href="/admin/api/export?business={{ business_id }}" class="nav-item" id="navExport" download>
         <span class="nav-icon">📥</span> Export CSV
       </a>
-      <a href="/feedback" target="_blank" class="nav-item">
+      <a href="/{% if business_id == 'technobuzz' %}feedback{% else %}{{ business_id }}{% endif %}" target="_blank" class="nav-item">
         <span class="nav-icon">🔗</span> Feedback Page
       </a>
     </nav>
 
     <div class="sidebar-footer">
-      <a href="/feedback" target="_blank">
-        <span>⚡</span> TechnoBuzz · {{ company_id }}
+      <a href="/{% if business_id == 'technobuzz' %}feedback{% else %}{{ business_id }}{% endif %}" target="_blank">
+        <span>⚡</span> {{ company_name }}
       </a>
     </div>
 
@@ -601,15 +601,20 @@
 
     <!-- Top Bar -->
     <header class="topbar">
-      <div>
+      <div style="display: flex; align-items: center; gap: 16px;">
         <div class="topbar-title">Feedback Overview</div>
+        <select id="businessSelector" class="filter-select" aria-label="Select Business" onchange="window.location.href='?business=' + this.value">
+          {% for b_id, b_data in businesses.items() %}
+          <option value="{{ b_id }}" {% if business_id == b_id %}selected{% endif %}>{{ b_data.name }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div class="topbar-actions">
         <span class="refresh-dot" title="Live data"></span>
         <button class="btn btn-outline" id="btnRefresh" onclick="loadAll()">
           ↻ Refresh
         </button>
-        <a href="/admin/api/export" class="btn btn-primary" download>
+        <a href="/admin/api/export?business={{ business_id }}" class="btn btn-primary" download>
           📥 Export CSV
         </a>
       </div>
@@ -760,7 +765,8 @@ function starBadge(r) {
    ═══════════════════════════════════════════════════════ */
 async function loadStats() {
   try {
-    const res  = await fetch('/admin/api/stats');
+    const business = new URLSearchParams(window.location.search).get('business') || 'technobuzz';
+    const res  = await fetch(`/admin/api/stats?business=${business}`);
     const data = await res.json();
     stats = data;
 
@@ -814,8 +820,9 @@ async function loadFeedback(page = 1) {
   const search = $('searchInput').value.trim();
   const rating = $('ratingFilter').value;
   const limit  = $('limitFilter').value;
+  const business = new URLSearchParams(window.location.search).get('business') || 'technobuzz';
 
-  const params = new URLSearchParams({ page, limit });
+  const params = new URLSearchParams({ page, limit, business });
   if (search) params.set('search', search);
   if (rating) params.set('rating', rating);
 

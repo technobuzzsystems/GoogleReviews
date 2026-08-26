@@ -92,15 +92,17 @@ def insert_feedback(
     company_id: str,
     rating: int,
     feedback_text: str,
+    collection_name: str = "feedback"
 ) -> Optional[str]:
     """
-    Build a FeedbackDocument and insert it into the 'feedback' collection.
+    Build a FeedbackDocument and insert it into the specified collection.
 
     Args:
-        company       (str): Company display name.
-        company_id    (str): Unique company / QR code identifier.
-        rating        (int): Star rating selected by user (1–5).
-        feedback_text (str): The AI-generated feedback sentence chosen by user.
+        company         (str): Company display name.
+        company_id      (str): Unique company / QR code identifier.
+        rating          (int): Star rating selected by user (1–5).
+        feedback_text   (str): The AI-generated feedback sentence chosen by user.
+        collection_name (str): MongoDB collection name (default 'feedback').
 
     Returns:
         str: The MongoDB-assigned _id of the inserted document (as string).
@@ -111,7 +113,7 @@ def insert_feedback(
     """
     try:
         db         = get_database()
-        collection = db["feedback"]
+        collection = db[collection_name]
 
         # Build the document using our typed model
         doc = FeedbackDocument(
@@ -144,16 +146,18 @@ def get_all_feedback(
     per_page: int = 20,
     rating_filter: Optional[int] = None,
     search_query: Optional[str] = None,
+    collection_name: str = "feedback"
 ) -> Dict[str, Any]:
     """
     Retrieve paginated feedback records with optional filters.
     Used by the admin dashboard (Phase 4).
 
     Args:
-        page         (int): 1-based page number.
-        per_page     (int): Records per page.
-        rating_filter(int): If set, filter to only this star rating.
-        search_query (str): If set, text-search within feedback field.
+        page            (int): 1-based page number.
+        per_page        (int): Records per page.
+        rating_filter   (int): If set, filter to only this star rating.
+        search_query    (str): If set, text-search within feedback field.
+        collection_name (str): MongoDB collection name (default 'feedback').
 
     Returns:
         dict: {
@@ -165,7 +169,7 @@ def get_all_feedback(
     """
     try:
         db         = get_database()
-        collection = db["feedback"]
+        collection = db[collection_name]
 
         # Build query filter
         query: Dict = {}
@@ -202,7 +206,7 @@ def get_all_feedback(
         return {"records": [], "total": 0, "page": page, "pages": 0}
 
 
-def get_feedback_stats() -> Dict[str, Any]:
+def get_feedback_stats(collection_name: str = "feedback") -> Dict[str, Any]:
     """
     Aggregate statistics for the admin dashboard (Phase 4).
 
@@ -215,7 +219,7 @@ def get_feedback_stats() -> Dict[str, Any]:
     """
     try:
         db         = get_database()
-        collection = db["feedback"]
+        collection = db[collection_name]
 
         total = collection.count_documents({})
         if total == 0:

@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
 </head>
 
-<body>
+<body class="theme-{{ business_id }}">
   <div class="page-wrapper">
 
     <!-- ═══════════════════════════════════════════════
@@ -30,8 +30,8 @@
 
         <div class="logo-wrapper">
           <img
-            src="{{ url_for('static', filename='images/technobuzz_logo.jpg') }}"
-            alt="TechnoBuzz Logo"
+            src="{{ url_for('static', filename=logo_filename) }}"
+            alt="{{ company_name }} Logo"
             class="company-logo"
             width="88"
             height="88"
@@ -44,6 +44,7 @@
           id="companyName"
           data-company="{{ company_name }}"
           data-company-id="{{ company_id }}"
+          data-business-id="{{ business_id }}"
         >
           {{ company_name }}
         </h1>
