@@ -354,6 +354,10 @@ const StarRating = {
 const SuggestionCards = {
   /** Clear the suggestions grid and reset selection. */
   clear() {
+    if (DOM.submitSection.closest('#suggestionsGrid')) {
+      DOM.feedbackForm.appendChild(DOM.submitSection);
+      UIState.hideSuggestionsAndSubmit();
+    }
     DOM.suggestionsGrid.innerHTML = '';
     State.selectedFeedback = null;
   },
@@ -426,6 +430,28 @@ const SuggestionCards = {
     selectedCard.classList.add('selected');
     selectedCard.setAttribute('aria-pressed', 'true');
     State.selectedFeedback = text;
+
+    // Get all suggestion cards to determine row placement
+    const cards = Array.from(DOM.suggestionsGrid.querySelectorAll('.suggestion-card'));
+    const selectedIndex = cards.indexOf(selectedCard);
+
+    // Determine if we are in the 2-column desktop layout
+    const isDesktop = window.matchMedia('(min-width: 480px)').matches;
+
+    // Find the last card in the current row
+    let targetIndex = selectedIndex;
+    if (isDesktop) {
+      // For 2-column grid: index 0 and 1 -> row ends at index 1
+      targetIndex = Math.floor(selectedIndex / 2) * 2 + 1;
+    }
+
+    // Cap the target index in case the last row has only one card
+    if (targetIndex >= cards.length) {
+      targetIndex = cards.length - 1;
+    }
+
+    // Move the single submit button into the grid immediately after the target row
+    cards[targetIndex].after(DOM.submitSection);
 
     // Show submit button and clear any validation errors
     UIState.showSubmit();

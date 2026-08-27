@@ -1335,3 +1335,10 @@ body.theme-rutuja_battery .suggestion-card.selected .card-indicator::after {
 }
 body.theme-rutuja_battery .rating-label { color: var(--clr-accent); }
 body.theme-rutuja_battery .suggestions-title { color: var(--clr-accent); }
+
+/* -- Dynamically Injected Submit Button inside Suggestions Grid -- */
+.suggestions-grid .submit-section {
+  grid-column: 1 / -1;
+  margin-top: var(--sp-md);
+  margin-bottom: var(--sp-sm);
+}
