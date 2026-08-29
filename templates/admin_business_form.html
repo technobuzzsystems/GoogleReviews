@@ -1,0 +1,383 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="breakdown-card form-card">
+  <form action="/admin/businesses" method="POST" enctype="multipart/form-data">
+    <div class="form-group">
+      <label for="business_key">Business Key (Unique ID)</label>
+      <input type="text" id="business_key" name="business_key" value="{{ business_key }}" {% if business %}readonly{% endif %} required>
+      <div class="form-hint">E.g., "boardwale" or "technobuzz". Cannot be changed later.</div>
+    </div>
+
+    <div class="form-group">
+      <label for="name">Business Name</label>
+      <input type="text" id="name" name="name" value="{{ business.name if business else '' }}" required>
+    </div>
+
+    <div class="form-section">Contact details</div>
+    {% if form_error %}
+    <div class="form-error">{{ form_error }}</div>
+    {% endif %}
+    <div class="form-row">
+      <div class="form-group">
+        <label for="mobile">Mobile number</label>
+        <input type="tel" id="mobile" name="mobile" value="{{ business.mobile if business else '' }}" inputmode="numeric" autocomplete="tel" placeholder="10-digit mobile" required>
+      </div>
+      <div class="form-group">
+        <label for="alternate_mobile">Alternate mobile number</label>
+        <input type="tel" id="alternate_mobile" name="alternate_mobile" value="{{ business.alternate_mobile if business else '' }}" inputmode="numeric" autocomplete="tel" placeholder="Optional">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" value="{{ business.email if business else '' }}" autocomplete="email" placeholder="name@business.com" required>
+    </div>
+    <div class="form-group">
+      <label for="address">Address</label>
+      <textarea id="address" name="address" rows="3" required>{{ business.address if business else '' }}</textarea>
+    </div>
+
+    <div class="form-section">Feedback page</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="id">Company ID (For DB/Tracking)</label>
+        <input type="text" id="id" name="id" value="{{ business.id if business else '' }}" required>
+      </div>
+      <div class="form-group">
+        <label for="route_slug">Route slug</label>
+        <input type="text" id="route_slug" name="route_slug" value="{{ business.route_slug if business else '' }}" placeholder="auto from business key" autocomplete="off">
+        <div class="form-hint">Leave empty to auto-generate from the business key. Live URL: /feedback/your_slug</div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="collection">Collection</label>
+      <input type="text" id="collection" name="collection" value="{{ business.collection if business else '' }}" placeholder="auto from slug" autocomplete="off">
+      <div class="form-hint">Leave empty to auto-generate as slug_feedback. Also opens the same page: /feedback/collection</div>
+      <div class="form-hint accent" id="feedback_url_preview"></div>
+    </div>
+
+    <div class="form-group">
+      <label for="place_id">Google Place ID</label>
+      <input type="text" id="place_id" name="place_id" value="{{ business.place_id if business else '' }}" placeholder="ChIJ..." autocomplete="off">
+      <div class="form-hint">Paste only the Place ID. The Google Review URL is generated automatically.</div>
+      <div class="form-hint accent" id="google_review_url_preview"></div>
+    </div>
+
+    <div class="form-section">Subscription Plan</div>
+
+    <div class="form-group">
+      <label>Plan</label>
+      <div class="plan-box">
+        {% for code, plan in plans.items() %}
+        <label class="plan-option">
+          <input type="radio" name="plan_code" value="{{ code }}" data-months="{{ plan.months }}" data-amount="{{ plan.amount }}" {% if (business and business.plan_code == code) or ((not business or not business.plan_code) and code == '6m') %}checked{% endif %} required>
+          <strong>{{ plan.label }}</strong>
+          ₹{{ '{:,.0f}'.format(plan.amount) }}
+        </label>
+        {% endfor %}
+      </div>
+      <div class="form-hint">Salesman earns {{ plan_commission_rate }}% of the plan amount in their wallet when this business is added or the plan is renewed.</div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="join_date">Date of join</label>
+        <input type="date" id="join_date" name="join_date" value="{{ business.join_date if business else '' }}" required>
+      </div>
+      <div class="form-group">
+        <label for="expiry_date">Date of expired</label>
+        <input type="date" id="expiry_date" readonly>
+        <div class="form-hint">Filled automatically from join date + plan duration.</div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Plan amount / salesman commission</label>
+      <div class="form-hint green" id="planPreview"></div>
+    </div>
+
+    <div class="form-group">
+      <label for="sales_executive_id">Sales executive</label>
+      {% if locked_executive %}
+      <input type="hidden" name="sales_executive_id" value="{{ locked_executive.id }}">
+      <input type="text" value="{{ locked_executive.name }} (wallet 10%)" readonly>
+      {% else %}
+      <select id="sales_executive_id" name="sales_executive_id">
+        <option value="">— Select salesman —</option>
+        {% for ex in executives %}
+        <option value="{{ ex.id }}" {% if business and business.sales_executive_id == ex.id %}selected{% endif %}>{{ ex.name }} — wallet ₹{{ '{:,.0f}'.format(ex.wallet_balance or 0) }}</option>
+        {% endfor %}
+      </select>
+      <div class="form-hint">Required so 10% commission is credited to this salesman’s wallet.</div>
+      {% endif %}
+    </div>
+
+    <div class="form-group">
+      <label for="logo_file">Business logo</label>
+      <div class="logo-upload">
+        <div class="logo-preview-wrap" id="logoPreviewWrap">
+          {% if business and business.logo_url %}
+          <img id="logoPreview" class="logo-preview" src="{{ business.logo_url }}" alt="Logo preview">
+          <div class="logo-preview-empty" id="logoPreviewEmpty" hidden>No logo yet</div>
+          {% else %}
+          <img id="logoPreview" class="logo-preview" src="" alt="Logo preview" hidden>
+          <div class="logo-preview-empty" id="logoPreviewEmpty">No logo yet</div>
+          {% endif %}
+        </div>
+        <div class="logo-upload-fields">
+          <input type="hidden" id="logo_filename" name="logo_filename" value="{{ business.logo_filename if business else '' }}">
+          <input type="file" id="logo_file" name="logo_file" accept="image/png,image/jpeg,image/webp,image/gif">
+          <label class="logo-remove">
+            <input type="checkbox" id="remove_logo" name="remove_logo" value="1">
+            Remove current logo
+          </label>
+          <div class="form-hint">PNG, JPG, WEBP or GIF · max 2 MB · uploaded to your S3 bucket</div>
+          {% if not s3_ready %}
+          <div class="form-hint warn">Add AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, and S3_BUCKET in .env, then restart the app.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="scope">Business Scope &amp; Services</label>
+      <textarea id="scope" name="scope" required>{{ business.scope if business else '' }}</textarea>
+      <div class="form-hint">Context provided to AI.</div>
+    </div>
+
+    <div class="form-section form-section-row">
+      <span>AI Prompt Examples</span>
+      <button type="button" class="btn btn-primary" id="btnGenerateExamples">✨ Generate with AI</button>
+    </div>
+    <p class="form-hint" id="examplesAiStatus">Uses Business Scope &amp; Services to suggest 1–5 star example themes. You can edit them after they fill.</p>
+
+    <div class="form-group">
+      <label for="examples_1star">1 Star Examples (Negative)</label>
+      <textarea id="examples_1star" name="examples_1star">{{ business.examples_1star if business else '' }}</textarea>
+    </div>
+    <div class="form-group">
+      <label for="examples_2star">2 Star Examples</label>
+      <textarea id="examples_2star" name="examples_2star">{{ business.examples_2star if business else '' }}</textarea>
+    </div>
+    <div class="form-group">
+      <label for="examples_3star">3 Star Examples</label>
+      <textarea id="examples_3star" name="examples_3star">{{ business.examples_3star if business else '' }}</textarea>
+    </div>
+    <div class="form-group">
+      <label for="examples_4star">4 Star Examples</label>
+      <textarea id="examples_4star" name="examples_4star">{{ business.examples_4star if business else '' }}</textarea>
+    </div>
+    <div class="form-group">
+      <label for="examples_5star">5 Star Examples (Positive)</label>
+      <textarea id="examples_5star" name="examples_5star">{{ business.examples_5star if business else '' }}</textarea>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Save Business</button>
+      <a href="/admin/businesses" class="btn btn-muted">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var input = document.getElementById("place_id");
+  var urlPreview = document.getElementById("google_review_url_preview");
+  var template = "https://search.google.com/local/writereview?placeid=";
+
+  function extractPlaceId(value) {
+    value = (value || "").trim();
+    var marker = "placeid=";
+    var idx = value.toLowerCase().indexOf(marker);
+    if (idx !== -1) {
+      return value.slice(idx + marker.length).split("&")[0].trim();
+    }
+    return value;
+  }
+
+  function updatePreview() {
+    var placeId = extractPlaceId(input.value);
+    urlPreview.textContent = placeId ? template + placeId : "Google Review URL will appear here after you enter a Place ID.";
+  }
+
+  input.addEventListener("input", updatePreview);
+  updatePreview();
+
+  function slugify(v) {
+    return (v || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").replace(/_+/g, "_").slice(0, 60);
+  }
+  var keyEl = document.getElementById("business_key");
+  var nameEl = document.getElementById("name");
+  var slugEl = document.getElementById("route_slug");
+  var colEl = document.getElementById("collection");
+  var pagePreview = document.getElementById("feedback_url_preview");
+  var slugTouched = !!(slugEl && slugEl.value.trim());
+  var colTouched = !!(colEl && colEl.value.trim());
+  function syncFeedbackUrl() {
+    if (slugEl && !slugTouched) {
+      slugEl.value = slugify(keyEl.value) || slugify(nameEl.value);
+    }
+    var slug = slugify((slugEl && slugEl.value) || "") || slugify(keyEl.value) || slugify(nameEl.value);
+    if (colEl && !colTouched) {
+      colEl.value = slug ? slug + "_feedback" : "";
+    }
+    if (pagePreview) {
+      pagePreview.textContent = slug
+        ? "Live page after save: /feedback/" + slug
+        : "Live page after save: /feedback";
+    }
+  }
+  if (slugEl) slugEl.addEventListener("input", function () { slugTouched = true; syncFeedbackUrl(); });
+  if (colEl) colEl.addEventListener("input", function () { colTouched = true; });
+  if (keyEl) keyEl.addEventListener("input", syncFeedbackUrl);
+  if (nameEl) nameEl.addEventListener("input", syncFeedbackUrl);
+  syncFeedbackUrl();
+
+  var logoInput = document.getElementById("logo_file");
+  var logoPreview = document.getElementById("logoPreview");
+  var logoEmpty = document.getElementById("logoPreviewEmpty");
+  var removeLogo = document.getElementById("remove_logo");
+  var existingLogo = {{ (business.logo_url if business and business.logo_url else "")|tojson }};
+  function showLogo(url) {
+    if (!logoPreview) return;
+    if (url) {
+      logoPreview.src = url;
+      logoPreview.hidden = false;
+      if (logoEmpty) logoEmpty.hidden = true;
+    } else {
+      logoPreview.removeAttribute("src");
+      logoPreview.hidden = true;
+      if (logoEmpty) logoEmpty.hidden = false;
+    }
+  }
+  if (logoInput) {
+    logoInput.addEventListener("change", function () {
+      var file = logoInput.files && logoInput.files[0];
+      if (!file) {
+        showLogo(removeLogo && removeLogo.checked ? "" : existingLogo);
+        return;
+      }
+      if (removeLogo) removeLogo.checked = false;
+      var reader = new FileReader();
+      reader.onload = function () { showLogo(reader.result); };
+      reader.readAsDataURL(file);
+    });
+  }
+  if (removeLogo) {
+    removeLogo.addEventListener("change", function () {
+      if (removeLogo.checked) {
+        if (logoInput) logoInput.value = "";
+        showLogo("");
+      } else {
+        showLogo(existingLogo);
+      }
+    });
+  }
+
+  var joinInput = document.getElementById("join_date");
+  var expiryInput = document.getElementById("expiry_date");
+  var planPreview = document.getElementById("planPreview");
+  var rate = {{ plan_commission_rate }};
+
+  function addMonths(date, months) {
+    var d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    d.setMonth(d.getMonth() + months);
+    return d;
+  }
+  function fmt(d) {
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + day;
+  }
+  function selectedPlan() {
+    var el = document.querySelector('input[name="plan_code"]:checked');
+    if (!el) return null;
+    return { months: parseInt(el.dataset.months, 10), amount: parseFloat(el.dataset.amount) };
+  }
+  function updatePlan() {
+    if (joinInput && !joinInput.value) joinInput.value = fmt(new Date());
+    var plan = selectedPlan();
+    if (!plan || !joinInput.value) return;
+    var parts = joinInput.value.split("-");
+    var join = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    expiryInput.value = fmt(addMonths(join, plan.months));
+    var commission = (plan.amount * rate) / 100;
+    planPreview.textContent = "Plan ₹" + plan.amount.toLocaleString("en-IN") + " → salesman wallet +₹" + commission.toLocaleString("en-IN") + " (10%)";
+  }
+  document.querySelectorAll('input[name="plan_code"]').forEach(function (el) {
+    el.addEventListener("change", updatePlan);
+  });
+  joinInput.addEventListener("change", updatePlan);
+  updatePlan();
+
+  var btnAi = document.getElementById("btnGenerateExamples");
+  var statusEl = document.getElementById("examplesAiStatus");
+  var scopeEl = document.getElementById("scope");
+  var starFields = [1, 2, 3, 4, 5].map(function (n) {
+    return document.getElementById("examples_" + n + "star");
+  });
+
+  function setStatus(text, kind) {
+    statusEl.textContent = text;
+    statusEl.className = "form-hint" + (kind ? " " + kind : "");
+  }
+
+  btnAi.addEventListener("click", function () {
+    var scope = (scopeEl.value || "").trim();
+    var name = (nameEl.value || "").trim();
+    if (scope.length < 8) {
+      setStatus("Enter Business Scope & Services first, then generate examples.", "warn");
+      scopeEl.focus();
+      return;
+    }
+    var hasExisting = starFields.some(function (el) { return (el.value || "").trim(); });
+    if (hasExisting && !window.confirm("Replace the current 1–5 star examples with AI suggestions?")) {
+      return;
+    }
+    btnAi.disabled = true;
+    setStatus("Generating 1–5 star examples from your business scope…", "accent");
+    fetch("/admin/api/generate-examples", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name, scope: scope })
+    })
+      .then(function (res) {
+        return res.json().then(function (data) {
+          return { ok: res.ok, data: data };
+        });
+      })
+      .then(function (result) {
+        if (!result.ok) {
+          var msg = (result.data && (result.data.detail || result.data.error)) || "Generation failed.";
+          if (Array.isArray(msg)) {
+            msg = msg.map(function (x) { return x.msg || JSON.stringify(x); }).join(" ");
+          }
+          throw new Error(msg);
+        }
+        var examples = result.data.examples || {};
+        starFields.forEach(function (el, i) {
+          var key = "examples_" + (i + 1) + "star";
+          if (examples[key]) {
+            el.value = examples[key];
+            el.classList.add("ai-filled");
+          }
+        });
+        setStatus("Filled 1–5 star examples from AI. Edit anything before you save.", "green");
+        setTimeout(function () {
+          starFields.forEach(function (el) { el.classList.remove("ai-filled"); });
+        }, 1800);
+      })
+      .catch(function (err) {
+        setStatus(err.message || "Could not generate examples. Try again.", "warn");
+      })
+      .finally(function () {
+        btnAi.disabled = false;
+      });
+  });
+})();
+</script>
+{% endblock %}

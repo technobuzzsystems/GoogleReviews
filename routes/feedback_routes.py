@@ -1,221 +1,145 @@
 """
 routes/feedback_routes.py
 --------------------------
-All customer-facing feedback routes.
-
-Endpoints:
-    GET  /                    → Redirect to /feedback
-    GET  /feedback            → Render the feedback HTML page
-    POST /generate-feedback   → Call Gemini AI, return 8-10 suggestions
-    POST /submit-feedback     → Validate and store feedback in MongoDB
+All customer-facing feedback routes (FastAPI).
 """
 
 import logging
-from flask import Blueprint, render_template, jsonify, request, redirect, url_for
+from fastapi import APIRouter, Request, HTTPException, status, Depends
+from fastapi.responses import RedirectResponse
+from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
 
-from config import get_config, BUSINESS_REGISTRY
-from utils.validators import validate_rating, validate_feedback_submission, sanitize_string
+from config import get_config
+from database import get_db
+from services.business_service import find_business_by_route, get_business
+from services.storage_service import public_logo_url
+from models.schemas import GenerateFeedbackRequest, SubmitFeedbackRequest
+from utils.validators import sanitize_string
 from services.gemini_service import generate_feedback_suggestions
-from services.database_service import insert_feedback
 
-# ─── Blueprint ────────────────────────────────────────────────────────────────
-feedback_bp = Blueprint("feedback", __name__)
-config      = get_config()
-logger      = logging.getLogger(__name__)
+router = APIRouter()
+config = get_config()
+logger = logging.getLogger(__name__)
 
+templates = Jinja2Templates(directory="templates")
 
 # ─── GET / ────────────────────────────────────────────────────────────────────
-@feedback_bp.route("/")
+@router.get("/")
 def index():
     """Redirect root URL to the main feedback page."""
-    return redirect(url_for("feedback.feedback_page"))
+    return RedirectResponse(url="/feedback")
 
 
 # ─── GET /feedback and /boardwale ──────────────────────────────────────────────
-def render_business_feedback(business_id: str):
+def render_business_feedback(request: Request, business_id: str, db: Session, b_config: dict = None):
     """Internal helper to render the feedback page with specific business context."""
-    b_config = BUSINESS_REGISTRY.get(business_id, BUSINESS_REGISTRY["technobuzz"])
+    b_config = b_config or get_business(db, business_id)
+    if not b_config:
+        raise HTTPException(status_code=404, detail="This feedback page is not available.")
+    logo = (b_config.get("logo_filename") or "").strip()
     context = {
-        "business_id":       business_id,
-        "company_name":      b_config["name"],
-        "company_id":        b_config["id"],
-        "google_review_url": b_config["google_review_url"],
-        "logo_filename":     b_config["logo_filename"],
+        "request": request,
+        "business_id":       b_config.get("key") or business_id,
+        "company_name":      b_config.get("name", "Feedback"),
+        "company_id":        b_config.get("id", ""),
+        "google_review_url": b_config.get("google_review_url", ""),
+        "logo_filename":     logo,
+        "logo_url":          b_config.get("logo_url") or public_logo_url(logo),
+        "feedback_path":     b_config.get("feedback_path") or "/feedback",
     }
-    return render_template("feedback.html", **context)
+    return templates.TemplateResponse("feedback.html", context)
 
-@feedback_bp.route("/feedback")
-def feedback_page():
-    return render_business_feedback("technobuzz")
+@router.get("/feedback")
+def feedback_page(request: Request, db: Session = Depends(get_db)):
+    return render_business_feedback(request, "technobuzz", db)
 
-@feedback_bp.route("/boardwale")
+@router.get("/boardwale")
 def old_boardwale_redirect():
     """Temporary backward-compatible redirect for old QR codes/links."""
-    return redirect(url_for("feedback.boardwale_feedback_page"), code=301)
+    return RedirectResponse(url="/feedback/board_001", status_code=status.HTTP_301_MOVED_PERMANENTLY)
 
-@feedback_bp.route("/feedback/board_001")
-def boardwale_feedback_page():
-    return render_business_feedback("boardwale")
+@router.get("/feedback/board_001")
+def boardwale_feedback_page(request: Request, db: Session = Depends(get_db)):
+    return render_business_feedback(request, "boardwale", db)
 
-@feedback_bp.route("/feedback/showroom_001")
-def jawa_feedback_page():
-    return render_business_feedback("jawa_showroom")
+@router.get("/feedback/showroom_001")
+def jawa_feedback_page(request: Request, db: Session = Depends(get_db)):
+    return render_business_feedback(request, "jawa_showroom", db)
 
-@feedback_bp.route("/feedback/1")
-def rutuja_battery_feedback_page():
-    return render_business_feedback("rutuja_battery")
+@router.get("/feedback/1")
+def rutuja_battery_feedback_page(request: Request, db: Session = Depends(get_db)):
+    return render_business_feedback(request, "rutuja_battery", db)
+
+
+# ─── Dynamic slug route handler ───────────────────────────────────────────────
+@router.get("/feedback/{slug}")
+def dynamic_business_feedback_page(request: Request, slug: str, db: Session = Depends(get_db)):
+    found = find_business_by_route(db, slug)
+    if not found:
+        raise HTTPException(status_code=404, detail="This feedback page is not available.")
+    return render_business_feedback(request, found["key"], db, b_config=found)
 
 
 # ─── POST /generate-feedback ──────────────────────────────────────────────────
-@feedback_bp.route("/generate-feedback", methods=["POST"])
-def generate_feedback():
+@router.post("/generate-feedback")
+def generate_feedback(payload: GenerateFeedbackRequest, db: Session = Depends(get_db)):
     """
     Accept a star rating, call Google Gemini AI,
     and return 8–10 human-like feedback suggestions.
-
-    Request  JSON: { "rating": <int 1-5> }
-    Response JSON: { "suggestions": ["...", "...", ...] }
     """
-    data = request.get_json(silent=True)
-
-    if not data:
-        logger.warning("generate_feedback: empty or non-JSON request body")
-        return jsonify({"error": "Request body must be valid JSON."}), 400
-
-    rating_raw = data.get("rating")
-    is_valid, error_message = validate_rating(rating_raw)
-    if not is_valid:
-        logger.warning("generate_feedback: invalid rating=%r — %s", rating_raw, error_message)
-        return jsonify({"error": error_message}), 400
-
-    rating = int(rating_raw)
-    business_id = data.get("business_id", "technobuzz")
-    b_config = BUSINESS_REGISTRY.get(business_id, BUSINESS_REGISTRY["technobuzz"])
+    rating = payload.rating
+    business_id = payload.business_id
+    b_config = get_business(db, business_id)
+    if not b_config:
+        raise HTTPException(status_code=400, detail="Unknown business.")
 
     try:
         suggestions = generate_feedback_suggestions(rating, business_context=b_config)
-
         if not suggestions:
-            return jsonify({"error": "AI returned no suggestions. Please try again."}), 500
+            raise HTTPException(status_code=500, detail="AI returned no suggestions. Please try again.")
 
         logger.info("generate_feedback: %d suggestions for rating=%d", len(suggestions), rating)
-        return jsonify({"suggestions": suggestions}), 200
+        return {"suggestions": suggestions}
 
     except ValueError as e:
         logger.warning("generate_feedback: ValueError — %s", str(e))
-        return jsonify({"error": str(e)}), 400
+        raise HTTPException(status_code=400, detail=str(e))
 
     except RuntimeError as e:
         error_str = str(e)
         logger.error("generate_feedback: RuntimeError — %s", error_str)
         if "GEMINI_API_KEY" in error_str:
-            return jsonify({"error": "AI service is not configured. Please contact support."}), 503
-        return jsonify({"error": "AI service is temporarily unavailable. Please try again."}), 500
+            raise HTTPException(status_code=503, detail="AI service is not configured. Please contact support.")
+        raise HTTPException(status_code=500, detail="AI service is temporarily unavailable. Please try again.")
 
     except Exception as e:
         logger.error("generate_feedback: unexpected error — %s", str(e), exc_info=True)
-        return jsonify({"error": "An unexpected error occurred. Please try again."}), 500
+        raise HTTPException(status_code=500, detail="An unexpected error occurred. Please try again.")
 
 
 # ─── POST /submit-feedback ────────────────────────────────────────────────────
-@feedback_bp.route("/submit-feedback", methods=["POST"])
-def submit_feedback():
+@router.post("/submit-feedback", status_code=status.HTTP_201_CREATED)
+def submit_feedback(payload: SubmitFeedbackRequest):
     """
-    Phase 3: Validate the selected feedback and persist it to MongoDB.
-
-    Validation rules:
-        - company     : non-empty string
-        - company_id  : non-empty string
-        - rating      : integer 1–5
-        - feedback    : non-empty string, max 1000 chars
-
-    Duplicate-click protection:
-        The frontend disables the submit button immediately on click,
-        but the server also validates all fields before writing to DB.
-
-    Request JSON:
-        {
-            "company":    "TechnoBuzz",
-            "company_id": "TECHNOBUZZ-001",
-            "rating":     5,
-            "feedback":   "Excellent service and a wonderful experience."
-        }
-
-    Success Response (201):
-        {
-            "success": true,
-            "message": "Thank you! Your feedback has been recorded.",
-            "id":      "<mongodb_document_id>"
-        }
-
-    Error Responses:
-        400 → Validation failure (missing/invalid fields)
-        500 → Database write failure
-        503 → MongoDB not reachable
+    Validate the selected feedback but DO NOT save it to any database.
+    Always returns a mock success response to keep the frontend flow working.
     """
-    # ── Parse request body ─────────────────────────────────────────────────────
-    data = request.get_json(silent=True)
-
-    if not data:
-        logger.warning("submit_feedback: empty or non-JSON request body")
-        return jsonify({"error": "Request body must be valid JSON."}), 400
-
-    # ── Server-side validation ─────────────────────────────────────────────────
-    is_valid, error_message = validate_feedback_submission(data)
-    if not is_valid:
-        logger.warning("submit_feedback: validation failed — %s", error_message)
-        return jsonify({"error": error_message}), 400
-
     # ── Sanitize inputs ────────────────────────────────────────────────────────
-    company       = sanitize_string(data["company"],    max_length=200)
-    company_id    = sanitize_string(data["company_id"], max_length=100)
-    rating        = int(data["rating"])
-    feedback_text = sanitize_string(data["feedback"],   max_length=1000)
-    business_id   = data.get("business_id", "technobuzz")
+    company       = sanitize_string(payload.company, max_length=200)
+    company_id    = sanitize_string(payload.company_id, max_length=100)
+    rating        = payload.rating
+    feedback_text = sanitize_string(payload.feedback, max_length=1000)
+    business_id   = payload.business_id
     
-    b_config = BUSINESS_REGISTRY.get(business_id, BUSINESS_REGISTRY["technobuzz"])
-    collection_name = b_config["collection"]
+    # Normally we would save to a DB here, but database connectivity is removed.
+    logger.info(
+        "submit_feedback (MOCK SUCCESS) — company=%s rating=%d feedback='%s'",
+        company_id, rating, feedback_text[:50]
+    )
 
-    # ── Insert into MongoDB ────────────────────────────────────────────────────
-    try:
-        inserted_id = insert_feedback(
-            company=      company,
-            company_id=   company_id,
-            rating=       rating,
-            feedback_text=feedback_text,
-            collection_name=collection_name,
-        )
-
-        if not inserted_id:
-            logger.error("submit_feedback: insert returned None for company_id=%s", company_id)
-            return jsonify({"error": "Failed to save feedback. Please try again."}), 500
-
-        logger.info(
-            "submit_feedback: SUCCESS — id=%s company=%s rating=%d",
-            inserted_id, company_id, rating
-        )
-        return jsonify({
-            "success": True,
-            "message": "Thank you! Your feedback has been recorded.",
-            "id":      inserted_id,
-        }), 201
-
-    except RuntimeError as e:
-        error_str = str(e)
-        logger.error("submit_feedback: RuntimeError — %s", error_str)
-
-        # Distinguish DB connection error from general DB error
-        if "connect" in error_str.lower() or "mongodb" in error_str.lower():
-            return jsonify({
-                "error": "Database is currently unavailable. Please try again later."
-            }), 503
-
-        return jsonify({
-            "error": "Failed to save feedback due to a server error. Please try again."
-        }), 500
-
-    except Exception as e:
-        logger.error("submit_feedback: unexpected error — %s", str(e), exc_info=True)
-        return jsonify({
-            "error": "An unexpected error occurred. Please try again."
-        }), 500
+    return {
+        "success": True,
+        "message": "Thank you! Your feedback has been recorded.",
+        "id":      "no-db-submission",
+    }

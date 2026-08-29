@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login — TechnoBuzz</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+</head>
+<body class="login-page">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="sidebar-logo-mark" aria-hidden="true">TB</div>
+      <div>
+        <h1>TechnoBuzz</h1>
+        <p>Admin Panel</p>
+      </div>
+    </div>
+    <p class="sub">Sign in to manage businesses and reviews.</p>
+    {% if error %}
+    <div class="form-error">{{ error }}</div>
+    {% endif %}
+    <form method="POST" action="/admin/login">
+      <input type="hidden" name="next" value="{{ next }}">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" value="{{ username or '' }}" autocomplete="username" required autofocus>
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" required>
+      <button type="submit">Sign in</button>
+    </form>
+    <p class="login-hint">
+      Local logins: <code>admin</code> / admin123.<br>
+      Sales (role <code>sales</code>): <code>sales</code>, <code>priya</code>, <code>amit</code>, <code>sneha</code>, <code>vikram</code> — password <code>name123</code> (sales / sales123).<br>
+      Other roles: <code>account</code>, <code>marketing</code>, <code>franchise</code>.
+    </p>
+  </div>
+</body>
+</html>

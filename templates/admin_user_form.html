@@ -1,0 +1,100 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="breakdown-card form-card">
+  {% if form_error %}
+  <div class="form-error">{{ form_error }}</div>
+  {% endif %}
+  <form action="/admin/users" method="POST">
+    <input type="hidden" name="user_id" value="{{ staff.id if staff and staff.id else '' }}">
+
+    <div class="form-section">Login &amp; role</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="full_name">Full name</label>
+        <input type="text" id="full_name" name="full_name" value="{{ staff.full_name if staff else '' }}" required>
+      </div>
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" value="{{ staff.username if staff else '' }}" autocomplete="off" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="role">Role</label>
+        <select id="role" name="role" required>
+          <option value="">— Select role —</option>
+          {% for value, label in role_labels.items() %}
+          <option value="{{ value }}" {% if staff and staff.role == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="password">{% if is_edit %}New password{% else %}Password{% endif %}</label>
+        <input type="password" id="password" name="password" autocomplete="new-password" {% if not is_edit %}required minlength="6"{% endif %} placeholder="{% if is_edit %}Leave blank to keep current{% else %}At least 6 characters{% endif %}">
+        {% if is_edit %}<div class="form-hint">Leave blank to keep the current password.</div>{% endif %}
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="check-label tight" for="is_active">
+        <input type="checkbox" id="is_active" name="is_active" value="1" {% if not staff or staff.get('is_active', True) %}checked{% endif %}>
+        Active login
+      </label>
+    </div>
+
+    <div class="form-section">Contact &amp; ID</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="phone">Mobile number</label>
+        <input type="tel" id="phone" name="phone" value="{{ staff.phone if staff else '' }}" inputmode="numeric" autocomplete="tel" placeholder="10-digit mobile" required>
+      </div>
+      <div class="form-group">
+        <label for="alternate_mobile">Alternate mobile</label>
+        <input type="tel" id="alternate_mobile" name="alternate_mobile" value="{{ staff.alternate_mobile if staff else '' }}" inputmode="numeric" placeholder="Optional">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" value="{{ staff.email if staff else '' }}" autocomplete="email" placeholder="name@example.com" required>
+      </div>
+      <div class="form-group">
+        <label for="aadhaar">Aadhaar card</label>
+        <input type="text" id="aadhaar" name="aadhaar" value="{{ staff.aadhaar if staff else '' }}" inputmode="numeric" maxlength="14" placeholder="12-digit Aadhaar" required>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="address">Address</label>
+      <textarea id="address" name="address" rows="3" required>{{ staff.address if staff else '' }}</textarea>
+    </div>
+
+    <div class="form-section">Bank account (required for every role)</div>
+    <p class="form-hint">Wallet withdrawals use these details. Users cannot change them themselves.</p>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="bank_name">Bank name</label>
+        <input type="text" id="bank_name" name="bank_name" value="{{ staff.bank_name if staff else '' }}" required>
+      </div>
+      <div class="form-group">
+        <label for="account_name">Account holder name</label>
+        <input type="text" id="account_name" name="account_name" value="{{ staff.account_name if staff else '' }}" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="account_number">Account number</label>
+        <input type="text" id="account_number" name="account_number" inputmode="numeric" value="{{ staff.account_number if staff else '' }}" required>
+      </div>
+      <div class="form-group">
+        <label for="ifsc">IFSC</label>
+        <input type="text" id="ifsc" name="ifsc" maxlength="11" value="{{ staff.ifsc if staff else '' }}" placeholder="HDFC0001234" required>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">{% if is_edit %}Save user{% else %}Create user{% endif %}</button>
+      <a href="/admin/users" class="btn btn-muted">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

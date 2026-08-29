@@ -101,7 +101,9 @@ def generate_qr(url: str, output_path: Path = OUTPUT_PATH, company_name: str = C
     return output_path
 
 
-from config import BUSINESS_REGISTRY
+from config import get_config
+from database import SessionLocal
+from services.business_service import get_all_businesses
 
 def main():
     parser = argparse.ArgumentParser(description="Generate Feedback QR Codes")
@@ -111,14 +113,14 @@ def main():
 
     app_base_url = os.getenv("APP_BASE_URL", "").rstrip("/")
 
-    for b_id, b_config in BUSINESS_REGISTRY.items():
-        route_slug = b_config.get("route_slug")
-        if route_slug == "":
-            route = "feedback"
-        elif route_slug:
-            route = f"feedback/{route_slug}"
-        else:
-            route = f"feedback/{b_id}"
+    db = SessionLocal()
+    try:
+        businesses = get_all_businesses(db)
+    finally:
+        db.close()
+    for b_id, b_config in businesses.items():
+        path = (b_config.get("feedback_path") or "/feedback").lstrip("/")
+        route = path
         
         if args.url:
             url = args.url if b_id == "technobuzz" else f"{args.url.rsplit('/', 1)[0]}/{route}"

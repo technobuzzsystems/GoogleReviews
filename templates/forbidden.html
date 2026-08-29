@@ -1,0 +1,10 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="breakdown-card alert-card">
+  <h2>Access denied</h2>
+  <p>Your role ({{ user.role }}) cannot manage businesses. Only <strong>admin</strong> and <strong>sales</strong> can open this page.</p>
+  <a href="/admin">Back to dashboard</a>
+  <a href="/admin/logout">Logout</a>
+</div>
+{% endblock %}

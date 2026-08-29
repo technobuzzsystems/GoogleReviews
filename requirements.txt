@@ -4,20 +4,31 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Web framework
-flask==3.0.3
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+pydantic>=2.7.1
+jinja2==3.1.4
+python-multipart==0.0.9
 
 # Environment variable loading
 python-dotenv==1.0.1
 
-# MongoDB driver
-pymongo==4.7.2
 
 # Google Gemini AI SDK (new official SDK)
 google-genai>=1.0.0
 
 # QR Code generation
 qrcode[pil]==7.4.2
-Pillow==10.3.0
+Pillow>=10.3.0
+
+# Amazon S3
+boto3>=1.34.0
+
+# Database
+SQLAlchemy>=2.0.0
+psycopg2-binary>=2.9.0
+bcrypt>=4.0.0
+itsdangerous>=2.2.0
 
 # Production WSGI server (optional, for deployment)
 gunicorn==22.0.0

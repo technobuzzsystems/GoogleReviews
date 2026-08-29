@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}{{ page_title|default('Admin') }} — TechnoBuzz{% endblock %}</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}" />
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="adminSidebar" role="navigation" aria-label="Admin navigation">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-mark" aria-hidden="true">TB</div>
+        <div>
+          <div class="sidebar-logo-text">{{ company_name|default('TechnoBuzz') }}</div>
+          <div class="sidebar-logo-sub">Admin Panel</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-label">Dashboard</div>
+      <a href="/admin" class="nav-item {% if active_nav == 'overview' %}active{% endif %}">
+        <span class="nav-icon">📊</span> Overview
+      </a>
+
+      <div class="nav-label" style="margin-top:12px">Actions</div>
+      {% if can_view_sales_book %}
+      <a href="/admin/sales-book" class="nav-item {% if active_nav == 'sales' %}active{% endif %}">
+        <span class="nav-icon">📒</span> Sales Book
+      </a>
+      <a href="/admin/commission" class="nav-item {% if active_nav == 'commission' %}active{% endif %}">
+        <span class="nav-icon">💸</span> Commission
+      </a>
+      <a href="/admin/wallet" class="nav-item {% if active_nav == 'wallet' %}active{% endif %}">
+        <span class="nav-icon">👛</span> Wallet
+      </a>
+      {% endif %}
+      {% if can_manage_users %}
+      <a href="/admin/users" class="nav-item {% if active_nav == 'users' %}active{% endif %}">
+        <span class="nav-icon">👥</span> Users
+      </a>
+      {% endif %}
+      {% if can_manage_businesses %}
+      <a href="/admin/businesses" class="nav-item {% if active_nav == 'businesses' %}active{% endif %}">
+        <span class="nav-icon">🏢</span> Manage Businesses
+      </a>
+      {% endif %}
+      <a href="/admin/api/export?business={{ business_id|default('technobuzz') }}" class="nav-item" download>
+        <span class="nav-icon">📥</span> Export CSV
+      </a>
+      <a href="{{ feedback_path|default('/feedback') }}" target="_blank" class="nav-item">
+        <span class="nav-icon">🔗</span> Feedback Page
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">{{ user.username }} · {{ user.role }}</div>
+      <a href="/admin/logout"><span>⎋</span> Logout</a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button type="button" class="menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+        <div class="topbar-title">{% block topbar_title %}{{ page_title|default('Overview') }}{% endblock %}</div>
+        {% block topbar_extra %}{% endblock %}
+      </div>
+      <div class="topbar-actions">
+        {% block topbar_actions %}{% endblock %}
+      </div>
+    </header>
+    <div class="page-body">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+<script>
+  (function () {
+    var btn = document.getElementById('menuBtn');
+    var side = document.getElementById('adminSidebar');
+    if (btn && side) {
+      btn.addEventListener('click', function () { side.classList.toggle('open'); });
+    }
+  })();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

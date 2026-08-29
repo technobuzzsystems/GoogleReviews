@@ -1,0 +1,147 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="breakdown-card form-card">
+  {% if error %}<div class="form-error">{{ error }}</div>{% endif %}
+  <form action="/admin/sales-book" method="POST">
+    <div class="form-group">
+      <label for="business_key">Client</label>
+      <select id="business_key" name="business_key" required>
+        <option value="">— Select client —</option>
+        {% for c in clients %}
+        <option
+          value="{{ c.key }}"
+          data-name="{{ c.name }}"
+          data-phone="{{ c.mobile }}"
+          data-amount="{{ c.plan_amount }}"
+          data-exec="{{ c.sales_executive_id or '' }}"
+          {% if business_id == c.key %}selected{% endif %}
+        >{{ c.name }}{% if c.plan_amount %} — ₹{{ '{:,.0f}'.format(c.plan_amount) }}{% endif %}</option>
+        {% endfor %}
+      </select>
+      <div class="form-hint">Sale amount defaults to this client’s plan (₹1,500 / ₹2,000 / ₹3,000).</div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="customer_name">Customer name</label>
+        <input type="text" id="customer_name" name="customer_name">
+      </div>
+      <div class="form-group">
+        <label for="customer_phone">Phone</label>
+        <input type="text" id="customer_phone" name="customer_phone">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="booking_type">Booking type</label>
+        <select id="booking_type" name="booking_type">
+          <option value="new">New</option>
+          <option value="renewal">Renewal</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="sales_executive_id">Sales executive</label>
+        {% if locked_executive %}
+        <input type="hidden" name="sales_executive_id" value="{{ locked_executive.id }}">
+        <input type="text" value="{{ locked_executive.name }} ({{ plan_commission_rate|int }}%)" readonly>
+        {% else %}
+        <select id="sales_executive_id" name="sales_executive_id" required>
+          {% for ex in executives %}
+          <option value="{{ ex.id }}">{{ ex.name }} — {{ plan_commission_rate|int }}%</option>
+          {% endfor %}
+        </select>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="amount">Sale amount (₹)</label>
+        <input type="number" id="amount" name="amount" min="0" step="0.01" required>
+      </div>
+      <div class="form-group">
+        <label for="collected_amount">Collected amount (₹)</label>
+        <input type="number" id="collected_amount" name="collected_amount" min="0" step="0.01" value="0">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="commission_rate">Commission %</label>
+        <input type="number" id="commission_rate" name="commission_rate" min="0" step="0.1" value="{{ plan_commission_rate }}">
+        <div class="form-hint">Default {{ plan_commission_rate|int }}% of sale amount.</div>
+      </div>
+      <div class="form-group">
+        <label for="booked_on">Booking date</label>
+        <input type="date" id="booked_on" name="booked_on">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="notes">Notes</label>
+      <textarea id="notes" name="notes" rows="3"></textarea>
+    </div>
+
+    <div class="form-hint accent" id="commissionPreview" style="margin-bottom:1rem;"></div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Save Booking</button>
+      <a href="/admin/sales-book" class="btn btn-muted">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const clients = document.getElementById('business_key');
+const name = document.getElementById('customer_name');
+const phone = document.getElementById('customer_phone');
+const amount = document.getElementById('amount');
+const collected = document.getElementById('collected_amount');
+const rate = document.getElementById('commission_rate');
+const exec = document.getElementById('sales_executive_id');
+const preview = document.getElementById('commissionPreview');
+const bookedOn = document.getElementById('booked_on');
+const defaultRate = {{ plan_commission_rate }};
+if (bookedOn && !bookedOn.value) bookedOn.value = new Date().toISOString().slice(0,10);
+
+function applyClient() {
+  if (!clients || !clients.selectedOptions[0] || !clients.value) return;
+  const opt = clients.selectedOptions[0];
+  if (name && !name.value) name.value = opt.dataset.name || '';
+  if (phone && !phone.value) phone.value = opt.dataset.phone || '';
+  const planAmt = parseFloat(opt.dataset.amount || '0') || 0;
+  if (amount && (!amount.value || amount.dataset.autofill === '1')) {
+    amount.value = planAmt || '';
+    amount.dataset.autofill = '1';
+  }
+  if (collected && (!collected.value || collected.value === '0') && planAmt) {
+    collected.value = planAmt;
+  }
+  if (exec && opt.dataset.exec) exec.value = opt.dataset.exec;
+  update();
+}
+
+function update() {
+  const a = parseFloat(amount.value || '0') || 0;
+  const r = parseFloat(rate.value || defaultRate) || 0;
+  preview.textContent = 'Commission: ₹' + ((a * r) / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 }) + ' (' + r + '%)';
+}
+
+if (clients) {
+  clients.addEventListener('change', function () {
+    if (name) name.value = '';
+    if (phone) phone.value = '';
+    if (amount) amount.dataset.autofill = '1';
+    applyClient();
+  });
+}
+if (amount) amount.addEventListener('input', function () { amount.dataset.autofill = '0'; update(); });
+[rate, collected].forEach(el => el && el.addEventListener('input', update));
+applyClient();
+update();
+</script>
+{% endblock %}

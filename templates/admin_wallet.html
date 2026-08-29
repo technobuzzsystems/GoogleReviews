@@ -1,0 +1,237 @@
+{% extends "admin_base.html" %}
+
+{% block topbar_actions %}
+{% if can_manage_businesses %}
+<a href="/admin/businesses/new" class="btn btn-outline">+ Add Business</a>
+{% endif %}
+<a href="/admin" class="btn btn-primary">Overview</a>
+{% endblock %}
+
+{% block content %}
+<p class="wallet-note">Commission is credited to the wallet. Open <a class="link-accent" href="/admin/commission">Commission</a> for client-wise totals. Salesmen request a bank transfer; admin sends it.</p>
+
+{% if form_success %}
+<div class="form-success">{{ form_success }}</div>
+{% endif %}
+
+<div class="stats-grid">
+  <div class="stat-card purple">
+    <span class="stat-icon">👛</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(wallet_total) }}</div>
+    <div class="stat-label">{% if locked_executive %}Your wallet{% else %}Wallet available{% endif %}</div>
+    <div class="stat-badge">Not yet requested</div>
+  </div>
+  <div class="stat-card green">
+    <span class="stat-icon">💸</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(commission_tile.total or 0) }}</div>
+    <div class="stat-label">{{ commission_tile.title }}</div>
+    <div class="stat-badge">{{ commission_tile.label }}</div>
+  </div>
+  <div class="stat-card yellow">
+    <span class="stat-icon">📨</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(pending_total or 0) }}</div>
+    <div class="stat-label">Requested</div>
+    <div class="stat-badge">Waiting for admin</div>
+  </div>
+  <div class="stat-card">
+    <span class="stat-icon">🏦</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(withdrawn_total or 0) }}</div>
+    <div class="stat-label">Transferred to bank</div>
+    <div class="stat-badge">Completed</div>
+  </div>
+</div>
+
+<div class="table-card">
+  <div class="table-toolbar">
+    <div>
+      <div class="section-title">Transfer requests</div>
+      <div class="section-subtitle">{% if is_admin %}Approve to send money to the saved bank account{% else %}Waiting for admin to transfer{% endif %}</div>
+    </div>
+    <span class="stat-badge">{{ pending_transfers|length }}</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Salesman</th>
+          <th>Bank</th>
+          <th>Account</th>
+          <th>IFSC</th>
+          <th>Status</th>
+          <th class="td-right">Amount</th>
+          {% if is_admin %}<th></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in pending_transfers %}
+        <tr>
+          <td class="muted">{{ row.created_at }}</td>
+          <td>{{ row.executive_name }}</td>
+          <td>{{ row.bank_name }}<div class="muted">{{ row.account_name }}</div></td>
+          <td>{{ row.account_masked }}</td>
+          <td>{{ row.ifsc }}</td>
+          <td><span class="badge due">Requested</span></td>
+          <td class="td-right amount-green">₹{{ '{:,.0f}'.format(row.amount) }}</td>
+          {% if is_admin %}
+          <td class="td-right">
+            <div class="row-actions">
+              <form action="/admin/wallet/withdrawals/{{ row.id }}/transfer" method="POST">
+                <button type="submit" class="btn btn-primary">Transfer</button>
+              </form>
+              <form action="/admin/wallet/withdrawals/{{ row.id }}/reject" method="POST">
+                <button type="submit" class="btn btn-muted">Reject</button>
+              </form>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="{{ 8 if is_admin else 7 }}">
+            <div class="empty-state">
+              <div class="empty-icon">📨</div>
+              <p>No pending transfer requests.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="breakdown-card form-card">
+  <div class="section-header">
+    <div>
+      <div class="section-title">{% if is_admin %}Transfer wallet to bank{% else %}Request transfer to bank{% endif %}</div>
+      <div class="section-subtitle">{% if is_admin %}Send from wallet now, or transfer a request above{% else %}Amount is held until admin transfers it to your saved account{% endif %}</div>
+    </div>
+  </div>
+  {% if form_error %}
+  <div class="form-error">{{ form_error }}</div>
+  {% endif %}
+  <form action="{% if is_admin %}/admin/wallet/withdraw{% else %}/admin/wallet/request{% endif %}" method="POST">
+    {% if not locked_executive %}
+    <div class="form-group">
+      <label for="sales_executive_id">Salesman</label>
+      <select id="sales_executive_id" name="sales_executive_id" required>
+        <option value="">— Select salesman —</option>
+        {% for e in executives %}
+        {% set saved = banks.get(e.id) %}
+        <option
+          value="{{ e.id }}"
+          data-has-bank="{{ '1' if saved else '0' }}"
+          data-bank-name="{{ saved.bank_name if saved else '' }}"
+          data-account-name="{{ saved.account_name if saved else '' }}"
+          data-account="{{ saved.account_masked if saved else '' }}"
+          data-ifsc="{{ saved.ifsc if saved else '' }}"
+          {% if (form.sales_executive_id and form.sales_executive_id|string == e.id|string) or (not form.sales_executive_id and selected_executive and selected_executive.id == e.id) %}selected{% endif %}
+        >{{ e.name }} — wallet ₹{{ '{:,.0f}'.format(e.wallet_balance or 0) }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% else %}
+    <input type="hidden" name="sales_executive_id" value="{{ locked_executive.id }}">
+    {% endif %}
+    <div class="bank-card {% if not bank %}is-missing{% endif %}" id="savedBankCard">
+      <div class="bank-card-label">Saved bank account</div>
+      <div class="bank-card-body" id="savedBankReady" {% if not bank %}hidden{% endif %}>
+        <strong id="savedBankName">{{ bank.bank_name if bank else '' }}</strong>
+        <div id="savedAccountName">{{ bank.account_name if bank else '' }}</div>
+        <div class="muted"><span id="savedAccount">{{ bank.account_masked if bank else '' }}</span> · <span id="savedIfsc">{{ bank.ifsc if bank else '' }}</span></div>
+      </div>
+      <div class="bank-card-empty" id="savedBankMissing" {% if bank %}hidden{% endif %}>
+        Admin has not saved account number and IFSC for this user. Add them under Users.
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="amount">Amount (₹)</label>
+      <input type="number" id="amount" name="amount" min="1" step="1" value="{{ form.amount if form.amount else '' }}" required>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary" id="withdrawBtn" {% if not bank %}disabled{% endif %}>{% if is_admin %}Transfer now{% else %}Request transfer{% endif %}</button>
+      {% if is_admin %}
+      <a href="/admin/users" class="btn btn-muted">Manage users &amp; bank details</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="table-card">
+  <div class="table-toolbar">
+    <div class="section-title">Bank transfers</div>
+    <div class="section-subtitle">Sent or rejected requests</div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Salesman</th>
+          <th>Bank</th>
+          <th>Account</th>
+          <th>IFSC</th>
+          <th>Status</th>
+          <th class="td-right">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in withdrawals %}
+        <tr>
+          <td class="muted">{{ row.processed_at or row.created_at }}</td>
+          <td>{{ row.executive_name }}</td>
+          <td>{{ row.bank_name }}<div class="muted">{{ row.account_name }}</div></td>
+          <td>{{ row.account_masked }}</td>
+          <td>{{ row.ifsc }}</td>
+          <td>
+            {% if row.status == 'sent' %}<span class="badge active">Transferred</span>
+            {% elif row.status == 'rejected' %}<span class="badge expired">Rejected</span>
+            {% else %}<span class="badge none">{{ row.status_label }}</span>{% endif %}
+          </td>
+          <td class="td-right amount-green">₹{{ '{:,.0f}'.format(row.amount) }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <div class="empty-icon">🏦</div>
+              <p>No bank transfers yet.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var select = document.getElementById("sales_executive_id");
+  if (!select) return;
+  function paint() {
+    var opt = select.options[select.selectedIndex];
+    var ready = document.getElementById("savedBankReady");
+    var missing = document.getElementById("savedBankMissing");
+    var card = document.getElementById("savedBankCard");
+    var btn = document.getElementById("withdrawBtn");
+    var has = opt && opt.dataset.hasBank === "1";
+    if (has) {
+      document.getElementById("savedBankName").textContent = opt.dataset.bankName || "";
+      document.getElementById("savedAccountName").textContent = opt.dataset.accountName || "";
+      document.getElementById("savedAccount").textContent = opt.dataset.account || "";
+      document.getElementById("savedIfsc").textContent = opt.dataset.ifsc || "";
+    }
+    ready.hidden = !has;
+    missing.hidden = has;
+    card.classList.toggle("is-missing", !has);
+    if (btn) btn.disabled = !has;
+  }
+  select.addEventListener("change", paint);
+  paint();
+})();
+</script>
+{% endblock %}

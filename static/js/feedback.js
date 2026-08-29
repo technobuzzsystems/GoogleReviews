@@ -485,7 +485,8 @@ const API = {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || `Server error (${response.status}). Please try again.`);
+        const detail = Array.isArray(data.detail) ? data.detail[0] : data.detail;
+        throw new Error(detail || data.error || `Server error (${response.status}). Please try again.`);
       }
 
       if (!data.suggestions || data.suggestions.length === 0) {

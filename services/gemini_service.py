@@ -11,12 +11,13 @@ Responsibilities:
     - Parse, validate, and sanitize the JSON response.
     - Return a clean list of 10 AI-generated feedback suggestions.
 
-If Gemini cannot generate suggestions, this module raises an error. It does
-not return static fallback responses.
+If Gemini is not configured, this module returns local rating-based
+suggestions so the feedback page still works.
 """
 
 import json
 import logging
+import os
 import re
 import time
 from typing import List
@@ -26,37 +27,126 @@ from google.genai import types
 from google.genai.errors import ClientError, ServerError
 
 from config import get_config
+from dotenv import load_dotenv
 
-config = get_config()
 logger = logging.getLogger(__name__)
-
-# If the primary model is rate-limited or unavailable, try the next one.
-_MODEL_FALLBACK_CHAIN = [
-    config.GEMINI_MODEL,
-    "gemini-2.5-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-flash-latest",
-]
 
 _MAX_RETRIES = 2
 _RETRY_DELAYS = [0.3, 0.5]
 _REQUEST_TIMEOUT = 25
 _TOTAL_BUDGET_SEC = 45
 
+
+def _gemini_api_key() -> str:
+    load_dotenv(override=True)
+    return (os.getenv("GEMINI_API_KEY") or "").strip()
+
+
 def _get_client() -> genai.Client:
-    """Return a Gemini API client. Raises RuntimeError if key is missing."""
-    if not config.GEMINI_API_KEY:
+    """Return a Gemini API client. Reloads .env each time so key changes are picked up."""
+    api_key = _gemini_api_key()
+    if not api_key:
         raise RuntimeError("GEMINI_API_KEY is not set. Please add it to your .env file.")
 
     return genai.Client(
-        api_key=config.GEMINI_API_KEY,
+        api_key=api_key,
         http_options=types.HttpOptions(timeout=_REQUEST_TIMEOUT * 1000),
     )
 
 
+def _cap(text: str) -> str:
+    text = (text or "").strip()
+    return text[:1].upper() + text[1:] if text else text
+
+
+def _example_phrases(business_context: dict, rating: int) -> List[str]:
+    raw = business_context.get(f"examples_{rating}star") or ""
+    phrases = [p.strip() for p in raw.split(",") if p.strip()]
+    return phrases or ["the overall experience"]
+
+
+def _local_suggestions(rating: int, business_context: dict) -> List[str]:
+    """Build 10 usable suggestions when Gemini is not configured."""
+    name = business_context.get("name") or "this business"
+    phrases = _example_phrases(business_context, rating)
+    while len(phrases) < 10:
+        phrases.append(phrases[len(phrases) % max(len(phrases), 1)])
+
+    templates = {
+        1: [
+            "Really disappointed with {name}. {issue} made the visit frustrating and I would not come back.",
+            "Poor experience at {name}. {issue} and nobody seemed interested in fixing it.",
+            "I expected better from {name}. {issue} ruined it for me.",
+            "Not happy at all. {issue} and the whole process felt careless.",
+            "Avoidable problems at {name}. {issue} should never happen.",
+            "Very frustrating visit. {issue} and communication was almost nonexistent.",
+            "This was a letdown. {issue} and I felt ignored when I asked for help.",
+            "Had a bad time at {name}. {issue} and it took too long to get any response.",
+            "Would not recommend {name} right now. {issue} was the main issue.",
+            "One of the worst experiences I have had. {issue} and no follow-up.",
+        ],
+        2: [
+            "It was below average at {name}. {issue} kept getting in the way.",
+            "Not terrible, but {issue} made it hard to feel satisfied.",
+            "I wanted to like {name}, but {issue} pulled the experience down.",
+            "A bit disappointing. {issue} and things felt disorganized.",
+            "Some parts were okay, yet {issue} was hard to ignore.",
+            "Would give it another chance only if they fix {issue}.",
+            "Service was uneven. {issue} stood out more than anything good.",
+            "Left feeling underwhelmed. {issue} took the shine off the visit.",
+            "Needs work. {issue} and the wait made it worse.",
+            "Not what I hoped for at {name}. {issue} was frustrating.",
+        ],
+        3: [
+            "Decent enough at {name}. {issue} kept it from being a clear yes.",
+            "Mixed feelings. Some things were fine, but {issue} held it back.",
+            "Average visit. {issue} and nothing really stood out.",
+            "It was okay. {issue} could have been handled better.",
+            "Not bad, not great. {issue} made the experience feel ordinary.",
+            "Fair experience at {name}. {issue} is the part I would change.",
+            "Would go again if they improve {issue}.",
+            "Middle of the road. Staff tried, but {issue} was noticeable.",
+            "Acceptable overall. {issue} stopped it from being better.",
+            "Three stars because {issue} balanced out the good parts.",
+        ],
+        4: [
+            "Good experience at {name}. Only thing I would tweak is {issue}.",
+            "Pretty happy with the visit. {issue} was a small miss.",
+            "Solid service. {issue} is the one area they could improve.",
+            "I liked {name}. A little more attention to {issue} would make it perfect.",
+            "Went well overall. {issue} was minor compared to the rest.",
+            "Would recommend {name}. Just a note on {issue}.",
+            "Really close to excellent. {issue} is the only nitpick.",
+            "Positive visit. {issue} did not spoil it, but it is worth mentioning.",
+            "Good value and friendly team. {issue} could be smoother next time.",
+            "Enjoyed it. If they sort {issue}, I would give five stars.",
+        ],
+        5: [
+            "Excellent visit to {name}. {highlight} and I will definitely return.",
+            "Loved the experience. {highlight} made it stand out.",
+            "Could not ask for more from {name}. {highlight} was impressive.",
+            "Fantastic from start to finish. {highlight} really showed.",
+            "Highly satisfied. {highlight} and the team was great.",
+            "One of the best experiences I have had. {highlight}.",
+            "So glad I chose {name}. {highlight} exceeded what I expected.",
+            "Five stars without hesitation. {highlight} and very professional.",
+            "Will recommend {name} to others. {highlight} was exactly what I needed.",
+            "Wonderful experience. {highlight} and I left really happy.",
+        ],
+    }
+
+    lines = []
+    for i, template in enumerate(templates[rating]):
+        phrase = phrases[i]
+        lines.append(
+            template.format(name=name, issue=_cap(phrase), highlight=_cap(phrase))
+        )
+    return lines
+
+
 def _build_prompt(rating: int, business_context: dict) -> str:
     """Build a rating-aware prompt for the Gemini model."""
-    company_name = business_context.get("name", config.COMPANY_NAME)
+    company_name = business_context.get("name", "TechnoBuzz")
     scope = business_context.get("scope", "Software development, web design, cloud infrastructure, network architecture, cybersecurity, and managed IT support.")
     
     return f"""
@@ -264,11 +354,25 @@ def generate_feedback_suggestions(rating: int, business_context: dict = None) ->
         raise ValueError(f"Invalid rating '{rating}'. Must be an integer between 1 and 5.")
 
     prompt = _build_prompt(rating, business_context)
+
+    if not _gemini_api_key():
+        logger.warning("GEMINI_API_KEY is not set; returning local suggestions.")
+        return _local_suggestions(rating, business_context)
+
     client = _get_client()
 
+    # Build model list fresh from current config (avoids stale module-level cache)
+    load_dotenv(override=True)
+    _current_config = get_config()
+    _raw_chain = [
+        _current_config.GEMINI_MODEL,
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-flash-latest",
+    ]
     seen = set()
     models = []
-    for model in _MODEL_FALLBACK_CHAIN:
+    for model in _raw_chain:
         if model not in seen:
             seen.add(model)
             models.append(model)
@@ -299,3 +403,138 @@ def generate_feedback_suggestions(rating: int, business_context: dict = None) ->
         last_error,
     )
     raise RuntimeError("AI feedback generation failed. Please try again.") from last_error
+
+
+def _local_star_examples(name: str, scope: str) -> dict:
+    """Phrase lists when Gemini is unavailable — still scoped to the business."""
+    parts = [p.strip(" .") for p in re.split(r"[,;/]|\band\b", scope or "") if len(p.strip()) > 2]
+    services = parts[:5] or ["service", "staff", "quality", "wait time"]
+    s1 = services[0]
+    s2 = services[min(1, len(services) - 1)]
+    s3 = services[min(2, len(services) - 1)]
+    label = (name or "this business").strip() or "this business"
+    return {
+        "examples_1star": (
+            f"terrible {s1}, rude or unhelpful staff at {label}, extremely delayed {s2}, "
+            f"poor quality {s3}, ignored complaints, overpriced with no value"
+        ),
+        "examples_2star": (
+            f"slow {s1}, disorganized {s2}, weak communication, long wait, "
+            f"below-average {s3}, staff seemed uninterested"
+        ),
+        "examples_3star": (
+            f"average {s1}, {s2} was okay but nothing special, mixed {s3}, "
+            f"pricing felt high for what we got, decent but forgettable visit to {label}"
+        ),
+        "examples_4star": (
+            f"good {s1}, helpful staff, solid {s2}, only a small delay on {s3}, "
+            f"would recommend {label} with a minor improvement"
+        ),
+        "examples_5star": (
+            f"excellent {s1}, outstanding {s2}, professional team at {label}, "
+            f"fast and reliable {s3}, would definitely return and recommend"
+        ),
+    }
+
+
+def _normalize_star_examples(data) -> dict:
+    if not isinstance(data, dict):
+        raise ValueError("Expected a JSON object of star examples.")
+    out = {}
+    for i in range(1, 6):
+        val = (
+            data.get(f"examples_{i}star")
+            or data.get(str(i))
+            or data.get(i)
+            or data.get(f"{i}_star")
+            or data.get(f"{i}star")
+        )
+        if isinstance(val, list):
+            val = ", ".join(str(x).strip() for x in val if str(x).strip())
+        text = re.sub(r"\s+", " ", str(val or "")).strip().strip(",")
+        if not text:
+            raise ValueError(f"Missing examples for {i} star.")
+        out[f"examples_{i}star"] = text[:800]
+    return out
+
+
+def generate_star_example_prompts(name: str, scope: str) -> dict:
+    """
+    Generate comma-separated review themes for 1–5 stars from business scope.
+    Used to auto-fill AI Prompt Examples on the add/edit business form.
+    """
+    name = (name or "").strip() or "this business"
+    scope = (scope or "").strip()
+    if len(scope) < 8:
+        raise ValueError("Enter Business Scope & Services first (at least a short description).")
+
+    if not _gemini_api_key():
+        logger.warning("GEMINI_API_KEY is not set; returning local star examples.")
+        return _local_star_examples(name, scope)
+
+    prompt = f"""
+You write short customer-review THEMES (not full reviews) for a Google-review assistant.
+
+Business name: {name}
+Business scope and services:
+{scope}
+
+Return ONLY JSON with these keys:
+"examples_1star", "examples_2star", "examples_3star", "examples_4star", "examples_5star"
+
+Each value is one comma-separated string of 5 to 8 short phrases.
+Phrases must be specific to THIS business's services (not generic "bad service").
+No numbering. No quotes inside phrases. No markdown.
+
+Meaning of each rating:
+- examples_1star: serious complaints (negative)
+- examples_2star: disappointing issues
+- examples_3star: mixed / average
+- examples_4star: mostly good, small improvements
+- examples_5star: enthusiastic praise (positive)
+
+Example shape (do not copy the content):
+{{"examples_1star": "phrase one, phrase two, phrase three", "examples_2star": "...", "examples_3star": "...", "examples_4star": "...", "examples_5star": "..."}}
+""".strip()
+
+    client = _get_client()
+    load_dotenv(override=True)
+    _current_config = get_config()
+    _raw_chain = [
+        _current_config.GEMINI_MODEL,
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-flash-latest",
+    ]
+    seen = set()
+    models = []
+    for model in _raw_chain:
+        if model not in seen:
+            seen.add(model)
+            models.append(model)
+
+    last_error = None
+    for model in models:
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.7,
+                    max_output_tokens=1200,
+                    response_mime_type="application/json",
+                ),
+            )
+            cleaned = re.sub(r"```(?:json)?\s*", "", (response.text or "")).strip()
+            cleaned = cleaned.replace("```", "").strip()
+            data = json.loads(cleaned)
+            examples = _normalize_star_examples(data)
+            logger.info("Generated star example prompts with %s", model)
+            return examples
+        except Exception as e:
+            last_error = e
+            logger.warning("Star examples via %s failed: %s", model, e)
+            continue
+
+    logger.warning("Falling back to local star examples: %s", last_error)
+    return _local_star_examples(name, scope)

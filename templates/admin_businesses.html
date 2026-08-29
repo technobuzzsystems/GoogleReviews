@@ -1,0 +1,122 @@
+{% extends "admin_base.html" %}
+
+{% block topbar_actions %}
+<a href="/admin/businesses/new" class="btn btn-primary">+ Add Business</a>
+{% endblock %}
+
+{% block content %}
+<p class="page-lede">
+  {% if is_admin %}
+  Compact client grid — search and page through thousands of businesses without loading them all.
+  {% else %}
+  Your clients only. Search, open a card to edit, or add a new business.
+  {% endif %}
+</p>
+
+<div class="stats-grid biz-stats">
+  <div class="stat-card">
+    <span class="stat-icon">🏢</span>
+    <div class="stat-value">{{ listing.total }}</div>
+    <div class="stat-label">{% if is_admin %}Total clients{% else %}Your clients{% endif %}</div>
+    <div class="stat-badge">{{ listing.per_page }} / page</div>
+  </div>
+</div>
+
+<div class="table-card biz-grid-wrap">
+  <form class="table-toolbar" method="get" action="/admin/businesses" role="search">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input
+        type="search"
+        name="q"
+        class="search-input"
+        value="{{ search_q }}"
+        placeholder="Search name, mobile, email, ID, or slug…"
+        aria-label="Search businesses"
+        maxlength="80"
+      />
+    </div>
+    <select name="per_page" class="filter-select" aria-label="Cards per page" onchange="this.form.submit()">
+      {% for size in page_sizes %}
+      <option value="{{ size }}" {% if listing.per_page == size %}selected{% endif %}>{{ size }} per page</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-outline">Search</button>
+    {% if search_q %}
+    <a href="/admin/businesses" class="btn btn-muted">Clear</a>
+    {% endif %}
+  </form>
+
+  {% if listing.rows %}
+  <div class="biz-grid">
+    {% for b in listing.rows %}
+    <article class="biz-tile">
+      <div class="biz-tile-top">
+        <h3 class="biz-tile-name" title="{{ b.name }}">{{ b.name }}</h3>
+        {% if b.plan_status == 'active' %}
+        <span class="badge active">Active</span>
+        {% elif b.plan_status == 'expired' %}
+        <span class="badge expired">Expired</span>
+        {% else %}
+        <span class="badge none">No plan</span>
+        {% endif %}
+      </div>
+      <div class="biz-tile-key">{{ b.key }}</div>
+      <div class="biz-tile-meta">
+        <span>{{ b.plan_label or '—' }}{% if b.plan_amount %} · ₹{{ '{:,.0f}'.format(b.plan_amount) }}{% endif %}</span>
+        <span>{{ b.salesman_name or 'Unassigned' }}</span>
+        {% if b.mobile %}<span>📱 {{ b.mobile }}{% if b.alternate_mobile %} · {{ b.alternate_mobile }}{% endif %}</span>{% endif %}
+        {% if b.email %}<span>{{ b.email }}</span>{% endif %}
+        <span>{{ b.join_date or '—' }} → {{ b.expiry_date or '—' }}</span>
+        {% if b.feedback_path %}<span class="biz-tile-url">{{ b.feedback_path }}</span>{% endif %}
+      </div>
+      <div class="biz-tile-actions">
+        <a class="biz-tile-link ghost" href="{{ b.feedback_path or '/feedback' }}" target="_blank" rel="noopener">Open page</a>
+        <a class="biz-tile-link" href="/admin/businesses/{{ b.key }}/edit">Edit</a>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+
+  <div class="pagination">
+    <div class="pagination-info">
+      Showing {{ listing.start }}–{{ listing.end }} of {{ listing.total }}
+    </div>
+    <div class="pagination-btns">
+      {% if listing.page > 1 %}
+      <a class="page-btn" href="/admin/businesses?q={{ search_q|urlencode }}&amp;per_page={{ listing.per_page }}&amp;page={{ listing.page - 1 }}">‹</a>
+      {% else %}
+      <span class="page-btn" aria-disabled="true">‹</span>
+      {% endif %}
+      {% for p in listing.page_numbers %}
+        {% if p == '…' %}
+        <span class="page-ellipsis">…</span>
+        {% elif p == listing.page %}
+        <span class="page-btn active">{{ p }}</span>
+        {% else %}
+        <a class="page-btn" href="/admin/businesses?q={{ search_q|urlencode }}&amp;per_page={{ listing.per_page }}&amp;page={{ p }}">{{ p }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if listing.page < listing.pages %}
+      <a class="page-btn" href="/admin/businesses?q={{ search_q|urlencode }}&amp;per_page={{ listing.per_page }}&amp;page={{ listing.page + 1 }}">›</a>
+      {% else %}
+      <span class="page-btn" aria-disabled="true">›</span>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">🏢</div>
+    <p>
+      {% if search_q %}
+      No clients match “{{ search_q }}”.
+      {% elif is_admin %}
+      No businesses yet. Add one to start collecting reviews.
+      {% else %}
+      You have no clients yet. Click “+ Add Business” to register one under your name.
+      {% endif %}
+    </p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,162 @@
+{% extends "admin_base.html" %}
+
+{% block topbar_actions %}
+<a href="/admin/wallet" class="btn btn-outline">{% if is_admin %}Transfer to bank{% else %}Request transfer{% endif %}</a>
+{% endblock %}
+
+{% block content %}
+<p class="page-lede">
+  {% if is_admin %}
+  Company commission by client. Filter by year, or pick a month for that year’s month-wise view.
+  {% else %}
+  Your commission by client for the selected month or year.
+  {% endif %}
+</p>
+
+<form class="table-toolbar commission-filters" method="get" action="/admin/commission">
+  <input type="hidden" name="page" value="1">
+  <label class="filter-field">
+    <span>Year</span>
+    <select name="year" class="filter-select" onchange="this.form.submit()">
+      {% for y in report.year_options %}
+      <option value="{{ y }}" {% if report.year == y %}selected{% endif %}>{{ y }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="filter-field">
+    <span>Month</span>
+    <select name="month" class="filter-select" onchange="this.form.submit()">
+      <option value="0" {% if report.month == 0 %}selected{% endif %}>All months (year total)</option>
+      {% for m in report.months %}
+      <option value="{{ m.value }}" {% if report.month == m.value %}selected{% endif %}>{{ m.label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="filter-field">
+    <span>Per page</span>
+    <select name="per_page" class="filter-select" onchange="this.form.submit()">
+      {% for size in report.page_sizes %}
+      <option value="{{ size }}" {% if report.per_page == size %}selected{% endif %}>{{ size }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <span class="stat-badge">{{ report.period_label }}</span>
+</form>
+
+<div class="stats-grid">
+  <div class="stat-card green">
+    <span class="stat-icon">💸</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(report.totals.total) }}</div>
+    <div class="stat-label">{% if is_admin %}Total commission{% else %}Your commission{% endif %}</div>
+    <div class="stat-badge">{{ report.period_label }}</div>
+  </div>
+  <div class="stat-card">
+    <span class="stat-icon">📋</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(report.totals.plan) }}</div>
+    <div class="stat-label">Plan commission</div>
+    <div class="stat-badge">10% of plans</div>
+  </div>
+  <div class="stat-card">
+    <span class="stat-icon">📒</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(report.totals.bookings) }}</div>
+    <div class="stat-label">Booking commission</div>
+    <div class="stat-badge">Sales book</div>
+  </div>
+  <div class="stat-card">
+    <span class="stat-icon">🏢</span>
+    <div class="stat-value">{{ report.totals.clients }}</div>
+    <div class="stat-label">Clients</div>
+    <div class="stat-badge">With commission</div>
+  </div>
+</div>
+
+<div class="table-card">
+  <div class="table-toolbar">
+    <div>
+      <div class="section-title">Client-wise commission</div>
+      <div class="section-subtitle">{{ report.period_label }} · total ₹{{ '{:,.0f}'.format(report.totals.total) }}{% if report.totals.clients %} · {{ report.start }}–{{ report.end }} of {{ report.totals.clients }}{% endif %}</div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Client</th>
+          {% if is_admin %}<th>Salesman</th>{% endif %}
+          <th class="td-right">Base amount</th>
+          <th class="td-right">Plan</th>
+          <th class="td-right">Bookings</th>
+          <th class="td-right">Total commission</th>
+          <th class="td-right">Entries</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report.rows %}
+        <tr>
+          <td>
+            <strong>{{ row.name }}</strong>
+            <div class="muted">{{ row.business_key }}</div>
+          </td>
+          {% if is_admin %}<td>{{ row.salesman_name }}</td>{% endif %}
+          <td class="td-right">₹{{ '{:,.0f}'.format(row.base_amount) }}</td>
+          <td class="td-right">₹{{ '{:,.0f}'.format(row.plan) }}</td>
+          <td class="td-right">₹{{ '{:,.0f}'.format(row.bookings) }}</td>
+          <td class="td-right amount-green">₹{{ '{:,.0f}'.format(row.total) }}</td>
+          <td class="td-right">{{ row.credits }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="{{ 7 if is_admin else 6 }}">
+            <div class="empty-state">
+              <div class="empty-icon">💸</div>
+              <p>No commission in {{ report.period_label }}.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if report.rows %}
+      <tfoot>
+        <tr>
+          <th>Total</th>
+          {% if is_admin %}<th></th>{% endif %}
+          <th class="td-right">₹{{ '{:,.0f}'.format(report.totals.base_amount) }}</th>
+          <th class="td-right">₹{{ '{:,.0f}'.format(report.totals.plan) }}</th>
+          <th class="td-right">₹{{ '{:,.0f}'.format(report.totals.bookings) }}</th>
+          <th class="td-right amount-green">₹{{ '{:,.0f}'.format(report.totals.total) }}</th>
+          <th></th>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+  {% if report.totals.clients %}
+  <div class="pagination">
+    <div class="pagination-info">
+      Showing {{ report.start }}–{{ report.end }} of {{ report.totals.clients }} clients
+    </div>
+    <div class="pagination-btns">
+      {% if report.page > 1 %}
+      <a class="page-btn" href="/admin/commission?year={{ report.year }}&amp;month={{ report.month }}&amp;per_page={{ report.per_page }}&amp;page={{ report.page - 1 }}">‹</a>
+      {% else %}
+      <span class="page-btn" aria-disabled="true">‹</span>
+      {% endif %}
+      {% for p in report.page_numbers %}
+        {% if p == '…' %}
+        <span class="page-ellipsis">…</span>
+        {% elif p == report.page %}
+        <span class="page-btn active">{{ p }}</span>
+        {% else %}
+        <a class="page-btn" href="/admin/commission?year={{ report.year }}&amp;month={{ report.month }}&amp;per_page={{ report.per_page }}&amp;page={{ p }}">{{ p }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if report.page < report.pages %}
+      <a class="page-btn" href="/admin/commission?year={{ report.year }}&amp;month={{ report.month }}&amp;per_page={{ report.per_page }}&amp;page={{ report.page + 1 }}">›</a>
+      {% else %}
+      <span class="page-btn" aria-disabled="true">›</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

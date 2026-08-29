@@ -1,977 +1,151 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Dashboard — TechnoBuzz Feedback</title>
-  <meta name="robots" content="noindex, nofollow" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <style>
-    /* ═══════════════════════════════════════════════════
-       DESIGN TOKENS
-       ═══════════════════════════════════════════════════ */
-    :root {
-      --bg-base:      #060D1A;
-      --bg-card:      #0D1B2A;
-      --bg-card-2:    #112236;
-      --bg-hover:     #162B40;
-      --border:       #1E3A50;
-      --border-light: #244560;
-      --accent:       #00B4D8;
-      --accent-2:     #0077A8;
-      --accent-glow:  rgba(0,180,216,0.18);
-      --green:        #00C896;
-      --yellow:       #FFB830;
-      --red:          #FF5C6A;
-      --purple:       #A78BFA;
-      --text-1:       #E8F4FD;
-      --text-2:       #7A9BB5;
-      --text-3:       #3E6480;
-      --radius:       14px;
-      --radius-sm:    8px;
-      --shadow:       0 4px 24px rgba(0,0,0,0.4);
-      --shadow-lg:    0 8px 48px rgba(0,0,0,0.6);
-      --transition:   0.2s ease;
-    }
+{% extends "admin_base.html" %}
+{% block title %}{{ page_title }} — TechnoBuzz{% endblock %}
 
-    /* ═══════════════════════════════════════════════════
-       RESET & BASE
-       ═══════════════════════════════════════════════════ */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+{% block topbar_title %}Overview{% endblock %}
 
-    html { scroll-behavior: smooth; }
+{% block topbar_extra %}
+<span class="biz-chip" title="Selected client">{{ company_name }}</span>
+{% if can_manage_businesses %}
+<a href="/admin/businesses" class="btn btn-outline">Switch client</a>
+{% endif %}
+{% endblock %}
 
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg-base);
-      color: var(--text-1);
-      min-height: 100vh;
-      line-height: 1.6;
-    }
+{% block topbar_actions %}
+{% if can_view_sales_book %}
+<a href="/admin/commission" class="btn btn-outline">Commission</a>
+<a href="/admin/wallet" class="btn btn-outline">{% if is_admin %}Transfer to bank{% else %}Request transfer{% endif %}</a>
+{% endif %}
+<a href="/admin" class="btn btn-primary">↻ Refresh</a>
+{% endblock %}
 
-    /* ═══════════════════════════════════════════════════
-       LAYOUT
-       ═══════════════════════════════════════════════════ */
-    .layout { display: flex; min-height: 100vh; }
+{% block content %}
+<p class="page-lede">Renewals, unpaid clients, and wallet summary{% if not is_admin %} for your book{% endif %}.</p>
 
-    /* ── Sidebar ─────────────────────────────────────── */
-    .sidebar {
-      width: 240px;
-      min-height: 100vh;
-      background: var(--bg-card);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      position: fixed;
-      top: 0; left: 0; bottom: 0;
-      z-index: 100;
-      transition: transform var(--transition);
-    }
-
-    .sidebar-brand {
-      padding: 28px 24px 20px;
-      border-bottom: 1px solid var(--border);
-    }
-    .sidebar-logo {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .sidebar-logo img {
-      width: 36px; height: 36px;
-      border-radius: 8px;
-      object-fit: cover;
-    }
-    .sidebar-logo-text {
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--text-1);
-      letter-spacing: 0.02em;
-    }
-    .sidebar-logo-sub {
-      font-size: 0.7rem;
-      color: var(--text-3);
-      margin-top: 1px;
-    }
-
-    .sidebar-nav {
-      padding: 16px 12px;
-      flex: 1;
-    }
-    .nav-label {
-      font-size: 0.65rem;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--text-3);
-      padding: 8px 12px 4px;
-    }
-    .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: var(--radius-sm);
-      color: var(--text-2);
-      font-size: 0.875rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all var(--transition);
-      text-decoration: none;
-      margin-bottom: 2px;
-    }
-    .nav-item:hover { background: var(--bg-hover); color: var(--text-1); }
-    .nav-item.active {
-      background: var(--accent-glow);
-      color: var(--accent);
-      border: 1px solid rgba(0,180,216,0.2);
-    }
-    .nav-icon { font-size: 1.1rem; width: 20px; text-align: center; }
-
-    .sidebar-footer {
-      padding: 16px;
-      border-top: 1px solid var(--border);
-    }
-    .sidebar-footer a {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 12px;
-      border-radius: var(--radius-sm);
-      color: var(--text-2);
-      font-size: 0.8rem;
-      text-decoration: none;
-      transition: all var(--transition);
-    }
-    .sidebar-footer a:hover { background: var(--bg-hover); color: var(--accent); }
-
-    /* ── Main Content ─────────────────────────────────── */
-    .main {
-      margin-left: 240px;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-
-    /* ── Top Bar ──────────────────────────────────────── */
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      background: rgba(6,13,26,0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-      padding: 16px 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .topbar-title {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text-1);
-    }
-    .topbar-actions { display: flex; align-items: center; gap: 12px; }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 18px;
-      border-radius: var(--radius-sm);
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      transition: all var(--transition);
-      text-decoration: none;
-    }
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      color: #fff;
-    }
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 16px rgba(0,180,216,0.4);
-    }
-    .btn-outline {
-      background: transparent;
-      color: var(--text-2);
-      border: 1px solid var(--border);
-    }
-    .btn-outline:hover { background: var(--bg-card-2); color: var(--text-1); }
-
-    /* ── Page Body ────────────────────────────────────── */
-    .page-body { padding: 32px; flex: 1; }
-
-    /* ── Section Headers ──────────────────────────────── */
-    .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
-    .section-title {
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--text-1);
-    }
-    .section-subtitle {
-      font-size: 0.8rem;
-      color: var(--text-3);
-      margin-top: 2px;
-    }
-
-    /* ═══════════════════════════════════════════════════
-       STATS CARDS
-       ═══════════════════════════════════════════════════ */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-bottom: 32px;
-    }
-
-    .stat-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      position: relative;
-      overflow: hidden;
-      transition: all var(--transition);
-    }
-    .stat-card:hover {
-      border-color: var(--border-light);
-      transform: translateY(-2px);
-      box-shadow: var(--shadow);
-    }
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      background: var(--accent-color, var(--accent));
-      border-radius: var(--radius) var(--radius) 0 0;
-    }
-    .stat-card.green { --accent-color: var(--green); }
-    .stat-card.yellow { --accent-color: var(--yellow); }
-    .stat-card.red { --accent-color: var(--red); }
-    .stat-card.purple { --accent-color: var(--purple); }
-
-    .stat-icon {
-      font-size: 1.8rem;
-      margin-bottom: 12px;
-      display: block;
-    }
-    .stat-value {
-      font-size: 2.2rem;
-      font-weight: 800;
-      color: var(--text-1);
-      line-height: 1;
-      margin-bottom: 6px;
-    }
-    .stat-label {
-      font-size: 0.8rem;
-      color: var(--text-2);
-      font-weight: 500;
-    }
-    .stat-badge {
-      position: absolute;
-      top: 20px; right: 20px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      padding: 3px 8px;
-      border-radius: 99px;
-      background: rgba(0,180,216,0.12);
-      color: var(--accent);
-    }
-
-    /* ═══════════════════════════════════════════════════
-       RATING BREAKDOWN BAR CHART
-       ═══════════════════════════════════════════════════ */
-    .breakdown-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      margin-bottom: 32px;
-    }
-
-    .rating-bars { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
-
-    .rating-row {
-      display: grid;
-      grid-template-columns: 64px 1fr 48px;
-      align-items: center;
-      gap: 12px;
-    }
-    .rating-stars {
-      font-size: 0.8rem;
-      color: var(--text-2);
-      white-space: nowrap;
-    }
-    .bar-track {
-      height: 10px;
-      background: var(--bg-hover);
-      border-radius: 99px;
-      overflow: hidden;
-    }
-    .bar-fill {
-      height: 100%;
-      border-radius: 99px;
-      transition: width 0.8s cubic-bezier(.4,0,.2,1);
-      width: 0%;
-    }
-    .bar-fill.r5 { background: var(--green); }
-    .bar-fill.r4 { background: var(--accent); }
-    .bar-fill.r3 { background: var(--yellow); }
-    .bar-fill.r2 { background: #FF8C42; }
-    .bar-fill.r1 { background: var(--red); }
-
-    .bar-count {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--text-2);
-      text-align: right;
-    }
-
-    /* ═══════════════════════════════════════════════════
-       FEEDBACK TABLE SECTION
-       ═══════════════════════════════════════════════════ */
-    .table-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-
-    .table-toolbar {
-      padding: 20px 24px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .search-box {
-      position: relative;
-      flex: 1;
-      min-width: 200px;
-    }
-    .search-icon {
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-3);
-      font-size: 0.9rem;
-      pointer-events: none;
-    }
-    .search-input {
-      width: 100%;
-      padding: 9px 12px 9px 36px;
-      background: var(--bg-base);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--text-1);
-      font-size: 0.875rem;
-      font-family: inherit;
-      outline: none;
-      transition: border-color var(--transition);
-    }
-    .search-input::placeholder { color: var(--text-3); }
-    .search-input:focus { border-color: var(--accent); }
-
-    .filter-select {
-      padding: 9px 32px 9px 12px;
-      background: var(--bg-base);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--text-1);
-      font-size: 0.875rem;
-      font-family: inherit;
-      outline: none;
-      appearance: none;
-      cursor: pointer;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237A9BB5' stroke-width='2'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 10px center;
-      transition: border-color var(--transition);
-    }
-    .filter-select:focus { border-color: var(--accent); }
-
-    /* Table */
-    .table-wrap { overflow-x: auto; }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.875rem;
-    }
-    thead tr {
-      background: var(--bg-card-2);
-      border-bottom: 1px solid var(--border);
-    }
-    th {
-      padding: 12px 20px;
-      text-align: left;
-      font-size: 0.72rem;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--text-3);
-    }
-    tbody tr {
-      border-bottom: 1px solid var(--border);
-      transition: background var(--transition);
-    }
-    tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: var(--bg-hover); }
-    td { padding: 14px 20px; vertical-align: middle; }
-    td.muted { color: var(--text-3); font-size: 0.8rem; }
-
-    /* Star badge in table */
-    .star-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 4px 10px;
-      border-radius: 99px;
-      font-size: 0.78rem;
-      font-weight: 700;
-    }
-    .star-badge.r5 { background: rgba(0,200,150,0.12); color: var(--green); }
-    .star-badge.r4 { background: rgba(0,180,216,0.12); color: var(--accent); }
-    .star-badge.r3 { background: rgba(255,184,48,0.12); color: var(--yellow); }
-    .star-badge.r2 { background: rgba(255,140,66,0.12); color: #FF8C42; }
-    .star-badge.r1 { background: rgba(255,92,106,0.12); color: var(--red); }
-
-    /* Feedback text */
-    .feedback-text {
-      color: var(--text-1);
-      max-width: 360px;
-    }
-
-    /* Empty state */
-    .empty-state {
-      text-align: center;
-      padding: 64px 32px;
-      color: var(--text-3);
-    }
-    .empty-state .empty-icon { font-size: 3rem; margin-bottom: 16px; }
-    .empty-state p { font-size: 0.9rem; }
-
-    /* Loading state */
-    .table-loading {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      padding: 48px;
-      color: var(--text-3);
-      font-size: 0.9rem;
-    }
-
-    /* ── Pagination ──────────────────────────────────── */
-    .pagination {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 24px;
-      border-top: 1px solid var(--border);
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .pagination-info { font-size: 0.8rem; color: var(--text-3); }
-    .pagination-btns { display: flex; gap: 6px; }
-    .page-btn {
-      min-width: 36px;
-      height: 36px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0 10px;
-      border-radius: var(--radius-sm);
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text-2);
-      font-size: 0.82rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all var(--transition);
-    }
-    .page-btn:hover { background: var(--bg-card-2); color: var(--text-1); }
-    .page-btn.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-    }
-    .page-btn:disabled {
-      opacity: 0.35;
-      cursor: not-allowed;
-    }
-
-    /* ── Spinner ─────────────────────────────────────── */
-    .spinner {
-      width: 20px; height: 20px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      flex-shrink: 0;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── Refresh indicator ───────────────────────────── */
-    .refresh-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--green);
-      display: inline-block;
-      animation: pulse-dot 2s ease infinite;
-    }
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50%       { opacity: 0.4; transform: scale(0.75); }
-    }
-
-    /* ═══════════════════════════════════════════════════
-       RESPONSIVE
-       ═══════════════════════════════════════════════════ */
-    @media (max-width: 768px) {
-      .sidebar { transform: translateX(-100%); }
-      .main { margin-left: 0; }
-      .page-body { padding: 20px 16px; }
-      .topbar { padding: 14px 16px; }
-    }
-  </style>
-</head>
-
-<body>
-<div class="layout">
-
-  <!-- ════════════════════════════════════════════════════
-       SIDEBAR
-       ════════════════════════════════════════════════════ -->
-  <aside class="sidebar" role="navigation" aria-label="Admin navigation">
-
-    <div class="sidebar-brand">
-      <div class="sidebar-logo">
-        <img src="{{ url_for('static', filename='images/technobuzz_logo.jpg') }}" alt="TechnoBuzz Logo" />
-        <div>
-          <div class="sidebar-logo-text">{{ company_name }}</div>
-          <div class="sidebar-logo-sub">Admin Panel</div>
-        </div>
-      </div>
+<div class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-icon">🏢</span>
+    <div class="stat-value">{{ overview_counts.clients }}</div>
+    <div class="stat-label">{% if is_admin %}Total clients{% else %}Your clients{% endif %}</div>
+    <div class="stat-badge">Active book</div>
+  </div>
+  <div class="stat-card yellow">
+    <span class="stat-icon">🔁</span>
+    <div class="stat-value">{{ renewals.total }}</div>
+    <div class="stat-label">Renewal due</div>
+    <div class="stat-badge">Due in 60 days</div>
+  </div>
+  <div class="stat-card red">
+    <span class="stat-icon">⏳</span>
+    <div class="stat-value">{{ pending.total }}</div>
+    <div class="stat-label">Payment remaining</div>
+    <div class="stat-badge">₹{{ '{:,.0f}'.format(pending.amount_due or 0) }} due</div>
+  </div>
+  <div class="stat-card green">
+    <span class="stat-icon">💸</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(commission_tile.total or 0) }}</div>
+    <div class="stat-label">{{ commission_tile.title }}</div>
+    <div class="stat-badge">{{ commission_tile.label }}</div>
+    <div class="stat-split">
+      <span>Plans ₹{{ '{:,.0f}'.format(commission_tile.plans or 0) }}</span>
+      <span>Bookings ₹{{ '{:,.0f}'.format(commission_tile.bookings or 0) }}</span>
     </div>
+  </div>
+  {% if can_view_sales_book %}
+  <div class="stat-card purple">
+    <span class="stat-icon">👛</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(overview_counts.wallet_balance or 0) }}</div>
+    <div class="stat-label">{% if is_admin %}Wallet balance{% else %}Your wallet{% endif %}</div>
+    {% if overview_counts.pending_transfer %}
+    <div class="stat-badge">₹{{ '{:,.0f}'.format(overview_counts.pending_transfer) }} requested</div>
+    {% else %}
+    <div class="stat-badge">In wallet · request transfer</div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
 
-    <nav class="sidebar-nav">
-      <div class="nav-label">Dashboard</div>
-      <a href="/admin" class="nav-item active" id="navDashboard">
-        <span class="nav-icon">📊</span> Overview
-      </a>
-
-      <div class="nav-label" style="margin-top:12px">Actions</div>
-      <a href="/admin/api/export?business={{ business_id }}" class="nav-item" id="navExport" download>
-        <span class="nav-icon">📥</span> Export CSV
-      </a>
-      <a href="/{% if business_id == 'technobuzz' %}feedback{% else %}{{ business_id }}{% endif %}" target="_blank" class="nav-item">
-        <span class="nav-icon">🔗</span> Feedback Page
-      </a>
-    </nav>
-
-    <div class="sidebar-footer">
-      <a href="/{% if business_id == 'technobuzz' %}feedback{% else %}{{ business_id }}{% endif %}" target="_blank">
-        <span>⚡</span> {{ company_name }}
-      </a>
+<div class="overview-split">
+  <section class="table-card">
+    <div class="table-toolbar">
+      <div>
+        <div class="section-title">Renewal clients</div>
+        <div class="section-subtitle">Expired, due in 60 days, or next upcoming plan dates</div>
+      </div>
+      <span class="stat-badge">{{ renewals.total }}</span>
     </div>
+    {% if renewals.rows %}
+    <div class="biz-grid overview-grid">
+      {% for b in renewals.rows %}
+      <article class="biz-tile">
+        <div class="biz-tile-top">
+          <h3 class="biz-tile-name" title="{{ b.name }}">{{ b.name }}</h3>
+          {% if b.overdue %}
+          <span class="badge expired">Expired</span>
+          {% elif b.due_soon %}
+          <span class="badge due">Due</span>
+          {% else %}
+          <span class="badge none">Upcoming</span>
+          {% endif %}
+        </div>
+        <div class="biz-tile-key">{{ b.due_label }}</div>
+        <div class="biz-tile-meta">
+          <span>{{ b.plan_label }}{% if b.plan_amount %} · ₹{{ '{:,.0f}'.format(b.plan_amount) }}{% endif %}</span>
+          <span>{{ b.salesman_name }}</span>
+          {% if b.mobile %}<span>📱 {{ b.mobile }}</span>{% endif %}
+          <span>Expires {{ b.expiry_date or '—' }}</span>
+        </div>
+        {% if can_manage_businesses %}
+        <div class="biz-tile-actions">
+          <a class="biz-tile-link" href="/admin/businesses/{{ b.key }}/edit">Renew plan</a>
+        </div>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">✅</div>
+      <p>No renewals due right now.</p>
+    </div>
+    {% endif %}
+  </section>
 
-  </aside>
-
-  <!-- ════════════════════════════════════════════════════
-       MAIN
-       ════════════════════════════════════════════════════ -->
-  <div class="main">
-
-    <!-- Top Bar -->
-    <header class="topbar">
-      <div style="display: flex; align-items: center; gap: 16px;">
-        <div class="topbar-title">Feedback Overview</div>
-        <select id="businessSelector" class="filter-select" aria-label="Select Business" onchange="window.location.href='?business=' + this.value">
-          {% for b_id, b_data in businesses.items() %}
-          <option value="{{ b_id }}" {% if business_id == b_id %}selected{% endif %}>{{ b_data.name }}</option>
-          {% endfor %}
-        </select>
+  <section class="table-card">
+    <div class="table-toolbar">
+      <div>
+        <div class="section-title">Payment remaining</div>
+        <div class="section-subtitle">Collected amount is still short of the booking value</div>
       </div>
-      <div class="topbar-actions">
-        <span class="refresh-dot" title="Live data"></span>
-        <button class="btn btn-outline" id="btnRefresh" onclick="loadAll()">
-          ↻ Refresh
-        </button>
-        <a href="/admin/api/export?business={{ business_id }}" class="btn btn-primary" download>
-          📥 Export CSV
-        </a>
-      </div>
-    </header>
-
-    <!-- Page Body -->
-    <div class="page-body">
-
-      <!-- ── Stats Grid ─────────────────────────────── -->
-      <div class="stats-grid">
-
-        <div class="stat-card">
-          <span class="stat-icon">💬</span>
-          <div class="stat-value" id="statTotal">—</div>
-          <div class="stat-label">Total Responses</div>
-          <div class="stat-badge">All time</div>
+      <span class="stat-badge">₹{{ '{:,.0f}'.format(pending.amount_due or 0) }}</span>
+    </div>
+    {% if pending.rows %}
+    <div class="biz-grid overview-grid">
+      {% for b in pending.rows %}
+      <article class="biz-tile">
+        <div class="biz-tile-top">
+          <h3 class="biz-tile-name" title="{{ b.name }}">{{ b.name }}</h3>
+          <span class="badge none">₹{{ '{:,.0f}'.format(b.remaining) }} due</span>
         </div>
-
-        <div class="stat-card green">
-          <span class="stat-icon">⭐</span>
-          <div class="stat-value" id="statAvg">—</div>
-          <div class="stat-label">Average Rating</div>
-          <div class="stat-badge">Out of 5.0</div>
+        <div class="biz-tile-key">{{ b.booking_type|capitalize }} · {{ b.booked_on or '—' }}</div>
+        <div class="biz-tile-meta">
+          <span>Bill ₹{{ '{:,.0f}'.format(b.amount) }} · Paid ₹{{ '{:,.0f}'.format(b.collected) }}</span>
+          <span>{{ b.salesman_name }}</span>
+          {% if b.mobile %}<span>📱 {{ b.mobile }}</span>{% endif %}
         </div>
-
-        <div class="stat-card yellow">
-          <span class="stat-icon">🏆</span>
-          <div class="stat-value" id="statBest">—</div>
-          <div class="stat-label">5-Star Reviews</div>
-          <div class="stat-badge">Excellent</div>
+        {% if can_view_sales_book %}
+        <div class="biz-tile-actions">
+          <a class="biz-tile-link ghost" href="/admin/sales-book?business={{ b.business_key }}">Sales book</a>
         </div>
-
-        <div class="stat-card red">
-          <span class="stat-icon">⚠️</span>
-          <div class="stat-value" id="statLow">—</div>
-          <div class="stat-label">1-Star Reviews</div>
-          <div class="stat-badge">Needs Action</div>
-        </div>
-
-      </div>
-
-      <!-- ── Rating Breakdown ───────────────────────── -->
-      <div class="breakdown-card">
-        <div class="section-header">
-          <div>
-            <div class="section-title">Rating Breakdown</div>
-            <div class="section-subtitle">Distribution of all feedback by star rating</div>
-          </div>
-        </div>
-        <div class="rating-bars" id="ratingBars">
-          <!-- Injected by JS -->
-          <div class="table-loading"><div class="spinner"></div> Loading breakdown…</div>
-        </div>
-      </div>
-
-      <!-- ── Feedback Table ─────────────────────────── -->
-      <div class="table-card">
-
-        <!-- Toolbar -->
-        <div class="table-toolbar">
-          <div class="search-box">
-            <span class="search-icon">🔍</span>
-            <input
-              type="text"
-              id="searchInput"
-              class="search-input"
-              placeholder="Search feedback…"
-              aria-label="Search feedback"
-            />
-          </div>
-
-          <select id="ratingFilter" class="filter-select" aria-label="Filter by rating">
-            <option value="">All Ratings</option>
-            <option value="5">⭐⭐⭐⭐⭐ 5 Stars</option>
-            <option value="4">⭐⭐⭐⭐ 4 Stars</option>
-            <option value="3">⭐⭐⭐ 3 Stars</option>
-            <option value="2">⭐⭐ 2 Stars</option>
-            <option value="1">⭐ 1 Star</option>
-          </select>
-
-          <select id="limitFilter" class="filter-select" aria-label="Records per page">
-            <option value="10">10 per page</option>
-            <option value="20">20 per page</option>
-            <option value="50">50 per page</option>
-          </select>
-        </div>
-
-        <!-- Table -->
-        <div class="table-wrap">
-          <table role="table" aria-label="Feedback records">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Rating</th>
-                <th>Feedback</th>
-                <th>Date</th>
-                <th>Time</th>
-              </tr>
-            </thead>
-            <tbody id="tableBody">
-              <tr>
-                <td colspan="5">
-                  <div class="table-loading">
-                    <div class="spinner"></div> Loading feedback…
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Pagination -->
-        <div class="pagination" id="paginationBar">
-          <div class="pagination-info" id="paginationInfo">—</div>
-          <div class="pagination-btns" id="paginationBtns"></div>
-        </div>
-
-      </div><!-- /table-card -->
-    </div><!-- /page-body -->
-  </div><!-- /main -->
-</div><!-- /layout -->
-
-
-<!-- ════════════════════════════════════════════════════
-     ADMIN DASHBOARD JAVASCRIPT
-     ════════════════════════════════════════════════════ -->
-<script>
-'use strict';
-
-/* ── State ──────────────────────────────────────────── */
-let currentPage   = 1;
-let totalPages    = 1;
-let searchTimeout = null;
-let stats         = {};
-
-/* ── DOM shortcuts ──────────────────────────────────── */
-const $ = id => document.getElementById(id);
-
-/* ── Stars helpers ──────────────────────────────────── */
-const STAR_LABELS = { 5:'⭐⭐⭐⭐⭐', 4:'⭐⭐⭐⭐', 3:'⭐⭐⭐', 2:'⭐⭐', 1:'⭐' };
-
-function starBadge(r) {
-  return `<span class="star-badge r${r}">${STAR_LABELS[r] || r} ${r}/5</span>`;
-}
-
-/* ═══════════════════════════════════════════════════════
-   LOAD STATS
-   ═══════════════════════════════════════════════════════ */
-async function loadStats() {
-  try {
-    const business = new URLSearchParams(window.location.search).get('business') || 'technobuzz';
-    const res  = await fetch(`/admin/api/stats?business=${business}`);
-    const data = await res.json();
-    stats = data;
-
-    $('statTotal').textContent = data.total ?? '—';
-    $('statAvg').textContent   = data.average_rating ? data.average_rating.toFixed(1) : '—';
-    $('statBest').textContent  = data.by_rating?.['5'] ?? '—';
-    $('statLow').textContent   = data.by_rating?.['1'] ?? '—';
-
-    renderBreakdown(data);
-  } catch (e) {
-    console.error('loadStats error:', e);
-  }
-}
-
-/* ═══════════════════════════════════════════════════════
-   RENDER RATING BREAKDOWN BARS
-   ═══════════════════════════════════════════════════════ */
-function renderBreakdown(data) {
-  const container = $('ratingBars');
-  const total     = data.total || 1;
-  const byRating  = data.by_rating || {};
-
-  const rows = [5, 4, 3, 2, 1].map(r => {
-    const count = byRating[String(r)] || 0;
-    const pct   = total > 0 ? Math.round((count / total) * 100) : 0;
-    return `
-      <div class="rating-row">
-        <div class="rating-stars">${STAR_LABELS[r]}</div>
-        <div class="bar-track">
-          <div class="bar-fill r${r}" data-pct="${pct}" style="width:0%"></div>
-        </div>
-        <div class="bar-count">${count}</div>
-      </div>`;
-  });
-
-  container.innerHTML = rows.join('');
-
-  // Animate bars after DOM insertion
-  requestAnimationFrame(() => {
-    container.querySelectorAll('.bar-fill').forEach(el => {
-      el.style.width = el.dataset.pct + '%';
-    });
-  });
-}
-
-/* ═══════════════════════════════════════════════════════
-   LOAD FEEDBACK TABLE
-   ═══════════════════════════════════════════════════════ */
-async function loadFeedback(page = 1) {
-  currentPage = page;
-  const search = $('searchInput').value.trim();
-  const rating = $('ratingFilter').value;
-  const limit  = $('limitFilter').value;
-  const business = new URLSearchParams(window.location.search).get('business') || 'technobuzz';
-
-  const params = new URLSearchParams({ page, limit, business });
-  if (search) params.set('search', search);
-  if (rating) params.set('rating', rating);
-
-  // Show loading
-  $('tableBody').innerHTML = `
-    <tr><td colspan="5">
-      <div class="table-loading">
-        <div class="spinner"></div> Loading…
-      </div>
-    </td></tr>`;
-
-  try {
-    const res  = await fetch(`/admin/api/feedback?${params}`);
-    const data = await res.json();
-
-    renderTable(data, page, limit);
-    renderPagination(data.total, data.pages, page, limit);
-  } catch (e) {
-    console.error('loadFeedback error:', e);
-    $('tableBody').innerHTML = `
-      <tr><td colspan="5">
-        <div class="empty-state">
-          <div class="empty-icon">⚠️</div>
-          <p>Failed to load feedback. Please refresh.</p>
-        </div>
-      </td></tr>`;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════
-   RENDER TABLE ROWS
-   ═══════════════════════════════════════════════════════ */
-function renderTable(data, page, limit) {
-  const tbody   = $('tableBody');
-  const records = data.records || [];
-  const offset  = (page - 1) * parseInt(limit);
-
-  if (records.length === 0) {
-    tbody.innerHTML = `
-      <tr><td colspan="5">
-        <div class="empty-state">
-          <div class="empty-icon">📭</div>
-          <p>No feedback found matching your filters.</p>
-        </div>
-      </td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = records.map((r, i) => `
-    <tr>
-      <td class="muted">${offset + i + 1}</td>
-      <td>${starBadge(r.rating)}</td>
-      <td><div class="feedback-text">${escapeHtml(r.feedback)}</div></td>
-      <td class="muted">${r.created_date || '—'}</td>
-      <td class="muted">${r.created_time || '—'}</td>
-    </tr>
-  `).join('');
-}
-
-/* ═══════════════════════════════════════════════════════
-   RENDER PAGINATION
-   ═══════════════════════════════════════════════════════ */
-function renderPagination(total, pages, page, limit) {
-  totalPages = pages;
-
-  const start  = Math.min((page - 1) * parseInt(limit) + 1, total);
-  const end    = Math.min(page * parseInt(limit), total);
-  $('paginationInfo').textContent =
-    total > 0 ? `Showing ${start}–${end} of ${total} records` : 'No records found';
-
-  const btns = $('paginationBtns');
-  btns.innerHTML = '';
-
-  // Prev
-  const prev = makePageBtn('‹', page - 1, page <= 1);
-  btns.appendChild(prev);
-
-  // Page numbers (up to 7 visible)
-  const range = pageRange(page, pages);
-  range.forEach(p => {
-    if (p === '…') {
-      const el = document.createElement('span');
-      el.textContent = '…';
-      el.style.cssText = 'padding:0 6px;color:var(--text-3);line-height:36px;';
-      btns.appendChild(el);
-    } else {
-      btns.appendChild(makePageBtn(p, p, false, p === page));
-    }
-  });
-
-  // Next
-  btns.appendChild(makePageBtn('›', page + 1, page >= pages));
-}
-
-function makePageBtn(label, targetPage, disabled, active = false) {
-  const btn = document.createElement('button');
-  btn.textContent = label;
-  btn.className   = 'page-btn' + (active ? ' active' : '');
-  btn.disabled    = disabled;
-  btn.setAttribute('aria-label', `Go to page ${targetPage}`);
-  if (!disabled && !active) btn.onclick = () => loadFeedback(targetPage);
-  return btn;
-}
-
-function pageRange(current, total) {
-  if (total <= 7) return Array.from({length: total}, (_, i) => i + 1);
-  const pages = [];
-  if (current <= 4) {
-    for (let i = 1; i <= 5; i++) pages.push(i);
-    pages.push('…'); pages.push(total);
-  } else if (current >= total - 3) {
-    pages.push(1); pages.push('…');
-    for (let i = total - 4; i <= total; i++) pages.push(i);
-  } else {
-    pages.push(1); pages.push('…');
-    for (let i = current - 1; i <= current + 1; i++) pages.push(i);
-    pages.push('…'); pages.push(total);
-  }
-  return pages;
-}
-
-/* ── Sanitize HTML output ──────────────────────────── */
-function escapeHtml(str) {
-  const el = document.createElement('div');
-  el.textContent = str;
-  return el.innerHTML;
-}
-
-/* ── Load everything ────────────────────────────────── */
-function loadAll() {
-  loadStats();
-  loadFeedback(1);
-}
-
-/* ── Event listeners ────────────────────────────────── */
-$('searchInput').addEventListener('input', () => {
-  clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => loadFeedback(1), 400);
-});
-
-$('ratingFilter').addEventListener('change', () => loadFeedback(1));
-$('limitFilter').addEventListener('change',  () => loadFeedback(1));
-
-/* ── Initial load ───────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', loadAll);
-
-/* ── Auto-refresh every 60 seconds ─────────────────── */
-setInterval(loadAll, 60000);
-</script>
-
-</body>
-</html>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">✅</div>
+      <p>No pending collections.</p>
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

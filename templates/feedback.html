@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- SEO -->
-  <title>Share Your Feedback — TechnoBuzz</title>
+  <title>Share Your Feedback — {{ company_name }}</title>
   <meta name="description"
-        content="We value your opinion! Rate your experience at TechnoBuzz and help us serve you better." />
+        content="We value your opinion! Rate your experience at {{ company_name }} and help us serve you better." />
   <meta name="robots" content="noindex, nofollow" />
 
   <!-- Favicon (emoji fallback) -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}" />
 </head>
 
 <body class="theme-{{ business_id }}">
@@ -29,13 +29,15 @@
       <header class="brand-section">
 
         <div class="logo-wrapper">
+          {% if logo_url %}
           <img
-            src="{{ url_for('static', filename=logo_filename) }}"
+            src="{{ logo_url }}"
             alt="{{ company_name }} Logo"
             class="company-logo"
             width="88"
             height="88"
           />
+          {% endif %}
         </div>
 
         <!-- Company name carries data attributes for JS to read -->
@@ -256,6 +258,6 @@
   </div>
 
   <!-- JavaScript -->
-  <script src="{{ url_for('static', filename='js/feedback.js') }}" defer></script>
+  <script src="{{ url_for('static', path='js/feedback.js') }}" defer></script>
 </body>
 </html>

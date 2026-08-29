@@ -1,0 +1,172 @@
+{% extends "admin_base.html" %}
+
+{% block topbar_actions %}
+<a href="/admin/sales-book/new" class="btn btn-primary">+ Add Booking</a>
+{% endblock %}
+
+{% block content %}
+<p class="page-lede">
+  Client sales at plan value — 6 months ₹1,500, 1 year ₹2,000, 2 years ₹3,000. Commission is {{ plan_commission_rate|int }}% of the sale amount.
+</p>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-icon">📒</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(stats.total_sales) }}</div>
+    <div class="stat-label">Total sales</div>
+    <div class="stat-badge">{{ stats.total_bookings }} booking{{ '' if stats.total_bookings == 1 else 's' }}</div>
+  </div>
+  <div class="stat-card green">
+    <span class="stat-icon">✅</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(stats.total_collection) }}</div>
+    <div class="stat-label">Collected</div>
+    <div class="stat-badge">{{ stats.collection_pct }}%</div>
+  </div>
+  <div class="stat-card red">
+    <span class="stat-icon">⏳</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(stats.pending_collection) }}</div>
+    <div class="stat-label">Pending collection</div>
+    <div class="stat-badge">{{ stats.total_customers }} client{{ '' if stats.total_customers == 1 else 's' }}</div>
+  </div>
+  <div class="stat-card">
+    <span class="stat-icon">💸</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(stats.total_commission) }}</div>
+    <div class="stat-label">{% if locked_executive %}Your commission{% else %}Booking commission{% endif %}</div>
+    <div class="stat-badge">{{ plan_commission_rate|int }}% of sales</div>
+  </div>
+</div>
+
+<div class="table-card">
+  <form class="table-toolbar" method="get" action="/admin/sales-book">
+    <input type="hidden" name="page" value="1">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="search" name="search" class="search-input" value="{{ search }}" placeholder="Search client, phone, or key…" aria-label="Search sales book">
+    </div>
+    {% if not locked_executive %}
+    <select name="executive_id" class="filter-select" aria-label="Salesman" onchange="this.form.submit()">
+      <option value="0">All salesmen</option>
+      {% for ex in executives %}
+      <option value="{{ ex.id }}" {% if selected_executive_id == ex.id %}selected{% endif %}>{{ ex.name }}</option>
+      {% endfor %}
+    </select>
+    {% endif %}
+    <select name="booking_type" class="filter-select" aria-label="Type" onchange="this.form.submit()">
+      <option value="" {% if not selected_type %}selected{% endif %}>All types</option>
+      <option value="new" {% if selected_type == 'new' %}selected{% endif %}>New</option>
+      <option value="renewal" {% if selected_type == 'renewal' %}selected{% endif %}>Renewal</option>
+    </select>
+    <select name="business" class="filter-select" aria-label="Client" onchange="this.form.submit()">
+      <option value="">All clients</option>
+      {% for c in clients %}
+      <option value="{{ c.key }}" {% if business_id == c.key %}selected{% endif %}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+    <select name="per_page" class="filter-select" aria-label="Per page" onchange="this.form.submit()">
+      {% for size in listing.page_sizes %}
+      <option value="{{ size }}" {% if listing.per_page == size %}selected{% endif %}>{{ size }} / page</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-outline">Filter</button>
+  </form>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Client</th>
+          <th>Type</th>
+          {% if not locked_executive %}<th>Salesman</th>{% endif %}
+          <th class="td-right">Sale</th>
+          <th class="td-right">Collected</th>
+          <th class="td-right">Pending</th>
+          <th class="td-right">Comm %</th>
+          <th class="td-right">Commission</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in listing.rows %}
+        <tr>
+          <td class="muted">{{ row.booked_on or '—' }}</td>
+          <td>
+            <strong>{{ row.business_name or row.customer_name }}</strong>
+            <div class="muted">{{ row.business_key }}{% if row.customer_phone %} · {{ row.customer_phone }}{% endif %}</div>
+          </td>
+          <td>{{ row.booking_type|capitalize }}{% if row.is_plan %} <span class="badge active">Plan</span>{% endif %}</td>
+          {% if not locked_executive %}<td>{{ row.executive_name }}</td>{% endif %}
+          <td class="td-right">₹{{ '{:,.0f}'.format(row.amount) }}</td>
+          <td class="td-right">₹{{ '{:,.0f}'.format(row.collected_amount) }}</td>
+          <td class="td-right {% if row.pending %}amount-red{% endif %}">₹{{ '{:,.0f}'.format(row.pending) }}</td>
+          <td class="td-right">{{ '{:,.0f}'.format(row.commission_rate) }}%</td>
+          <td class="td-right amount-green">₹{{ '{:,.0f}'.format(row.commission_amount) }}</td>
+          <td>
+            {% if row.status == 'collected' %}
+            <span class="badge active">Collected</span>
+            {% elif row.status == 'booked' %}
+            <span class="badge due">Pending</span>
+            {% else %}
+            <span class="badge none">{{ row.status|capitalize }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="{{ 10 if not locked_executive else 9 }}">
+            <div class="empty-state">
+              <div class="empty-icon">📒</div>
+              <p>No sales yet. Add a booking or assign a plan to a client.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if listing.rows %}
+      <tfoot>
+        <tr>
+          <th>Total</th>
+          <th></th>
+          <th></th>
+          {% if not locked_executive %}<th></th>{% endif %}
+          <th class="td-right">₹{{ '{:,.0f}'.format(stats.total_sales) }}</th>
+          <th class="td-right">₹{{ '{:,.0f}'.format(stats.total_collection) }}</th>
+          <th class="td-right">₹{{ '{:,.0f}'.format(stats.pending_collection) }}</th>
+          <th></th>
+          <th class="td-right amount-green">₹{{ '{:,.0f}'.format(stats.total_commission) }}</th>
+          <th></th>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+  {% if listing.total %}
+  <div class="pagination">
+    <div class="pagination-info">
+      Showing {{ listing.start }}–{{ listing.end }} of {{ listing.total }} sales
+    </div>
+    <div class="pagination-btns">
+      {% if listing.page > 1 %}
+      <a class="page-btn" href="/admin/sales-book?business={{ business_id }}&amp;executive_id={{ selected_executive_id }}&amp;booking_type={{ selected_type }}&amp;search={{ search }}&amp;per_page={{ listing.per_page }}&amp;page={{ listing.page - 1 }}">‹</a>
+      {% else %}
+      <span class="page-btn" aria-disabled="true">‹</span>
+      {% endif %}
+      {% for p in listing.page_numbers %}
+        {% if p == '…' %}
+        <span class="page-ellipsis">…</span>
+        {% elif p == listing.page %}
+        <span class="page-btn active">{{ p }}</span>
+        {% else %}
+        <a class="page-btn" href="/admin/sales-book?business={{ business_id }}&amp;executive_id={{ selected_executive_id }}&amp;booking_type={{ selected_type }}&amp;search={{ search }}&amp;per_page={{ listing.per_page }}&amp;page={{ p }}">{{ p }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if listing.page < listing.pages %}
+      <a class="page-btn" href="/admin/sales-book?business={{ business_id }}&amp;executive_id={{ selected_executive_id }}&amp;booking_type={{ selected_type }}&amp;search={{ search }}&amp;per_page={{ listing.per_page }}&amp;page={{ listing.page + 1 }}">›</a>
+      {% else %}
+      <span class="page-btn" aria-disabled="true">›</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

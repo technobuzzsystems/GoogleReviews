@@ -1,0 +1,68 @@
+{% extends "admin_base.html" %}
+
+{% block topbar_actions %}
+<a href="/admin/users/new" class="btn btn-primary">+ Add user</a>
+{% endblock %}
+
+{% block content %}
+<p class="page-lede">
+  Only admin can create login accounts. Every role — admin, salesman, account, marketing, and franchise — must have a bank account number and IFSC.
+</p>
+
+<div class="table-card">
+  <div class="table-toolbar">
+    <div>
+      <div class="section-title">Staff accounts</div>
+      <div class="section-subtitle">{{ staff_users|length }} user{{ '' if staff_users|length == 1 else 's' }}</div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Aadhaar</th>
+          <th>Bank</th>
+          <th>Account</th>
+          <th>IFSC</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in staff_users %}
+        <tr>
+          <td>
+            <strong>{{ row.full_name or row.username }}</strong>
+            {% if row.phone %}<div class="muted">{{ row.phone }}{% if row.alternate_mobile %} · {{ row.alternate_mobile }}{% endif %}</div>{% endif %}
+            {% if row.email %}<div class="muted">{{ row.email }}</div>{% endif %}
+          </td>
+          <td>{{ row.username }}</td>
+          <td>{{ row.role_label }}</td>
+          <td>{{ row.aadhaar_masked or '—' }}</td>
+          <td>{{ row.bank_name or '—' }}<div class="muted">{{ row.account_name or '' }}</div></td>
+          <td>{{ row.account_masked }}</td>
+          <td>{{ row.ifsc or '—' }}</td>
+          <td>
+            {% if row.is_active %}<span class="badge active">Active</span>{% else %}<span class="badge none">Inactive</span>{% endif %}
+            {% if not row.has_bank %}<span class="badge expired">No bank</span>{% endif %}
+          </td>
+          <td class="td-right"><a class="biz-tile-link" href="/admin/users/{{ row.id }}/edit">Edit</a></td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="9">
+            <div class="empty-state">
+              <div class="empty-icon">👥</div>
+              <p>No users yet. Add an admin-created account.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
