@@ -23,11 +23,11 @@ const COMPANY_ID   = document.getElementById('companyName')?.dataset.companyId |
 const BUSINESS_ID  = document.getElementById('companyName')?.dataset.businessId || 'technobuzz';
 
 const RATING_LABELS = {
-  5: { emoji: '🤩', text: 'Excellent Experience!',      cls: 'r5' },
-  4: { emoji: '😊', text: 'Great, with minor notes.',   cls: 'r4' },
-  3: { emoji: '😐', text: 'Average Experience.',        cls: 'r3' },
-  2: { emoji: '😕', text: 'Needs Improvement.',         cls: 'r2' },
-  1: { emoji: '😞', text: 'Poor Experience.',           cls: 'r1' },
+  5: { emoji: '🤩', cls: 'r5' },
+  4: { emoji: '😊', cls: 'r4' },
+  3: { emoji: '😐', cls: 'r3' },
+  2: { emoji: '😕', cls: 'r2' },
+  1: { emoji: '😞', cls: 'r1' },
 };
 
 /* ============================================================
@@ -70,6 +70,10 @@ const DOM = {
   autoCopyMsg:       document.getElementById('autoCopyMsg'),
   googleInstructions:document.getElementById('googleInstructions'),
 
+  // Language
+  langSelect:        document.getElementById('reviewLanguage'),
+  langChips:         document.querySelectorAll('.lang-chip'),
+
   // Toast
   copyToast:         document.getElementById('copyToast'),
   toastMsg:          document.getElementById('toastMsg'),
@@ -83,6 +87,7 @@ const State = {
   selectedFeedback:  null,    // string
   isSubmitting:      false,   // prevent double-submit
   isLoadingAI:       false,   // prevent concurrent AI calls
+  language:          'en',
 };
 
 /* ============================================================
@@ -151,7 +156,7 @@ const UIState = {
         () => {
           // ── STEP 2 (copy succeeded): Open the Google review tab ───────────
           if (DOM.autoCopyMsg) {
-            DOM.autoCopyMsg.textContent = '📋 Review copied to clipboard!';
+            DOM.autoCopyMsg.textContent = I18n.t('copiedClipboard');
             DOM.autoCopyMsg.style.display = 'block';
           }
           UIState._openGoogleTab(googleUrl);
@@ -159,8 +164,7 @@ const UIState = {
         () => {
           // ── STEP 2 (copy failed): Still open tab, warn user to copy manually
           if (DOM.autoCopyMsg) {
-            DOM.autoCopyMsg.textContent =
-              '⚠️ Auto-copy failed. Use the "Copy Review" button, then paste on Google.';
+            DOM.autoCopyMsg.textContent = I18n.t('copyFailed');
             DOM.autoCopyMsg.style.display = 'block';
           }
           UIState._openGoogleTab(googleUrl);
@@ -187,7 +191,7 @@ const UIState = {
     if (DOM.btnCopyReview) {
       DOM.btnCopyReview.addEventListener('click', () => {
         Clipboard.copy(State.selectedFeedback, () => {
-          Toast.show('✅ Review copied! Now paste it on Google.');
+          Toast.show(I18n.t('copySuccessToast'));
         });
       });
     }
@@ -209,10 +213,10 @@ const UIState = {
           DOM.googleInstructions.innerHTML = `
             <div class="instructions-icon" aria-hidden="true">📋</div>
             <p class="instructions-text">
-              <strong>Google Review tab is open!</strong><br /><br />
-              Your review text is already copied.<br />
-              👉 Click inside the Google text box<br />
-              👉 Press <kbd style="
+              <strong>${escapeHtml(I18n.t('googleTabOpenTitle'))}</strong><br /><br />
+              ${escapeHtml(I18n.t('googleTabOpenBody'))}<br />
+              ${escapeHtml(I18n.t('clickTextBox'))}<br />
+              ${escapeHtml(I18n.t('pressPaste'))} <kbd style="
                 display:inline-block;
                 padding:2px 8px;
                 background:#2a2a3a;
@@ -222,8 +226,8 @@ const UIState = {
                 font-size:0.95em;
                 color:#00E5FF;
                 letter-spacing:1px;
-              ">Ctrl + V</kbd> to paste<br />
-              👉 Click <strong>Post</strong> ✅
+              ">Ctrl + V</kbd> ${escapeHtml(I18n.t('toPaste'))}<br />
+              ${escapeHtml(I18n.t('clickPost'))} <strong>${escapeHtml(I18n.t('postWord'))}</strong> ✅
             </p>
           `;
         }
@@ -233,10 +237,10 @@ const UIState = {
           DOM.googleInstructions.innerHTML = `
             <div class="instructions-icon" aria-hidden="true">📋</div>
             <p class="instructions-text">
-              Your review is copied to clipboard.<br /><br />
-              👉 Click <strong>"Post on Google"</strong> button below<br />
-              👉 Click inside the Google text box<br />
-              👉 Press <kbd style="
+              ${escapeHtml(I18n.t('popupBlockedTitle'))}<br /><br />
+              ${escapeHtml(I18n.t('popupBlockedBody'))}<br />
+              ${escapeHtml(I18n.t('clickTextBox'))}<br />
+              ${escapeHtml(I18n.t('pressPaste'))} <kbd style="
                 display:inline-block;
                 padding:2px 8px;
                 background:#2a2a3a;
@@ -246,8 +250,8 @@ const UIState = {
                 font-size:0.95em;
                 color:#00E5FF;
                 letter-spacing:1px;
-              ">Ctrl + V</kbd> to paste<br />
-              👉 Click <strong>Post</strong> ✅
+              ">Ctrl + V</kbd> ${escapeHtml(I18n.t('toPaste'))}<br />
+              ${escapeHtml(I18n.t('clickPost'))} <strong>${escapeHtml(I18n.t('postWord'))}</strong> ✅
             </p>
           `;
         }
@@ -277,7 +281,7 @@ const UIState = {
     // Add Try Again button if this is an AI error
     if (showRetry && retryRating) {
       const btn = document.createElement('button');
-      btn.textContent = 'Try Again';
+      btn.textContent = I18n.t('tryAgain');
       btn.className   = 'btn-retry-ai';
       btn.style.cssText = [
         'margin-left:12px', 'padding:4px 14px',
@@ -338,7 +342,7 @@ const StarRating = {
     const info = RATING_LABELS[rating];
     if (!info) return;
 
-    DOM.ratingBadge.textContent = `${info.emoji}  ${info.text}`;
+    DOM.ratingBadge.textContent = `${info.emoji}  ${I18n.ratingText(rating)}`;
     DOM.ratingBadge.className   = `rating-badge ${info.cls}`;
 
     // Trigger CSS visibility transition
@@ -370,7 +374,7 @@ const SuggestionCards = {
     SuggestionCards.clear();
 
     if (!suggestions || suggestions.length === 0) {
-      UIState.showValidation('error', '⚠️', 'No suggestions were generated. Please try again.');
+      UIState.showValidation('error', '⚠️', I18n.t('noSuggestions'));
       return;
     }
 
@@ -479,7 +483,7 @@ const API = {
       const response = await fetch('/generate-feedback', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ rating, business_id: BUSINESS_ID }),
+        body:    JSON.stringify({ rating, business_id: BUSINESS_ID, language: State.language }),
       });
 
       const data = await response.json();
@@ -504,15 +508,15 @@ const API = {
       // Build a friendly message
       let msg;
       if (!navigator.onLine || error.message.includes('Failed to fetch')) {
-        msg = 'No internet connection. Please check your WiFi and try again.';
+        msg = I18n.t('noInternet');
       } else if (
         error.message.toLowerCase().includes('busy') ||
         error.message.toLowerCase().includes('unavailable') ||
         error.message.toLowerCase().includes('temporarily')
       ) {
-        msg = '✨ AI is busy right now. Please tap Try Again in a moment.';
+        msg = I18n.t('aiBusy');
       } else {
-        msg = error.message || 'Could not load suggestions. Please try again.';
+        msg = error.message || I18n.t('genericError');
       }
 
       // Show banner with a Try Again button so user doesn\'t have to re-select stars
@@ -534,7 +538,7 @@ const API = {
     // Disable button immediately to prevent double-submit
     DOM.btnSubmit.disabled = true;
     DOM.btnSubmit.classList.add('loading');
-    DOM.btnText.textContent = 'Submitting…';
+    DOM.btnText.textContent = I18n.t('submittingBtn');
     UIState.clearErrorBanner();
 
     try {
@@ -568,11 +572,11 @@ const API = {
       // Friendly message based on error type
       let userMessage;
       if (!navigator.onLine || error.message.includes('Failed to fetch')) {
-        userMessage = 'No internet connection. Please check your network and try again.';
+        userMessage = I18n.t('noInternet');
       } else if (error.message.includes('503') || error.message.includes('unavailable')) {
-        userMessage = 'Database is temporarily unavailable. Please try again in a moment.';
+        userMessage = I18n.t('aiBusy');
       } else {
-        userMessage = error.message || 'Failed to submit feedback. Please try again.';
+        userMessage = error.message || I18n.t('submitFail');
       }
 
       UIState.showErrorBanner(userMessage);
@@ -581,7 +585,7 @@ const API = {
       State.isSubmitting = false;
       DOM.btnSubmit.disabled = false;
       DOM.btnSubmit.classList.remove('loading');
-      DOM.btnText.textContent = 'Submit Feedback';
+      DOM.btnText.textContent = I18n.t('submitBtn');
       return; // early return — don't run finally block's re-enable
     }
 
@@ -596,13 +600,13 @@ const API = {
 function onSubmitClick() {
   // Validate: rating must be selected
   if (!State.selectedRating) {
-    UIState.showValidation('error', '⚠️', 'Please select a star rating first.');
+    UIState.showValidation('error', '⚠️', I18n.t('selectRating'));
     return;
   }
 
   // Validate: a suggestion card must be selected
   if (!State.selectedFeedback) {
-    UIState.showValidation('error', '⚠️', 'Please select one feedback suggestion before submitting.');
+    UIState.showValidation('error', '⚠️', I18n.t('selectSuggestion'));
     return;
   }
 
@@ -697,9 +701,62 @@ function escapeHtml(text) {
 }
 
 /* ============================================================
+   LANGUAGE — chips + dropdown, persist, refetch reviews
+   ============================================================ */
+const Language = {
+  detect() {
+    try {
+      const saved = localStorage.getItem('reviewLanguage');
+      if (saved && LANG_OPTIONS.some((l) => l.code === saved)) return saved;
+    } catch (_) { /* ignore */ }
+    const nav = (navigator.language || 'en').toLowerCase();
+    const match = LANG_OPTIONS.find((l) => nav.startsWith(l.code));
+    return match ? match.code : 'en';
+  },
+
+  syncUi(lang) {
+    if (DOM.langSelect) DOM.langSelect.value = lang;
+    DOM.langChips.forEach((chip) => {
+      chip.classList.toggle('active', chip.dataset.lang === lang);
+    });
+  },
+
+  set(lang, { refetch = true } = {}) {
+    if (!LANG_OPTIONS.some((l) => l.code === lang)) lang = 'en';
+    const changed = State.language !== lang;
+    State.language = lang;
+    I18n.lang = lang;
+    try { localStorage.setItem('reviewLanguage', lang); } catch (_) { /* ignore */ }
+    Language.syncUi(lang);
+    I18n.apply();
+    if (State.selectedRating && DOM.ratingBadge.classList.contains('visible')) {
+      StarRating.updateBadge(State.selectedRating);
+    }
+    if (refetch && changed && State.selectedRating && !State.isSubmitting) {
+      State.selectedFeedback = null;
+      SuggestionCards.clear();
+      UIState.hideSuggestionsAndSubmit();
+      API.fetchSuggestions(State.selectedRating);
+    }
+  },
+
+  init() {
+    const lang = Language.detect();
+    Language.set(lang, { refetch: false });
+    if (DOM.langSelect) {
+      DOM.langSelect.addEventListener('change', () => Language.set(DOM.langSelect.value));
+    }
+    DOM.langChips.forEach((chip) => {
+      chip.addEventListener('click', () => Language.set(chip.dataset.lang));
+    });
+  },
+};
+
+/* ============================================================
    INITIALISE
    ============================================================ */
 document.addEventListener('DOMContentLoaded', () => {
+  Language.init();
   StarRating.init();
 
   // Wire up submit button

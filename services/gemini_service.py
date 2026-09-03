@@ -28,8 +28,22 @@ from google.genai.errors import ClientError, ServerError
 
 from config import get_config
 from dotenv import load_dotenv
+from services.review_templates import templates_for
 
 logger = logging.getLogger(__name__)
+
+REVIEW_LANGUAGE_NAMES = {
+    "en": "English",
+    "mr": "Marathi (मराठी)",
+    "hi": "Hindi (हिन्दी)",
+    "gu": "Gujarati (ગુજરાતી)",
+    "ta": "Tamil (தமிழ்)",
+    "te": "Telugu (తెలుగు)",
+    "kn": "Kannada (ಕನ್ನಡ)",
+    "bn": "Bengali (বাংলা)",
+    "pa": "Punjabi (ਪੰਜਾਬੀ)",
+    "ml": "Malayalam (മലയാളം)",
+}
 
 _MAX_RETRIES = 2
 _RETRY_DELAYS = [0.3, 0.5]
@@ -65,14 +79,14 @@ def _example_phrases(business_context: dict, rating: int) -> List[str]:
     return phrases or ["the overall experience"]
 
 
-def _local_suggestions(rating: int, business_context: dict) -> List[str]:
+def _local_suggestions(rating: int, business_context: dict, language: str = "en") -> List[str]:
     """Build 10 usable suggestions when Gemini is not configured."""
     name = business_context.get("name") or "this business"
     phrases = _example_phrases(business_context, rating)
     while len(phrases) < 10:
         phrases.append(phrases[len(phrases) % max(len(phrases), 1)])
 
-    templates = {
+    templates = templates_for(language) or {
         1: [
             "Really disappointed with {name}. {issue} made the visit frustrating and I would not come back.",
             "Poor experience at {name}. {issue} and nobody seemed interested in fixing it.",
@@ -144,11 +158,24 @@ def _local_suggestions(rating: int, business_context: dict) -> List[str]:
     return lines
 
 
-def _build_prompt(rating: int, business_context: dict) -> str:
+def _build_prompt(rating: int, business_context: dict, language: str = "en") -> str:
     """Build a rating-aware prompt for the Gemini model."""
     company_name = business_context.get("name", "TechnoBuzz")
     scope = business_context.get("scope", "Software development, web design, cloud infrastructure, network architecture, cybersecurity, and managed IT support.")
-    
+    language_name = REVIEW_LANGUAGE_NAMES.get(language, REVIEW_LANGUAGE_NAMES["en"])
+    language_block = ""
+    if language != "en":
+        language_block = f"""
+LANGUAGE (CRITICAL)
+
+Write EVERY suggestion entirely in {language_name}.
+The customer chose this language for their Google review.
+- Use natural everyday {language_name} that a real local customer would type.
+- Do NOT write the reviews in English.
+- You may keep the business name "{company_name}" in its original form.
+- Do not mix English sentences. A few common loanwords are OK if locals actually use them.
+"""
+
     return f"""
 You are an expert at writing realistic customer feedback for a service provider.
 
@@ -162,7 +189,7 @@ Star Rating:
 
 Scope of Services:
 {scope}
-
+{language_block}
 IMPORTANT REQUIREMENTS
 
 1. Every response MUST sound like it was written by a real client.
@@ -338,7 +365,11 @@ def _call_model(client: genai.Client, model: str, prompt: str) -> List[str]:
     raise RuntimeError(f"All retries failed for model {model}.")
 
 
-def generate_feedback_suggestions(rating: int, business_context: dict = None) -> List[str]:
+def generate_feedback_suggestions(
+    rating: int,
+    business_context: dict = None,
+    language: str = "en",
+) -> List[str]:
     """
     Call Google Gemini AI and return 10 feedback suggestion strings.
 
@@ -353,11 +384,15 @@ def generate_feedback_suggestions(rating: int, business_context: dict = None) ->
     if not isinstance(rating, int) or rating < 1 or rating > 5:
         raise ValueError(f"Invalid rating '{rating}'. Must be an integer between 1 and 5.")
 
-    prompt = _build_prompt(rating, business_context)
+    language = (language or "en").strip().lower()
+    if language not in REVIEW_LANGUAGE_NAMES:
+        language = "en"
+
+    prompt = _build_prompt(rating, business_context, language)
 
     if not _gemini_api_key():
         logger.warning("GEMINI_API_KEY is not set; returning local suggestions.")
-        return _local_suggestions(rating, business_context)
+        return _local_suggestions(rating, business_context, language)
 
     client = _get_client()
 

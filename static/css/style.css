@@ -4,7 +4,7 @@
    ============================================================================ */
 
 /* ── Google Fonts ─────────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Gujarati:wght@400;600;700&display=swap');
 
 /* ── Design Tokens (CSS Custom Properties) ────────────────────────────────── */
 :root {
@@ -157,6 +157,103 @@ body::after {
   height: 180px;
   background: radial-gradient(ellipse, rgba(0,180,216,0.06) 0%, transparent 70%);
   pointer-events: none;
+}
+
+html[lang="mr"] body,
+html[lang="hi"] body {
+  font-family: 'Noto Sans Devanagari', var(--font-body);
+}
+html[lang="gu"] body {
+  font-family: 'Noto Sans Gujarati', var(--font-body);
+}
+html:not([lang="en"]) .rating-label {
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+
+/* ── Language picker ─────────────────────────────────────────────────────── */
+.lang-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 var(--sp-lg);
+  position: relative;
+  z-index: 3;
+}
+.lang-bar-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--clr-primary);
+  text-align: center;
+}
+html:not([lang="en"]) .lang-bar-label {
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+.lang-chips {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.lang-chip {
+  appearance: none;
+  border: 1px solid var(--clr-border);
+  background: rgba(0, 180, 216, 0.05);
+  color: var(--clr-text);
+  border-radius: var(--r-full);
+  padding: 8px 4px;
+  font-size: clamp(0.68rem, 2.4vw, 0.82rem);
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1.2;
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast), box-shadow var(--t-fast);
+}
+.lang-chip.featured {
+  box-shadow: inset 0 0 0 1px rgba(0, 180, 216, 0.12);
+}
+.lang-chip:hover {
+  border-color: var(--clr-border-active);
+  background: rgba(0, 180, 216, 0.12);
+}
+.lang-chip.active {
+  background: var(--g-primary);
+  color: #062033;
+  border-color: transparent;
+  box-shadow: 0 0 16px rgba(0, 180, 216, 0.35);
+}
+.lang-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 180, 216, 0.06);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--r-full);
+  padding: 6px 14px;
+}
+.lang-select-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+.lang-select {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  color: var(--clr-text);
+  border: none;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.lang-select:focus {
+  outline: none;
+}
+.lang-select option,
+.lang-select optgroup {
+  color: #0D1B2A;
+  background: #fff;
 }
 
 /* ── Brand / Header Section ───────────────────────────────────────────────── */

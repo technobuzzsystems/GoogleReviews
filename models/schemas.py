@@ -1,8 +1,13 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
+
+ReviewLanguage = Literal["en", "mr", "hi", "gu", "ta", "te", "kn", "bn", "pa", "ml"]
 
 class GenerateFeedbackRequest(BaseModel):
     rating: int = Field(..., ge=1, le=5, description="Star rating from 1 to 5")
     business_id: str = Field(default="technobuzz")
+    language: ReviewLanguage = Field(default="en", description="Language for generated review text")
 
 class SubmitFeedbackRequest(BaseModel):
     company: str = Field(..., min_length=1, max_length=200)

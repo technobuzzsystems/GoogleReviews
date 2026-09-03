@@ -1,9 +1,10 @@
-"""S3 uploads for business logos."""
+"""S3 uploads for business logos. Client pages load them via /media/logo/."""
 
 import io
 import logging
 import uuid
 from pathlib import Path
+from urllib.parse import urlparse
 
 from fastapi import UploadFile
 
@@ -12,7 +13,6 @@ from utils.slugs import slugify
 
 logger = logging.getLogger(__name__)
 
-MAX_LOGO_BYTES = 2 * 1024 * 1024
 ALLOWED_LOGO_TYPES = {
     "image/jpeg": ".jpg",
     "image/jpg": ".jpg",
@@ -30,13 +30,8 @@ EXT_CONTENT_TYPES = {
 }
 
 
-def public_logo_url(logo_filename: str) -> str:
-    value = (logo_filename or "").strip()
-    if not value:
-        return ""
-    if value.startswith("http://") or value.startswith("https://"):
-        return value
-    return "/static/" + value.lstrip("/")
+def _max_logo_bytes() -> int:
+    return max(1, int(get_config().MAX_FILE_SIZE_MB or 10)) * 1024 * 1024
 
 
 def s3_configured() -> bool:
@@ -61,6 +56,59 @@ def _s3_client(cfg):
         aws_secret_access_key=cfg.AWS_SECRET_ACCESS_KEY,
         region_name=cfg.AWS_REGION or "ap-south-1",
     )
+
+
+def _logo_prefix(cfg) -> str:
+    return (cfg.S3_LOGO_PREFIX or "logos").strip("/")
+
+
+def _s3_key_from_stored(value: str) -> str:
+    """Return the S3 object key if this stored value points at our bucket."""
+    value = (value or "").strip()
+    if not value:
+        return ""
+    cfg = get_config()
+    prefix = _logo_prefix(cfg)
+    if value.startswith(prefix + "/") and ".." not in value:
+        return value.lstrip("/")
+    if not (value.startswith("http://") or value.startswith("https://")):
+        return ""
+    parsed = urlparse(value)
+    host = (parsed.netloc or "").lower()
+    bucket = (cfg.S3_BUCKET or "").lower()
+    region = (cfg.AWS_REGION or "ap-south-1").lower()
+    custom = urlparse(_public_base(cfg) + "/")
+    our_hosts = {
+        f"{bucket}.s3.{region}.amazonaws.com",
+        f"{bucket}.s3.amazonaws.com",
+        f"s3.{region}.amazonaws.com",
+        f"s3.amazonaws.com",
+        (custom.netloc or "").lower(),
+    }
+    if host not in our_hosts:
+        return ""
+    key = parsed.path.lstrip("/")
+    if host in {f"s3.{region}.amazonaws.com", "s3.amazonaws.com"}:
+        parts = key.split("/", 1)
+        if len(parts) == 2 and parts[0].lower() == bucket:
+            key = parts[1]
+        else:
+            return ""
+    if key.startswith(prefix + "/") and ".." not in key:
+        return key
+    return ""
+
+
+def public_logo_url(logo_filename: str) -> str:
+    value = (logo_filename or "").strip()
+    if not value:
+        return ""
+    s3_key = _s3_key_from_stored(value)
+    if s3_key:
+        return "/media/logo/" + s3_key
+    if value.startswith("http://") or value.startswith("https://"):
+        return value
+    return "/static/" + value.lstrip("/")
 
 
 def _detect_extension(filename: str, content_type: str) -> str:
@@ -94,7 +142,7 @@ def _validate_image_bytes(data: bytes, content_type: str) -> None:
 
 
 def save_logo_upload(upload: UploadFile, business_key: str) -> str:
-    """Upload a logo to S3 and return the public HTTPS URL."""
+    """Upload a logo to S3 and return the object key (served via /media/logo/)."""
     if not upload or not (upload.filename or "").strip():
         return ""
     if not s3_configured():
@@ -110,12 +158,14 @@ def save_logo_upload(upload: UploadFile, business_key: str) -> str:
     data = upload.file.read()
     if not data:
         raise ValueError("The selected logo file is empty.")
-    if len(data) > MAX_LOGO_BYTES:
-        raise ValueError("Logo must be 2 MB or smaller.")
+    max_bytes = _max_logo_bytes()
+    if len(data) > max_bytes:
+        raise ValueError(f"Logo must be {get_config().MAX_FILE_SIZE_MB} MB or smaller.")
     _validate_image_bytes(data, upload.content_type or "")
 
     cfg = get_config()
-    prefix = (cfg.S3_LOGO_PREFIX or "logos").strip("/")
+    prefix = _logo_prefix(cfg)
+    folder = slugify(business_key) or "business"
     key = f"{prefix}/{folder}/{uuid.uuid4().hex}{ext}"
     extra = {
         "ContentType": (upload.content_type or "").lower()
@@ -133,4 +183,29 @@ def save_logo_upload(upload: UploadFile, business_key: str) -> str:
         logger.exception("S3 logo upload failed")
         raise ValueError("Could not upload the logo to S3. Check bucket credentials and permissions.") from exc
 
-    return f"{_public_base(cfg)}/{key}"
+    logger.info("Uploaded logo to s3://%s/%s", cfg.S3_BUCKET, key)
+    return key
+
+
+def get_logo_object(key: str) -> tuple[bytes, str]:
+    """Fetch a logo object from S3. Raises FileNotFoundError if missing/invalid."""
+    cfg = get_config()
+    prefix = _logo_prefix(cfg)
+    key = (key or "").lstrip("/")
+    if not key.startswith(prefix + "/") or ".." in key:
+        raise FileNotFoundError("Invalid logo key.")
+    if not s3_configured():
+        raise FileNotFoundError("S3 is not configured.")
+    try:
+        obj = _s3_client(cfg).get_object(Bucket=cfg.S3_BUCKET, Key=key)
+        body = obj["Body"].read()
+        content_type = (obj.get("ContentType") or "").split(";")[0].strip()
+        if content_type not in ALLOWED_LOGO_TYPES:
+            ext = Path(key).suffix.lower()
+            content_type = EXT_CONTENT_TYPES.get(ext, "image/jpeg")
+        return body, content_type
+    except FileNotFoundError:
+        raise
+    except Exception as exc:
+        logger.warning("S3 logo fetch failed for %s: %s", key, exc)
+        raise FileNotFoundError("Logo not found.") from exc

@@ -132,7 +132,7 @@
             <input type="checkbox" id="remove_logo" name="remove_logo" value="1">
             Remove current logo
           </label>
-          <div class="form-hint">PNG, JPG, WEBP or GIF · max 2 MB · uploaded to your S3 bucket</div>
+          <div class="form-hint">PNG, JPG, WEBP or GIF · max {{ max_file_size_mb|default(10) }} MB · stored in S3 and shown on this client’s feedback page</div>
           {% if not s3_ready %}
           <div class="form-hint warn">Add AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, and S3_BUCKET in .env, then restart the app.</div>
           {% endif %}

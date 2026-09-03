@@ -6,14 +6,14 @@ All customer-facing feedback routes (FastAPI).
 
 import logging
 from fastapi import APIRouter, Request, HTTPException, status, Depends
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from config import get_config
 from database import get_db
 from services.business_service import find_business_by_route, get_business
-from services.storage_service import public_logo_url
+from services.storage_service import get_logo_object, public_logo_url
 from models.schemas import GenerateFeedbackRequest, SubmitFeedbackRequest
 from utils.validators import sanitize_string
 from services.gemini_service import generate_feedback_suggestions
@@ -23,6 +23,21 @@ config = get_config()
 logger = logging.getLogger(__name__)
 
 templates = Jinja2Templates(directory="templates")
+
+# ─── GET /media/logo/{key} ────────────────────────────────────────────────────
+@router.get("/media/logo/{key:path}")
+def serve_business_logo(key: str):
+    """Stream a client logo from S3 so the feedback page can display it."""
+    try:
+        body, content_type = get_logo_object(key)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Logo not found.")
+    return Response(
+        content=body,
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
 
 # ─── GET / ────────────────────────────────────────────────────────────────────
 @router.get("/")
@@ -95,7 +110,11 @@ def generate_feedback(payload: GenerateFeedbackRequest, db: Session = Depends(ge
         raise HTTPException(status_code=400, detail="Unknown business.")
 
     try:
-        suggestions = generate_feedback_suggestions(rating, business_context=b_config)
+        suggestions = generate_feedback_suggestions(
+            rating,
+            business_context=b_config,
+            language=payload.language,
+        )
         if not suggestions:
             raise HTTPException(status_code=500, detail="AI returned no suggestions. Please try again.")
 

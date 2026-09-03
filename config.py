@@ -55,6 +55,7 @@ class Config:
     S3_PUBLIC_BASE_URL: str = os.getenv("S3_PUBLIC_BASE_URL", "")
     S3_LOGO_PREFIX: str = os.getenv("S3_LOGO_PREFIX", "logos")
     S3_OBJECT_ACL: str = os.getenv("S3_OBJECT_ACL", "")
+    MAX_FILE_SIZE_MB: int = int(os.getenv("MAX_FILE_SIZE_MB", "10") or "10")
 
 
 class DevelopmentConfig(Config):
@@ -76,5 +77,18 @@ config_map = {
 
 def get_config() -> Config:
     """Return the appropriate config object based on FLASK_ENV."""
+    load_dotenv(override=True)
     env = os.getenv("FLASK_ENV", "development")
-    return config_map.get(env, DevelopmentConfig)()
+    cfg = config_map.get(env, DevelopmentConfig)()
+    cfg.AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "").strip()
+    cfg.AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "").strip()
+    cfg.AWS_REGION = os.getenv("AWS_REGION", "ap-south-1").strip() or "ap-south-1"
+    cfg.S3_BUCKET = os.getenv("S3_BUCKET", "").strip()
+    cfg.S3_PUBLIC_BASE_URL = os.getenv("S3_PUBLIC_BASE_URL", "").strip()
+    cfg.S3_LOGO_PREFIX = os.getenv("S3_LOGO_PREFIX", "logos").strip() or "logos"
+    cfg.S3_OBJECT_ACL = os.getenv("S3_OBJECT_ACL", "").strip()
+    try:
+        cfg.MAX_FILE_SIZE_MB = max(1, int(os.getenv("MAX_FILE_SIZE_MB", "10") or "10"))
+    except ValueError:
+        cfg.MAX_FILE_SIZE_MB = 10
+    return cfg

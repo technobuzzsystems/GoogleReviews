@@ -25,6 +25,35 @@
          ═══════════════════════════════════════════════ -->
     <main class="feedback-card" role="main" aria-label="Customer Feedback Form">
 
+      <div class="lang-bar">
+        <p class="lang-bar-label" data-i18n="languageLabel">Review language</p>
+        <div class="lang-chips" id="langChips" role="group" aria-label="Popular languages">
+          <button type="button" class="lang-chip featured" data-lang="mr">मराठी</button>
+          <button type="button" class="lang-chip featured" data-lang="hi">हिन्दी</button>
+          <button type="button" class="lang-chip featured" data-lang="en">English</button>
+          <button type="button" class="lang-chip featured" data-lang="gu">ગુજરાતી</button>
+        </div>
+        <label class="lang-select-wrap">
+          <span class="lang-select-icon" aria-hidden="true">🌐</span>
+          <select id="reviewLanguage" class="lang-select" data-i18n-aria="languageLabel" aria-label="Review language">
+            <optgroup id="langGroupPopular" label="Popular">
+              <option value="mr">मराठी · Marathi</option>
+              <option value="hi">हिन्दी · Hindi</option>
+              <option value="en" selected>English</option>
+              <option value="gu">ગુજરાતી · Gujarati</option>
+            </optgroup>
+            <optgroup id="langGroupMore" label="More languages">
+              <option value="ta">தமிழ் · Tamil</option>
+              <option value="te">తెలుగు · Telugu</option>
+              <option value="kn">ಕನ್ನಡ · Kannada</option>
+              <option value="bn">বাংলা · Bengali</option>
+              <option value="pa">ਪੰਜਾਬੀ · Punjabi</option>
+              <option value="ml">മലയാളം · Malayalam</option>
+            </optgroup>
+          </select>
+        </label>
+      </div>
+
       <!-- ── Brand / Header ───────────────────────────── -->
       <header class="brand-section">
 
@@ -52,8 +81,8 @@
         </h1>
 
         <p class="welcome-message">
-          We'd love to hear about your experience!<br />
-          Your feedback helps us grow and serve you better. 💙
+          <span data-i18n="welcomeLine1">We'd love to hear about your experience!</span><br />
+          <span data-i18n="welcomeLine2">Your feedback helps us grow and serve you better. 💙</span>
         </p>
       </header>
 
@@ -64,7 +93,7 @@
 
         <!-- ── Star Rating ─────────────────────────────── -->
         <section class="rating-section" id="ratingSection" aria-labelledby="ratingLabel">
-          <p class="rating-label" id="ratingLabel">How was your experience?</p>
+          <p class="rating-label" id="ratingLabel" data-i18n="ratingLabel">How was your experience?</p>
 
           <!--
             Stars are rendered in REVERSE order (5→1) in HTML
@@ -73,20 +102,20 @@
           -->
           <div class="star-rating" role="radiogroup" aria-label="Star rating 1 to 5">
 
-            <input type="radio" id="star5" name="rating" value="5" aria-label="5 stars — Excellent" />
-            <label for="star5" title="5 stars — Excellent">★</label>
+            <input type="radio" id="star5" name="rating" value="5" data-i18n-aria="star5" aria-label="5 stars — Excellent" />
+            <label for="star5" data-i18n-title="star5" title="5 stars — Excellent">★</label>
 
-            <input type="radio" id="star4" name="rating" value="4" aria-label="4 stars — Good" />
-            <label for="star4" title="4 stars — Good">★</label>
+            <input type="radio" id="star4" name="rating" value="4" data-i18n-aria="star4" aria-label="4 stars — Good" />
+            <label for="star4" data-i18n-title="star4" title="4 stars — Good">★</label>
 
-            <input type="radio" id="star3" name="rating" value="3" aria-label="3 stars — Average" />
-            <label for="star3" title="3 stars — Average">★</label>
+            <input type="radio" id="star3" name="rating" value="3" data-i18n-aria="star3" aria-label="3 stars — Average" />
+            <label for="star3" data-i18n-title="star3" title="3 stars — Average">★</label>
 
-            <input type="radio" id="star2" name="rating" value="2" aria-label="2 stars — Poor" />
-            <label for="star2" title="2 stars — Poor">★</label>
+            <input type="radio" id="star2" name="rating" value="2" data-i18n-aria="star2" aria-label="2 stars — Poor" />
+            <label for="star2" data-i18n-title="star2" title="2 stars — Poor">★</label>
 
-            <input type="radio" id="star1" name="rating" value="1" aria-label="1 star — Very Poor" />
-            <label for="star1" title="1 star — Very Poor">★</label>
+            <input type="radio" id="star1" name="rating" value="1" data-i18n-aria="star1" aria-label="1 star — Very Poor" />
+            <label for="star1" data-i18n-title="star1" title="1 star — Very Poor">★</label>
 
           </div>
 
@@ -110,7 +139,7 @@
           aria-live="polite"
         >
           <div class="spinner-ring" aria-hidden="true"></div>
-          <p class="loading-text">✨ AI is crafting your suggestions…</p>
+          <p class="loading-text" data-i18n="loadingText">✨ AI is crafting your suggestions…</p>
         </section>
 
         <!-- ── AI Suggestions ──────────────────────────── -->
@@ -120,8 +149,8 @@
           aria-labelledby="suggestionsTitle"
         >
           <div class="suggestions-header">
-            <p class="suggestions-title" id="suggestionsTitle">Choose Your Feedback</p>
-            <p class="suggestions-subtitle">Select the one that best matches your experience.</p>
+            <p class="suggestions-title" id="suggestionsTitle" data-i18n="suggestionsTitle">Choose Your Feedback</p>
+            <p class="suggestions-subtitle" data-i18n="suggestionsSubtitle">Select the one that best matches your experience.</p>
           </div>
 
           <!-- Cards are injected here by feedback.js -->
@@ -150,7 +179,7 @@
           >
             <span class="btn-submit-inner">
               <span class="btn-spinner" id="btnSpinner" aria-hidden="true"></span>
-              <span class="btn-text"    id="btnText">Submit Feedback</span>
+              <span class="btn-text"    id="btnText" data-i18n="submitBtn">Submit Feedback</span>
             </span>
           </button>
         </div>
@@ -173,10 +202,10 @@
         </div>
 
         <!-- Heading -->
-        <h2 class="success-title">Thank You!</h2>
+        <h2 class="success-title" data-i18n="successTitle">Thank You!</h2>
 
         <!-- Subheading -->
-        <p class="success-subtitle">
+        <p class="success-subtitle" data-i18n="successSubtitle">
           Your feedback has been submitted successfully.
         </p>
 
@@ -200,7 +229,7 @@
             aria-label="Copy your review to clipboard"
           >
             <span class="btn-icon" aria-hidden="true">📋</span>
-            Copy Review
+            <span data-i18n="copyReview">Copy Review</span>
           </button>
 
           <!-- Post on Google button -->
@@ -217,14 +246,14 @@
                 <path d="M21.805 10.023H12.18v3.955h5.508c-.533 2.504-2.742 4.023-5.508 4.023-3.338 0-6.046-2.713-6.046-6.05s2.708-6.05 6.046-6.05c1.468 0 2.8.532 3.832 1.398l2.944-2.946C17.053 2.863 14.697 2 12.18 2 6.477 2 1.875 6.478 1.875 12c0 5.523 4.602 10 10.305 10 5.952 0 9.895-4.186 9.895-10.08 0-.638-.063-1.258-.27-1.897z" fill="currentColor"/>
               </svg>
             </span>
-            Post on Google
+            <span data-i18n="postGoogle">Post on Google</span>
           </a>
 
         </div>
 
         <!-- Google URL not configured warning -->
         <p class="google-url-missing" id="googleUrlMissing" style="display:none;">
-          ⚠️ Google Review link is not configured.
+          <span data-i18n="googleUrlMissing">⚠️ Google Review link is not configured.</span>
         </p>
 
         <!-- Auto-copy status message -->
@@ -234,15 +263,15 @@
         <div class="google-instructions-card" id="googleInstructions">
           <div class="instructions-icon" aria-hidden="true">ℹ️</div>
           <p class="instructions-text">
-            Google requires every review to be submitted by the customer using their own Google account.<br />
-            We've copied your review for convenience.<br />
-            Click <strong>"Post on Google"</strong>, paste your review, and click Post.
+            <span data-i18n="googlePolicy">Google requires every review to be submitted by the customer using their own Google account.</span><br />
+            <span data-i18n="googleCopied">We've copied your review for convenience.</span><br />
+            <span data-i18n="googleClickPaste">Click "Post on Google", paste your review, and click Post.</span>
           </p>
         </div>
 
         <!-- Submitted badge -->
         <span class="success-badge">
-          ✔&nbsp;Feedback Submitted
+          <span data-i18n="successBadge">✔ Feedback Submitted</span>
         </span>
 
       </div>
@@ -254,10 +283,11 @@
   <!-- Toast / Snackbar -->
   <div class="copy-toast" id="copyToast" role="status" aria-live="polite">
     <span class="toast-icon" aria-hidden="true">✅</span>
-    <span class="toast-msg" id="toastMsg">Review copied successfully.</span>
+    <span class="toast-msg" id="toastMsg" data-i18n="toastCopied">Review copied successfully.</span>
   </div>
 
   <!-- JavaScript -->
+  <script src="{{ url_for('static', path='js/i18n.js') }}"></script>
   <script src="{{ url_for('static', path='js/feedback.js') }}" defer></script>
 </body>
 </html>
