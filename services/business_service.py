@@ -577,7 +577,9 @@ def save_business(db: Session, business_key: str, data: dict):
     plan_changed = plan["plan_code"] and (
         is_new or plan["plan_code"] != old_plan or plan["join_date"] != old_join
     )
-    if plan_changed and exec_id:
+    from services.payment_service import razorpay_configured
+
+    if plan_changed and exec_id and not razorpay_configured():
         credit_plan_to_wallet(
             db,
             exec_id,

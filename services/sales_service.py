@@ -255,6 +255,9 @@ def upsert_plan_booking(db: Session, business: BusinessConfigModel, *, commit: b
     rate = PLAN_COMMISSION_RATE
     booked_on = business.join_date or date.today()
     phone = business.mobile or ""
+    from services.payment_service import razorpay_configured
+
+    collect_now = not razorpay_configured()
 
     existing = (
         db.query(Booking)
@@ -273,12 +276,15 @@ def upsert_plan_booking(db: Session, business: BusinessConfigModel, *, commit: b
         existing.business_key = business.key
         existing.booking_type = "new"
         existing.amount = amount
-        existing.collected_amount = amount
         existing.commission_rate = rate
         existing.commission_amount = calc_commission(amount, rate)
-        existing.status = "collected"
         existing.notes = CLIENT_PLAN_NOTE
         existing.booked_on = booked_on
+        if collect_now or (existing.collected_amount or 0) >= amount:
+            existing.collected_amount = amount
+            existing.status = "collected"
+        else:
+            existing.status = "booked"
         if commit:
             db.commit()
             db.refresh(existing)
@@ -298,10 +304,10 @@ def upsert_plan_booking(db: Session, business: BusinessConfigModel, *, commit: b
         business_key=business.key,
         booking_type="new",
         amount=amount,
-        collected_amount=amount,
+        collected_amount=amount if collect_now else 0.0,
         commission_rate=rate,
         commission_amount=calc_commission(amount, rate),
-        status="collected",
+        status="collected" if collect_now else "booked",
         notes=CLIENT_PLAN_NOTE,
         booked_on=booked_on,
     )

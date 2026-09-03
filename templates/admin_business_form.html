@@ -77,7 +77,10 @@
         </label>
         {% endfor %}
       </div>
-      <div class="form-hint">Salesman earns {{ plan_commission_rate }}% of the plan amount in their wallet when this business is added or the plan is renewed.</div>
+      <div class="form-hint">Salesman earns {{ plan_commission_rate }}% of the plan amount in their wallet{% if razorpay_ready %} after Razorpay collection succeeds{% else %} when this business is added or the plan is renewed{% endif %}.</div>
+      {% if not razorpay_ready %}
+      <div class="form-hint warn">Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env to collect this plan online, then restart the app.</div>
+      {% endif %}
     </div>
 
     <div class="form-row">
@@ -175,6 +178,18 @@
 
     <div class="form-actions">
       <button type="submit" class="btn btn-primary">Save Business</button>
+      {% if business and razorpay_ready %}
+      <button
+        type="button"
+        class="btn btn-green"
+        data-razorpay-pay
+        data-business-key="{{ business.key or business_key }}"
+      >Collect payment</button>
+      {% endif %}
+      {% if pay_url %}
+      <button type="button" class="btn btn-outline" data-copy-text="{{ pay_url }}">Copy payment link</button>
+      <a class="btn btn-muted" href="{{ pay_url }}" target="_blank" rel="noopener">Open pay page</a>
+      {% endif %}
       <a href="/admin/businesses" class="btn btn-muted">Cancel</a>
     </div>
   </form>

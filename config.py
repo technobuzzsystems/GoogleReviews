@@ -57,6 +57,11 @@ class Config:
     S3_OBJECT_ACL: str = os.getenv("S3_OBJECT_ACL", "")
     MAX_FILE_SIZE_MB: int = int(os.getenv("MAX_FILE_SIZE_MB", "10") or "10")
 
+    # ─── Razorpay ────────────────────────────────────────────────────────────
+    RAZORPAY_KEY_ID: str = os.getenv("RAZORPAY_KEY_ID", "")
+    RAZORPAY_KEY_SECRET: str = os.getenv("RAZORPAY_KEY_SECRET", "")
+    RAZORPAY_WEBHOOK_SECRET: str = os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
+
 
 class DevelopmentConfig(Config):
     """Development-specific configuration."""
@@ -91,4 +96,7 @@ def get_config() -> Config:
         cfg.MAX_FILE_SIZE_MB = max(1, int(os.getenv("MAX_FILE_SIZE_MB", "10") or "10"))
     except ValueError:
         cfg.MAX_FILE_SIZE_MB = 10
+    cfg.RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "").strip()
+    cfg.RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
+    cfg.RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", "").strip()
     return cfg

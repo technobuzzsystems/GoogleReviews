@@ -68,6 +68,7 @@ def init_db():
         Booking,
         BusinessConfigModel,
         Customer,
+        Payment,
         SalesExecutive,
         User,
         WalletLedger,

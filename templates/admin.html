@@ -20,6 +20,9 @@
 
 {% block content %}
 <p class="page-lede">Renewals, unpaid clients, and wallet summary{% if not is_admin %} for your book{% endif %}.</p>
+{% if not razorpay_ready %}
+<p class="page-lede warn-line">Razorpay keys are not set. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env, then restart — until then, new plans are marked collected when you save the client.</p>
+{% endif %}
 
 <div class="stats-grid">
   <div class="stat-card">
@@ -134,6 +137,16 @@
         </div>
         {% if can_view_sales_book %}
         <div class="biz-tile-actions">
+          {% if razorpay_ready %}
+          <button
+            type="button"
+            class="biz-tile-link"
+            data-razorpay-pay
+            data-business-key="{{ b.business_key }}"
+            data-booking-id="{{ b.id }}"
+          >Pay now</button>
+          <a class="biz-tile-link ghost" href="/pay/{{ b.business_key }}" target="_blank" rel="noopener">Pay page</a>
+          {% endif %}
           <a class="biz-tile-link ghost" href="/admin/sales-book?business={{ b.business_key }}">Sales book</a>
         </div>
         {% endif %}

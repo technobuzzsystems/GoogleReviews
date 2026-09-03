@@ -72,6 +72,9 @@
       </div>
       <div class="biz-tile-actions">
         <a class="biz-tile-link ghost" href="{{ b.feedback_path or '/feedback' }}" target="_blank" rel="noopener">Open page</a>
+        {% if razorpay_ready %}
+        <a class="biz-tile-link ghost" href="/pay/{{ b.key }}" target="_blank" rel="noopener">Pay page</a>
+        {% endif %}
         <a class="biz-tile-link" href="/admin/businesses/{{ b.key }}/edit">Edit</a>
       </div>
     </article>

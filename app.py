@@ -17,6 +17,7 @@ from config import get_config
 from database import init_db
 from routes.admin_routes import router as admin_router
 from routes.feedback_routes import router as feedback_router
+from routes.payment_routes import router as payment_router
 from services.auth_service import AuthRedirect
 from utils.network import build_lan_url
 
@@ -56,9 +57,10 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
     app.include_router(feedback_router)
+    app.include_router(payment_router)
     app.include_router(admin_router)
 
-    logger.info("[OK] Routers registered: feedback_router, admin_router")
+    logger.info("[OK] Routers registered: feedback_router, payment_router, admin_router")
 
     @app.exception_handler(AuthRedirect)
     async def auth_redirect_handler(request: Request, exc: AuthRedirect):
@@ -95,6 +97,10 @@ if __name__ == "__main__":
     logger.info("   Feedback   : %s/feedback", config.APP_BASE_URL)
     logger.info("   Phone QR   : %s", build_lan_url(config.PORT, "/feedback"))
     logger.info("   Admin      : %s/admin", config.APP_BASE_URL)
+    logger.info(
+        "   Razorpay   : %s",
+        "configured" if (config.RAZORPAY_KEY_ID and config.RAZORPAY_KEY_SECRET) else "not configured (plans auto-collected on save)",
+    )
     logger.info("   Host:Port  : %s:%s", config.HOST, config.PORT)
 
     uvicorn.run("app:app", host=config.HOST, port=config.PORT, reload=config.DEBUG)

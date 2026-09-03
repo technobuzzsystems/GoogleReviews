@@ -67,6 +67,7 @@ from services.sales_service import (
 )
 from models.schemas import GenerateExamplesRequest
 from services.gemini_service import generate_star_example_prompts
+from services.payment_service import razorpay_configured
 from services.storage_service import public_logo_url, s3_configured, save_logo_upload
 from utils.google_review import build_google_review_url, extract_place_id
 from utils.validators import (
@@ -102,6 +103,8 @@ def _admin_context(request: Request, user: User, **extra):
         "business_id": "technobuzz",
         "feedback_path": "/feedback",
         "s3_ready": s3_configured(),
+        "razorpay_ready": razorpay_configured(),
+        "app_base_url": (config.APP_BASE_URL or "").rstrip("/"),
         "max_file_size_mb": config.MAX_FILE_SIZE_MB,
         "businesses": {},
         "active_nav": "overview",
@@ -125,6 +128,8 @@ def _render_business_form(
     if business is not None:
         business = dict(business)
         business["logo_url"] = public_logo_url(business.get("logo_filename") or "")
+    base = (get_config().APP_BASE_URL or "").rstrip("/")
+    pay_url = f"{base}/pay/{business_key}" if is_edit and business_key else ""
     return templates.TemplateResponse(
         "admin_business_form.html",
         _admin_context(
@@ -137,6 +142,7 @@ def _render_business_form(
             form_error=error,
             feedback_path=(business or {}).get("feedback_path") or "/feedback",
             s3_ready=s3_configured(),
+            pay_url=pay_url,
             max_file_size_mb=config.MAX_FILE_SIZE_MB,
             page_title="Edit Business" if is_edit else "Add Business",
             active_nav="businesses",
@@ -362,20 +368,7 @@ def new_business(
     own = get_executive_for_user(db, user)
     if user.role != UserRole.ADMIN and not own:
         return RedirectResponse(url="/admin/forbidden", status_code=302)
-    return templates.TemplateResponse(
-        "admin_business_form.html",
-        _admin_context(
-            request,
-            user,
-            business=None,
-            business_key="",
-            executives=list_executives(db),
-            locked_executive=own if user.role != UserRole.ADMIN else None,
-            page_title="Add Business",
-            active_nav="businesses",
-            feedback_path="/feedback",
-        ),
-    )
+    return _render_business_form(request, user, db, business=None, business_key="")
 
 
 @router.get("/businesses/{business_key}/edit")
@@ -388,21 +381,7 @@ def edit_business(
     business = get_business(db, business_key)
     if not business or not user_owns_business(db, user, business_key):
         return RedirectResponse(url="/admin/businesses", status_code=302)
-    own = get_executive_for_user(db, user)
-    return templates.TemplateResponse(
-        "admin_business_form.html",
-        _admin_context(
-            request,
-            user,
-            business=business,
-            business_key=business_key,
-            executives=list_executives(db),
-            locked_executive=own if user.role != UserRole.ADMIN else None,
-            page_title="Edit Business",
-            active_nav="businesses",
-            feedback_path=business.get("feedback_path") or "/feedback",
-        ),
-    )
+    return _render_business_form(request, user, db, business=business, business_key=business_key)
 
 
 @router.post("/businesses")

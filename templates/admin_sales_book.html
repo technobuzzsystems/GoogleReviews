@@ -84,6 +84,7 @@
           <th class="td-right">Comm %</th>
           <th class="td-right">Commission</th>
           <th>Status</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -110,10 +111,23 @@
             <span class="badge none">{{ row.status|capitalize }}</span>
             {% endif %}
           </td>
+          <td class="td-actions">
+            {% if row.pending and razorpay_ready %}
+            <button
+              type="button"
+              class="btn btn-primary btn-sm"
+              data-razorpay-pay
+              data-business-key="{{ row.business_key }}"
+              data-booking-id="{{ row.id }}"
+            >Pay</button>
+            {% elif row.pending %}
+            <a class="btn btn-outline btn-sm" href="/pay/{{ row.business_key }}" target="_blank" rel="noopener">Pay page</a>
+            {% endif %}
+          </td>
         </tr>
         {% else %}
         <tr>
-          <td colspan="{{ 10 if not locked_executive else 9 }}">
+          <td colspan="{{ 11 if not locked_executive else 10 }}">
             <div class="empty-state">
               <div class="empty-icon">📒</div>
               <p>No sales yet. Add a booking or assign a plan to a client.</p>
@@ -134,6 +148,7 @@
           <th class="td-right">₹{{ '{:,.0f}'.format(stats.pending_collection) }}</th>
           <th></th>
           <th class="td-right amount-green">₹{{ '{:,.0f}'.format(stats.total_commission) }}</th>
+          <th></th>
           <th></th>
         </tr>
       </tfoot>

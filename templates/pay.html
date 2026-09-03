@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pay {{ plan_label }} — {{ business.name }}</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}" />
+  <style>
+    .pay-card { max-width: 460px; }
+    .pay-amount { font-size: 2rem; font-weight: 800; color: var(--clr-text); margin: 8px 0 4px; }
+    .pay-meta { color: var(--clr-text-muted); font-size: 0.92rem; line-height: 1.6; }
+    .pay-actions { margin-top: 24px; display: flex; flex-direction: column; gap: 10px; }
+    .pay-error { margin-top: 12px; color: var(--clr-error); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+    <main class="feedback-card pay-card" role="main">
+      <header class="brand-section">
+        <div class="logo-wrapper">
+          {% if logo_url %}
+          <img src="{{ logo_url }}" alt="{{ business.name }} Logo" class="company-logo" width="88" height="88" />
+          {% endif %}
+        </div>
+        <h1 class="company-name">{{ business.name }}</h1>
+        <p class="welcome-message">Pay your ReviewHub plan with Razorpay</p>
+      </header>
+      <div class="section-divider"></div>
+      {% if paid %}
+      <div class="success-screen active" style="display:block">
+        <div class="success-icon-wrapper"><span class="success-checkmark">✅</span></div>
+        <h2 class="success-title">Payment received</h2>
+        <p class="success-subtitle">Thank you. This plan is marked collected in the sales book.</p>
+      </div>
+      {% elif amount > 0 %}
+      <p class="pay-meta">{{ plan_label }}</p>
+      <p class="pay-amount">₹{{ '{:,.0f}'.format(amount) }}</p>
+      <p class="pay-meta">Secure card / UPI / netbanking checkout via Razorpay.</p>
+      <div class="pay-actions">
+        {% if razorpay_ready %}
+        <button
+          type="button"
+          class="btn-submit"
+          id="btnPay"
+          data-razorpay-pay
+          data-order-url="/pay/{{ business.key }}/order"
+          data-verify-url="/pay/{{ business.key }}/verify"
+        >
+          <span class="btn-submit-inner"><span class="btn-text">Pay ₹{{ '{:,.0f}'.format(amount) }}</span></span>
+        </button>
+        {% else %}
+        <p class="pay-error">Razorpay keys are not configured yet. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env.</p>
+        {% endif %}
+      </div>
+      {% else %}
+      <p class="pay-error">{{ error or "Nothing to pay for this client." }}</p>
+      {% endif %}
+    </main>
+  </div>
+  {% if razorpay_ready and not paid %}
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script src="{{ url_for('static', path='js/razorpay_checkout.js') }}"></script>
+  {% endif %}
+</body>
+</html>

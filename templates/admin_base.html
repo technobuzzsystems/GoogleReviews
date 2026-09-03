@@ -92,6 +92,10 @@
     }
   })();
 </script>
+{% if razorpay_ready %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+{% endif %}
+<script src="{{ url_for('static', path='js/razorpay_checkout.js') }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -147,3 +147,24 @@ class WalletWithdrawal(Base):
     processed_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     processed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    business_key = Column(String, nullable=False, index=True)
+    booking_id = Column(Integer, ForeignKey("bookings.id"), nullable=True, index=True)
+    plan_code = Column(String, default="")
+    amount = Column(Float, default=0.0, nullable=False)
+    currency = Column(String, default="INR", nullable=False)
+    razorpay_order_id = Column(String, unique=True, index=True, nullable=False)
+    razorpay_payment_id = Column(String, default="", index=True)
+    razorpay_signature = Column(String, default="")
+    status = Column(String, default="created", nullable=False, index=True)  # created | paid | failed
+    payer_name = Column(String, default="")
+    payer_email = Column(String, default="")
+    payer_phone = Column(String, default="")
+    notes = Column(Text, default="")
+    paid_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
