@@ -63,7 +63,7 @@ def render_business_feedback(request: Request, business_id: str, db: Session, b_
         "logo_url":          b_config.get("logo_url") or public_logo_url(logo),
         "feedback_path":     b_config.get("feedback_path") or "/feedback",
     }
-    return templates.TemplateResponse("feedback.html", context)
+    return templates.TemplateResponse(request=request, name="feedback.html", context=context)
 
 @router.get("/feedback")
 def feedback_page(request: Request, db: Session = Depends(get_db)):

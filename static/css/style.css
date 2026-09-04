@@ -281,15 +281,15 @@ html:not([lang="en"]) .lang-bar-label {
   animation: logoPulse 3.5s ease-in-out infinite;
 }
 .company-logo {
-  width: 88px;
-  height: 88px;
-  border-radius: var(--r-lg);
+  width: auto;
+  height: auto;
+  max-width: 280px;
+  max-height: 100px;
+  border-radius: var(--r-sm);
   object-fit: contain;
-  border: 2px solid var(--clr-border-active);
-  box-shadow: var(--shadow-md), 0 0 22px rgba(0,180,216,0.18);
   position: relative;
   z-index: 1;
-  background: #0D1B2A;
+  background: transparent;
 }
 
 .company-name {

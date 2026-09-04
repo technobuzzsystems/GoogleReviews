@@ -72,8 +72,9 @@ def pay_page(request: Request, business_key: str, db: Session = Depends(get_db))
     else:
         paid, error = False, "This client has no plan amount to collect."
     return templates.TemplateResponse(
-        "pay.html",
-        _pay_context(request, business, db, paid=paid, error=error),
+        request=request,
+        name="pay.html",
+        context=_pay_context(request, business, db, paid=paid, error=error)
     )
 
 

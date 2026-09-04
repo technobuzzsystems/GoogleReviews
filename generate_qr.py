@@ -123,7 +123,8 @@ def main():
         route = path
         
         if args.url:
-            url = args.url if b_id == "technobuzz" else f"{args.url.rsplit('/', 1)[0]}/{route}"
+            base_url = args.url.rstrip("/")
+            url = base_url if b_id == "technobuzz" else f"{base_url}/{route}"
         elif app_base_url and is_phone_reachable_base_url(app_base_url):
             url = f"{app_base_url}/{route}"
         else:

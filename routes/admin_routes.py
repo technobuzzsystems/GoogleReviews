@@ -130,8 +130,7 @@ def _render_business_form(
         business["logo_url"] = public_logo_url(business.get("logo_filename") or "")
     base = (get_config().APP_BASE_URL or "").rstrip("/")
     pay_url = f"{base}/pay/{business_key}" if is_edit and business_key else ""
-    return templates.TemplateResponse(
-        "admin_business_form.html",
+    return templates.TemplateResponse(request=request, name="admin_business_form.html", context=
         _admin_context(
             request,
             user,
@@ -170,8 +169,7 @@ def _visible_business_key(db: Session, user: User, business: str) -> tuple[str, 
 def login_page(request: Request, next: str = "/admin", error: str = "", db: Session = Depends(get_db)):
     if get_session_user(request, db):
         return RedirectResponse(url=safe_next_url(next), status_code=302)
-    return templates.TemplateResponse(
-        "login.html",
+    return templates.TemplateResponse(request=request, name="login.html", context=
         {"request": request, "next": safe_next_url(next), "error": error},
     )
 
@@ -186,8 +184,7 @@ def login_submit(
 ):
     user = authenticate_user(db, username, password)
     if not user:
-        return templates.TemplateResponse(
-            "login.html",
+        return templates.TemplateResponse(request=request, name="login.html", context=
             {
                 "request": request,
                 "next": safe_next_url(next),
@@ -208,8 +205,7 @@ def logout(request: Request):
 
 @router.get("/forbidden")
 def forbidden(request: Request, user: User = Depends(require_login)):
-    return templates.TemplateResponse(
-        "forbidden.html",
+    return templates.TemplateResponse(request=request, name="forbidden.html", context=
         _admin_context(request, user, page_title="Access Denied", active_nav=""),
         status_code=403,
     )
@@ -232,8 +228,7 @@ def admin_dashboard(
     counts = overview_counts(db, user)
     commission_tile = actual_commission_tile(db, user)
 
-    return templates.TemplateResponse(
-        "admin.html",
+    return templates.TemplateResponse(request=request, name="admin.html", context=
         _admin_context(
             request,
             user,
@@ -343,8 +338,7 @@ def list_businesses(
 ):
     listing = list_businesses_page(db, user=user, search=q, page=page, per_page=per_page)
     first = listing["rows"][0] if listing["rows"] else None
-    return templates.TemplateResponse(
-        "admin_businesses.html",
+    return templates.TemplateResponse(request=request, name="admin_businesses.html", context=
         _admin_context(
             request,
             user,
@@ -541,8 +535,7 @@ def sales_book(
         per_page=per_page,
     )
     stats = sales_stats(db, business_key=business, executive_id=filter_exec)
-    return templates.TemplateResponse(
-        "admin_sales_book.html",
+    return templates.TemplateResponse(request=request, name="admin_sales_book.html", context=
         _admin_context(
             request,
             user,
@@ -570,8 +563,7 @@ def new_booking(
 ):
     own = get_executive_for_user(db, user)
     locked = own if user.role != UserRole.ADMIN else None
-    return templates.TemplateResponse(
-        "admin_sales_form.html",
+    return templates.TemplateResponse(request=request, name="admin_sales_form.html", context=
         _admin_context(
             request,
             user,
@@ -606,8 +598,7 @@ def save_booking_route(
     locked = own if user.role != UserRole.ADMIN else None
     if user.role != UserRole.ADMIN:
         if not own:
-            return templates.TemplateResponse(
-                "admin_sales_form.html",
+            return templates.TemplateResponse(request=request, name="admin_sales_form.html", context=
                 _admin_context(
                     request,
                     user,
@@ -644,8 +635,7 @@ def save_booking_route(
             },
         )
     except ValueError as exc:
-        return templates.TemplateResponse(
-            "admin_sales_form.html",
+        return templates.TemplateResponse(request=request, name="admin_sales_form.html", context=
             _admin_context(
                 request,
                 user,
@@ -696,8 +686,7 @@ def _wallet_view(
         selected = execs[0]
     banks = {e.id: bank_details_for_executive(db, e) for e in execs}
     bank = banks.get(selected.id) if selected else None
-    return templates.TemplateResponse(
-        "admin_wallet.html",
+    return templates.TemplateResponse(request=request, name="admin_wallet.html", context=
         _admin_context(
             request,
             user,
@@ -760,8 +749,7 @@ def commission_page(
     report = client_commission_report(
         db, user, year=year, month=month, page=page, per_page=per_page
     )
-    return templates.TemplateResponse(
-        "admin_commission.html",
+    return templates.TemplateResponse(request=request, name="admin_commission.html", context=
         _admin_context(
             request,
             user,
@@ -875,8 +863,7 @@ def wallet_reject_transfer(
 
 def _user_form_view(request: Request, user: User, *, staff=None, error: str = "", posted: dict = None):
     data = posted or staff or {}
-    return templates.TemplateResponse(
-        "admin_user_form.html",
+    return templates.TemplateResponse(request=request, name="admin_user_form.html", context=
         _admin_context(
             request,
             user,
@@ -896,8 +883,7 @@ def users_list(
     db: Session = Depends(get_db),
     user: User = Depends(require_admin),
 ):
-    return templates.TemplateResponse(
-        "admin_users.html",
+    return templates.TemplateResponse(request=request, name="admin_users.html", context=
         _admin_context(
             request,
             user,

@@ -76,10 +76,12 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(500)
     async def internal_error_handler(request: Request, exc):
+        import traceback
+        err = traceback.format_exc()
         logger.exception("Internal server error")
         return JSONResponse(
             status_code=500,
-            content={"error": "An internal server error occurred. Please try again later."},
+            content={"error": "An internal server error occurred. Please try again later.", "traceback": str(exc)},
         )
 
     logger.info("[OK] Global error handlers registered.")
