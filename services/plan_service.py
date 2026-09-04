@@ -9,12 +9,12 @@ from sqlalchemy.orm import Session
 from models.domain_models import Booking, BusinessConfigModel, SalesExecutive, WalletLedger
 
 PLANS = {
-    "6m": {"code": "6m", "label": "6 Months (TESTING)", "months": 6, "amount": 1.0},
-    "1y": {"code": "1y", "label": "1 Year", "months": 12, "amount": 2000.0},
-    "2y": {"code": "2y", "label": "2 Years", "months": 24, "amount": 3000.0},
+    "6m": {"code": "6m", "label": "6 Months", "months": 6, "amount": 1499.0},
+    "1y": {"code": "1y", "label": "1 Year", "months": 12, "amount": 1999.0},
+    "2y": {"code": "2y", "label": "2 Years", "months": 24, "amount": 2999.0},
 }
 
-PLAN_COMMISSION_RATE = 10.0  # 10% of plan amount credited to salesman wallet
+PLAN_COMMISSION_RATE = 25.0  # 25% of plan amount credited to salesman wallet
 CLIENT_PLAN_NOTE = "Client plan"
 
 

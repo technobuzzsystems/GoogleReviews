@@ -331,12 +331,14 @@ def api_generate_examples(
 def list_businesses(
     request: Request,
     q: str = "",
+    date_from: str = "",
+    date_to: str = "",
     page: int = 1,
-    per_page: int = 24,
+    per_page: int = 100,
     db: Session = Depends(get_db),
     user: User = Depends(require_business_access),
 ):
-    listing = list_businesses_page(db, user=user, search=q, page=page, per_page=per_page)
+    listing = list_businesses_page(db, user=user, search=q, page=page, per_page=per_page, date_from=date_from, date_to=date_to)
     first = listing["rows"][0] if listing["rows"] else None
     return templates.TemplateResponse(request=request, name="admin_businesses.html", context=
         _admin_context(

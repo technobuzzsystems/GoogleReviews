@@ -140,8 +140,8 @@ def _serialize_business(b: BusinessConfigModel, salesman_names: dict = None) -> 
     }
 
 
-BUSINESS_PAGE_SIZES = (12, 24, 48, 96)
-DEFAULT_BUSINESS_PAGE_SIZE = 24
+BUSINESS_PAGE_SIZES = (12, 24, 48, 100)
+DEFAULT_BUSINESS_PAGE_SIZE = 100
 
 
 def _serialize_business_card(b: BusinessConfigModel, salesman_names: dict = None) -> dict:
@@ -192,7 +192,7 @@ def _page_numbers(current: int, pages: int) -> list:
     return pages_out
 
 
-def _businesses_query(db: Session, sales_executive_id: int = None, search: str = ""):
+def _businesses_query(db: Session, sales_executive_id: int = None, search: str = "", date_from: str = "", date_to: str = ""):
     from sqlalchemy import or_
 
     q = db.query(BusinessConfigModel)
@@ -213,6 +213,18 @@ def _businesses_query(db: Session, sales_executive_id: int = None, search: str =
                 BusinessConfigModel.email.ilike(like),
             )
         )
+    if date_from:
+        try:
+            df = datetime.strptime(date_from, "%Y-%m-%d").date()
+            q = q.filter(BusinessConfigModel.join_date >= df)
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            dt = datetime.strptime(date_to, "%Y-%m-%d").date()
+            q = q.filter(BusinessConfigModel.join_date <= dt)
+        except ValueError:
+            pass
     return q
 
 
@@ -222,6 +234,8 @@ def list_businesses_page(
     search: str = "",
     page: int = 1,
     per_page: int = DEFAULT_BUSINESS_PAGE_SIZE,
+    date_from: str = "",
+    date_to: str = "",
 ) -> dict:
     """Paginated client grid. Loads one page only — safe at 3000+ rows."""
     from math import ceil
@@ -253,7 +267,7 @@ def list_businesses_page(
             }
         exec_id = own.id
 
-    q = _businesses_query(db, sales_executive_id=exec_id, search=search)
+    q = _businesses_query(db, sales_executive_id=exec_id, search=search, date_from=date_from, date_to=date_to)
     total = q.with_entities(func.count(BusinessConfigModel.key)).order_by(None).scalar() or 0
     pages = ceil(total / per_page) if total else 0
     if pages:
@@ -278,7 +292,7 @@ def list_businesses_page(
                 BusinessConfigModel.address,
             )
         )
-        .order_by(BusinessConfigModel.name.asc(), BusinessConfigModel.key.asc())
+        .order_by(BusinessConfigModel.join_date.desc(), BusinessConfigModel.name.asc())
         .offset((page - 1) * per_page if pages else 0)
         .limit(per_page)
         .all()

@@ -36,6 +36,8 @@
         maxlength="80"
       />
     </div>
+    <input type="date" name="date_from" value="{{ request.query_params.get('date_from', '') }}" class="filter-select" aria-label="From Date" style="width: auto;"/>
+    <input type="date" name="date_to" value="{{ request.query_params.get('date_to', '') }}" class="filter-select" aria-label="To Date" style="width: auto;"/>
     <select name="per_page" class="filter-select" aria-label="Cards per page" onchange="this.form.submit()">
       {% for size in page_sizes %}
       <option value="{{ size }}" {% if listing.per_page == size %}selected{% endif %}>{{ size }} per page</option>
@@ -70,13 +72,16 @@
         <span>{{ b.join_date or '—' }} → {{ b.expiry_date or '—' }}</span>
         {% if b.feedback_path %}<span class="biz-tile-url">{{ b.feedback_path }}</span>{% endif %}
       </div>
-      <div class="biz-tile-actions">
-        <a class="biz-tile-link ghost" href="{{ b.feedback_path or '/feedback' }}" target="_blank" rel="noopener">Open page</a>
-        {% if razorpay_ready %}
-        <a class="biz-tile-link ghost" href="/pay/{{ b.key }}" target="_blank" rel="noopener">Pay page</a>
-        {% endif %}
-        <a class="biz-tile-link" href="/admin/businesses/{{ b.key }}/edit">Edit</a>
-      </div>
+        <div class="biz-tile-actions">
+          <a class="biz-tile-link ghost" href="{{ b.feedback_path or '/feedback' }}" target="_blank" rel="noopener">Open page</a>
+          {% if razorpay_ready %}
+          <button class="biz-tile-link" style="box-shadow: 0 4px 12px rgba(16,185,129,0.3); white-space: nowrap; transition: transform 0.2s;" data-razorpay-pay data-business-key="{{ b.key }}" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <svg style="width: 14px; height: 14px; margin-right: 6px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+            Pay now
+          </button>
+          {% endif %}
+          <a class="biz-tile-link ghost" href="/admin/businesses/{{ b.key }}/edit">Edit</a>
+        </div>
     </article>
     {% endfor %}
   </div>
