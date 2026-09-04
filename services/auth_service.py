@@ -145,7 +145,14 @@ def require_sales_book(request: Request, db: Session = Depends(get_db)) -> User:
 
 
 def can_manage_users(user: Optional[User]) -> bool:
-    return bool(user and user.role == UserRole.ADMIN)
+    return bool(user and user.role in UserRole.USER_MANAGERS)
+
+
+def require_user_manager(request: Request, db: Session = Depends(get_db)) -> User:
+    user = require_login(request, db)
+    if user.role not in UserRole.USER_MANAGERS:
+        raise AuthRedirect("/admin/forbidden")
+    return user
 
 
 def require_admin(request: Request, db: Session = Depends(get_db)) -> User:
@@ -169,8 +176,8 @@ def _mask_account(number: str) -> str:
     return "•••• " + digits[-4:]
 
 
-def serialize_user(user: User) -> dict:
-    return {
+def serialize_user(user: User, db: Session = None) -> dict:
+    data = {
         "id": user.id,
         "username": user.username,
         "role": user.role,
@@ -187,14 +194,37 @@ def serialize_user(user: User) -> dict:
         "account_number": user.account_number or "",
         "account_masked": _mask_account(user.account_number or ""),
         "ifsc": user.ifsc or "",
+        "franchise_id": getattr(user, "franchise_id", None),
+        "area": "",
+        "commission_rate": None,
         "is_active": bool(user.is_active),
         "has_bank": bool((user.account_number or "").strip() and (user.ifsc or "").strip()),
     }
+    if db:
+        from models.domain_models import Franchise, SalesExecutive
+
+        fr = None
+        if user.franchise_id:
+            fr = db.query(Franchise).filter(Franchise.id == user.franchise_id).first()
+        if not fr and user.role == UserRole.FRANCHISE:
+            fr = db.query(Franchise).filter(Franchise.user_id == user.id).first()
+        if fr:
+            data["area"] = fr.area or ""
+            data["franchise_id"] = fr.id
+        executive = db.query(SalesExecutive).filter(SalesExecutive.user_id == user.id).first()
+        if executive:
+            data["commission_rate"] = executive.commission_rate
+            if executive.franchise_id:
+                data["franchise_id"] = executive.franchise_id
+    return data
 
 
-def list_users(db: Session) -> list[dict]:
-    rows = db.query(User).order_by(User.role.asc(), User.username.asc()).all()
-    return [serialize_user(u) for u in rows]
+def list_users(db: Session, franchise_id: Optional[int] = None) -> list[dict]:
+    q = db.query(User)
+    if franchise_id:
+        q = q.filter(User.franchise_id == franchise_id, User.role == UserRole.SALES)
+    rows = q.order_by(User.role.asc(), User.username.asc()).all()
+    return [serialize_user(u, db) for u in rows]
 
 
 def bank_details_for_executive(db: Session, executive) -> Optional[dict]:
@@ -215,8 +245,9 @@ def bank_details_for_executive(db: Session, executive) -> Optional[dict]:
     }
 
 
-def _sync_sales_executive(db: Session, user: User) -> None:
+def _sync_sales_executive(db: Session, user: User, *, franchise_id=None, commission_rate=None) -> None:
     from models.domain_models import SalesExecutive
+    from services.plan_service import PLAN_COMMISSION_RATE
 
     if user.role != UserRole.SALES:
         return
@@ -237,6 +268,13 @@ def _sync_sales_executive(db: Session, user: User) -> None:
     executive.account_number = user.account_number or ""
     executive.ifsc = user.ifsc or ""
     executive.is_active = bool(user.is_active)
+    if franchise_id:
+        executive.franchise_id = int(franchise_id)
+        user.franchise_id = int(franchise_id)
+    if commission_rate is not None and str(commission_rate).strip() != "":
+        executive.commission_rate = float(commission_rate)
+    elif not executive.commission_rate:
+        executive.commission_rate = PLAN_COMMISSION_RATE
 
 
 def save_staff_user(db: Session, user_id: Optional[int], data: dict) -> User:
@@ -290,7 +328,20 @@ def save_staff_user(db: Session, user_id: Optional[int], data: dict) -> User:
         raise ValueError("Account number and IFSC are required for every role.")
     user.is_active = bool(data.get("is_active", True))
     db.flush()
-    _sync_sales_executive(db, user)
+    if user.role == UserRole.FRANCHISE:
+        from services.franchise_service import ensure_franchise_profile
+
+        org = ensure_franchise_profile(db, user, area=data.get("area") or "")
+        if org:
+            user.franchise_id = org.id
+    if user.role == UserRole.SALES:
+        user.franchise_id = data.get("franchise_id") or user.franchise_id
+    _sync_sales_executive(
+        db,
+        user,
+        franchise_id=data.get("franchise_id") or user.franchise_id,
+        commission_rate=data.get("commission_rate"),
+    )
     db.commit()
     db.refresh(user)
     return user

@@ -100,6 +100,24 @@ def unpaid_booking(db: Session, *, booking_id: int = 0, business_key: str = "") 
     return None
 
 
+def unpaid_business_keys(db: Session, keys: list[str]) -> set[str]:
+    """Business keys that still have an unpaid (non-cancelled) booking."""
+    clean = [k for k in keys if k]
+    if not clean:
+        return set()
+    rows = (
+        db.query(Booking.business_key)
+        .filter(
+            Booking.status != "cancelled",
+            Booking.amount > Booking.collected_amount,
+            Booking.business_key.in_(clean),
+        )
+        .distinct()
+        .all()
+    )
+    return {key for (key,) in rows if key}
+
+
 def due_amount(booking: Booking) -> float:
     return round_money(max((booking.amount or 0) - (booking.collected_amount or 0), 0))
 

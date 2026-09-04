@@ -32,6 +32,7 @@ from services.auth_service import (
     require_business_access,
     require_login,
     require_sales_book,
+    require_user_manager,
     safe_next_url,
     save_staff_user,
     serialize_user,
@@ -56,6 +57,12 @@ from services.dashboard_service import (
     withdraw_wallet_to_bank,
 )
 from services.plan_service import PLANS, PLAN_COMMISSION_RATE
+from services.franchise_service import (
+    ADMIN_FRANCHISE_COMMISSION_RATE,
+    get_franchise_for_user,
+    list_franchises,
+    scope_for_user,
+)
 from services.sales_service import (
     DEFAULT_SALES_PAGE_SIZE,
     get_executive_for_user,
@@ -92,12 +99,14 @@ def _admin_context(request: Request, user: User, **extra):
         "request": request,
         "user": user,
         "is_admin": user.role == UserRole.ADMIN,
+        "is_franchise": user.role == UserRole.FRANCHISE,
         "can_manage_businesses": can_manage_businesses(user),
         "can_manage_users": can_manage_users(user),
         "can_view_sales_book": can_view_sales_book(user),
         "role_labels": ROLE_LABELS,
         "plans": PLANS,
         "plan_commission_rate": PLAN_COMMISSION_RATE,
+        "admin_franchise_rate": ADMIN_FRANCHISE_COMMISSION_RATE,
         "company_name": config.COMPANY_NAME,
         "company_id": config.COMPANY_ID,
         "business_id": "technobuzz",
@@ -124,20 +133,29 @@ def _render_business_form(
     error: str = "",
 ):
     own = get_executive_for_user(db, user)
+    org = get_franchise_for_user(db, user)
     is_edit = bool(business_key and business and business.get("key"))
     if business is not None:
         business = dict(business)
         business["logo_url"] = public_logo_url(business.get("logo_filename") or "")
+        if org and not business.get("area"):
+            business["area"] = org.area
+        if org and not business.get("franchise_id"):
+            business["franchise_id"] = org.id
     base = (get_config().APP_BASE_URL or "").rstrip("/")
     pay_url = f"{base}/pay/{business_key}" if is_edit and business_key else ""
+    execs = list_executives(db, franchise_id=org.id if org and user.role == UserRole.FRANCHISE else None)
     return templates.TemplateResponse(request=request, name="admin_business_form.html", context=
         _admin_context(
             request,
             user,
             business=business,
             business_key=business_key,
-            executives=list_executives(db),
-            locked_executive=own if user.role != UserRole.ADMIN else None,
+            executives=execs,
+            franchises=list_franchises(db) if user.role == UserRole.ADMIN else [],
+            current_franchise=org,
+            locked_area=org.area if org and user.role == UserRole.FRANCHISE else "",
+            locked_executive=own if user.role == UserRole.SALES else None,
             form_error=error,
             feedback_path=(business or {}).get("feedback_path") or "/feedback",
             s3_ready=s3_configured(),
@@ -241,6 +259,7 @@ def admin_dashboard(
             pending=pending,
             overview_counts=counts,
             commission_tile=commission_tile,
+            current_franchise=get_franchise_for_user(db, user),
             page_title="Overview",
             active_nav="overview",
         ),
@@ -362,7 +381,9 @@ def new_business(
     user: User = Depends(require_business_access),
 ):
     own = get_executive_for_user(db, user)
-    if user.role != UserRole.ADMIN and not own:
+    if user.role == UserRole.SALES and not own:
+        return RedirectResponse(url="/admin/forbidden", status_code=302)
+    if user.role == UserRole.FRANCHISE and not get_franchise_for_user(db, user):
         return RedirectResponse(url="/admin/forbidden", status_code=302)
     return _render_business_form(request, user, db, business=None, business_key="")
 
@@ -405,17 +426,26 @@ def save_business_route(
     alternate_mobile: str = Form(""),
     email: str = Form(""),
     address: str = Form(""),
+    area: str = Form(""),
+    franchise_id: str = Form(""),
     db: Session = Depends(get_db),
     user: User = Depends(require_business_access),
 ):
     own = get_executive_for_user(db, user)
-    if user.role != UserRole.ADMIN:
+    org = get_franchise_for_user(db, user)
+    if user.role == UserRole.SALES:
         if not own:
             return RedirectResponse(url="/admin/forbidden", status_code=302)
         existing = get_business(db, business_key.strip())
         if existing and not user_owns_business(db, user, business_key.strip()):
             return RedirectResponse(url="/admin/businesses", status_code=302)
         sales_executive_id = str(own.id)
+    elif user.role == UserRole.FRANCHISE:
+        if not org:
+            return RedirectResponse(url="/admin/forbidden", status_code=302)
+        existing = get_business(db, business_key.strip())
+        if existing and not user_owns_business(db, user, business_key.strip()):
+            return RedirectResponse(url="/admin/businesses", status_code=302)
 
     posted = {
         "key": business_key.strip(),
@@ -438,6 +468,8 @@ def save_business_route(
         "alternate_mobile": alternate_mobile,
         "email": email,
         "address": address,
+        "area": area,
+        "franchise_id": int(franchise_id) if str(franchise_id).isdigit() else None,
     }
 
     mobile_val, mobile_err = validate_mobile(mobile, required=True)
@@ -493,6 +525,8 @@ def save_business_route(
         "alternate_mobile": alt_val,
         "email": email_val,
         "address": address_val,
+        "area": org.area if org and user.role == UserRole.FRANCHISE else sanitize_string(area, 80),
+        "franchise_id": org.id if org and user.role == UserRole.FRANCHISE else (int(franchise_id) if str(franchise_id).isdigit() else None),
     }
     save_business(db, business_key.strip(), business_data)
     return RedirectResponse(url="/admin/businesses", status_code=303)
@@ -506,10 +540,14 @@ def api_sales_stats(
     user: User = Depends(require_sales_book),
 ):
     executive_id = None
-    if user.role != UserRole.ADMIN:
+    franchise_id = None
+    if user.role == UserRole.SALES:
         own = get_executive_for_user(db, user)
         executive_id = own.id if own else -1
-    return sales_stats(db, business_key=business, executive_id=executive_id)
+    elif user.role == UserRole.FRANCHISE:
+        org = get_franchise_for_user(db, user)
+        franchise_id = org.id if org else -1
+    return sales_stats(db, business_key=business, executive_id=executive_id, franchise_id=franchise_id)
 
 
 @router.get("/sales-book")
@@ -525,7 +563,8 @@ def sales_book(
     user: User = Depends(require_sales_book),
 ):
     own = get_executive_for_user(db, user)
-    locked_executive_id = own.id if (user.role != UserRole.ADMIN and own) else None
+    org = get_franchise_for_user(db, user)
+    locked_executive_id = own.id if user.role == UserRole.SALES and own else None
     filter_exec = locked_executive_id or (executive_id or None)
     listing = list_bookings(
         db,
@@ -535,14 +574,20 @@ def sales_book(
         search=search,
         page=page,
         per_page=per_page,
+        franchise_id=org.id if user.role == UserRole.FRANCHISE and org else None,
     )
-    stats = sales_stats(db, business_key=business, executive_id=filter_exec)
+    stats = sales_stats(
+        db,
+        business_key=business,
+        executive_id=filter_exec,
+        franchise_id=org.id if user.role == UserRole.FRANCHISE and org else None,
+    )
     return templates.TemplateResponse(request=request, name="admin_sales_book.html", context=
         _admin_context(
             request,
             user,
             listing=listing,
-            executives=list_executives(db),
+            executives=list_executives(db, franchise_id=org.id if org and user.role == UserRole.FRANCHISE else None),
             clients=list_sales_clients(db, filter_exec if locked_executive_id else None),
             stats=stats,
             business_id=business,
@@ -664,17 +709,21 @@ def _wallet_view(
     form: dict = None,
 ):
     own = get_executive_for_user(db, user)
-    filter_exec = own.id if (user.role != UserRole.ADMIN and own) else None
-    pending = list_withdrawals(db, sales_executive_id=filter_exec, status="requested")
+    org = get_franchise_for_user(db, user)
+    filter_exec = own.id if (user.role == UserRole.SALES and own) else None
+    filter_franchise = org.id if user.role == UserRole.FRANCHISE and org else None
+    pending = list_withdrawals(db, sales_executive_id=filter_exec, franchise_id=filter_franchise, status="requested")
     history = [
         w
-        for w in list_withdrawals(db, sales_executive_id=filter_exec)
+        for w in list_withdrawals(db, sales_executive_id=filter_exec, franchise_id=filter_franchise)
         if w["status"] != "requested"
     ]
-    execs = list_executives(db)
+    execs = list_executives(db, franchise_id=filter_franchise)
     if filter_exec:
         execs = [e for e in execs if e.id == filter_exec]
-    wallet_total = round(sum(float(e.wallet_balance or 0) for e in execs), 2)
+    team_wallet = round(sum(float(e.wallet_balance or 0) for e in execs), 2)
+    franchise_wallet = round(float(org.wallet_balance or 0), 2) if org and user.role == UserRole.FRANCHISE else 0.0
+    wallet_total = franchise_wallet if user.role == UserRole.FRANCHISE else team_wallet
     pending_total = round(sum(float(w["amount"] or 0) for w in pending), 2)
     withdrawn_total = round(sum(float(w["amount"] or 0) for w in history if w["status"] == "sent"), 2)
     commission_tile = actual_commission_tile(db, user)
@@ -696,10 +745,13 @@ def _wallet_view(
             withdrawals=history,
             executives=execs,
             wallet_total=wallet_total,
+            team_wallet=team_wallet,
+            franchise_wallet=franchise_wallet,
+            current_franchise=org if user.role == UserRole.FRANCHISE else None,
             pending_total=pending_total,
             withdrawn_total=withdrawn_total,
             commission_tile=commission_tile,
-            locked_executive=own if user.role != UserRole.ADMIN else None,
+            locked_executive=own if user.role == UserRole.SALES else None,
             selected_executive=selected,
             bank=bank,
             banks=banks,
@@ -863,8 +915,18 @@ def wallet_reject_transfer(
     return RedirectResponse(url="/admin/wallet?rejected=1", status_code=303)
 
 
-def _user_form_view(request: Request, user: User, *, staff=None, error: str = "", posted: dict = None):
+def _user_form_view(request: Request, user: User, db: Session = None, *, staff=None, error: str = "", posted: dict = None):
     data = posted or staff or {}
+    org = get_franchise_for_user(db, user) if db else None
+    allowed_roles = ROLE_LABELS
+    if user.role == UserRole.FRANCHISE:
+        allowed_roles = {UserRole.SALES: ROLE_LABELS[UserRole.SALES]}
+        if not data.get("role"):
+            data = dict(data)
+            data["role"] = UserRole.SALES
+        if org and not data.get("area"):
+            data = dict(data)
+            data["area"] = org.area
     return templates.TemplateResponse(request=request, name="admin_user_form.html", context=
         _admin_context(
             request,
@@ -872,6 +934,9 @@ def _user_form_view(request: Request, user: User, *, staff=None, error: str = ""
             staff=data,
             is_edit=bool(staff and staff.get("id")),
             form_error=error,
+            role_labels=allowed_roles,
+            current_franchise=org,
+            franchises=list_franchises(db) if db and user.role == UserRole.ADMIN else [],
             page_title="Edit user" if staff and staff.get("id") else "Add user",
             active_nav="users",
         ),
@@ -883,22 +948,25 @@ def _user_form_view(request: Request, user: User, *, staff=None, error: str = ""
 def users_list(
     request: Request,
     db: Session = Depends(get_db),
-    user: User = Depends(require_admin),
+    user: User = Depends(require_user_manager),
 ):
+    org = get_franchise_for_user(db, user)
+    staff = list_users(db, franchise_id=org.id if user.role == UserRole.FRANCHISE and org else None)
     return templates.TemplateResponse(request=request, name="admin_users.html", context=
         _admin_context(
             request,
             user,
-            staff_users=list_users(db),
-            page_title="Users & bank accounts",
+            staff_users=staff,
+            current_franchise=org,
+            page_title="Your sales team" if user.role == UserRole.FRANCHISE else "Users & bank accounts",
             active_nav="users",
         ),
     )
 
 
 @router.get("/users/new")
-def users_new(request: Request, user: User = Depends(require_admin)):
-    return _user_form_view(request, user)
+def users_new(request: Request, db: Session = Depends(get_db), user: User = Depends(require_user_manager)):
+    return _user_form_view(request, user, db)
 
 
 @router.get("/users/{user_id}/edit")
@@ -906,12 +974,15 @@ def users_edit(
     request: Request,
     user_id: int,
     db: Session = Depends(get_db),
-    user: User = Depends(require_admin),
+    user: User = Depends(require_user_manager),
 ):
     staff = db.query(User).filter(User.id == user_id).first()
     if not staff:
         return RedirectResponse(url="/admin/users", status_code=302)
-    return _user_form_view(request, user, staff=serialize_user(staff))
+    org = get_franchise_for_user(db, user)
+    if user.role == UserRole.FRANCHISE and (not org or staff.franchise_id != org.id or staff.role != UserRole.SALES):
+        return RedirectResponse(url="/admin/users", status_code=302)
+    return _user_form_view(request, user, db, staff=serialize_user(staff, db))
 
 
 @router.post("/users")
@@ -932,8 +1003,11 @@ def users_save(
     account_number: str = Form(""),
     ifsc: str = Form(""),
     is_active: str = Form(""),
+    area: str = Form(""),
+    commission_rate: str = Form(""),
+    franchise_id: str = Form(""),
     db: Session = Depends(get_db),
-    user: User = Depends(require_admin),
+    user: User = Depends(require_user_manager),
 ):
     posted = {
         "id": int(user_id) if str(user_id).isdigit() else None,
@@ -952,6 +1026,9 @@ def users_save(
         "is_active": is_active in {"1", "on", "true", "yes"},
         "role_label": ROLE_LABELS.get(role, role),
         "has_bank": True,
+        "area": area,
+        "commission_rate": commission_rate,
+        "franchise_id": int(franchise_id) if str(franchise_id).isdigit() else None,
     }
     phone_val, phone_err = validate_mobile(phone, required=True, label="Mobile number")
     alt_val, alt_err = validate_mobile(alternate_mobile, required=False, label="Alternate mobile number")
@@ -971,8 +1048,31 @@ def users_save(
         error = error or "Bank name is required."
     if not account_name_val:
         error = error or "Account holder name is required."
+    org = get_franchise_for_user(db, user)
+    if user.role == UserRole.FRANCHISE:
+        role = UserRole.SALES
+        posted["role"] = role
+        posted["role_label"] = ROLE_LABELS[UserRole.SALES]
+        if not org:
+            error = error or "Franchise area is not allocated yet. Ask admin to set your area."
+        posted["area"] = org.area if org else area
+    if role == UserRole.FRANCHISE and user.role == UserRole.ADMIN and not sanitize_string(area, 80):
+        error = error or "Allocated client area is required for a franchise."
     if error:
-        return _user_form_view(request, user, staff=posted if posted["id"] else None, error=error, posted=posted)
+        return _user_form_view(request, user, db, staff=posted if posted["id"] else None, error=error, posted=posted)
+
+    rate_val = None
+    if commission_rate.strip():
+        try:
+            rate_val = float(commission_rate)
+        except ValueError:
+            rate_val = None
+        if rate_val is None or rate_val < 0 or rate_val > 80:
+            return _user_form_view(
+                request, user, db, staff=posted if posted["id"] else None,
+                error="Salesman commission must be between 0 and 80%.",
+                posted=posted,
+            )
 
     try:
         save_staff_user(
@@ -993,9 +1093,15 @@ def users_save(
                 "account_number": account_val,
                 "ifsc": ifsc_val,
                 "is_active": posted["is_active"],
+                "area": sanitize_string(area, 80) if user.role == UserRole.ADMIN else (org.area if org else ""),
+                "franchise_id": (
+                    org.id if user.role == UserRole.FRANCHISE and org
+                    else (int(franchise_id) if user.role == UserRole.ADMIN and str(franchise_id).isdigit() else None)
+                ),
+                "commission_rate": rate_val,
             },
         )
     except ValueError as exc:
-        return _user_form_view(request, user, staff=posted if posted["id"] else None, error=str(exc), posted=posted)
+        return _user_form_view(request, user, db, staff=posted if posted["id"] else None, error=str(exc), posted=posted)
     return RedirectResponse(url="/admin/users", status_code=303)
 

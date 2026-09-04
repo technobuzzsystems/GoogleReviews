@@ -20,7 +20,7 @@
         <div class="sidebar-logo-mark" aria-hidden="true">TB</div>
         <div>
           <div class="sidebar-logo-text">{{ company_name|default('TechnoBuzz') }}</div>
-          <div class="sidebar-logo-sub">Admin Panel</div>
+          <div class="sidebar-logo-sub">{% if is_franchise %}Franchise Panel{% else %}Admin Panel{% endif %}</div>
         </div>
       </div>
     </div>
@@ -92,9 +92,7 @@
     }
   })();
 </script>
-{% if razorpay_ready %}
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-{% endif %}
 <script src="{{ url_for('static', path='js/razorpay_checkout.js') }}"></script>
 {% block scripts %}{% endblock %}
 </body>

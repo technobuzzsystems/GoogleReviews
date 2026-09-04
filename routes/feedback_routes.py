@@ -24,14 +24,15 @@ logger = logging.getLogger(__name__)
 
 templates = Jinja2Templates(directory="templates")
 
-# ─── GET /media/logo/{key} ────────────────────────────────────────────────────
+# ─── GET /media/logo/{key} and /media/file/{key} ───────────────────────────────
 @router.get("/media/logo/{key:path}")
+@router.get("/media/file/{key:path}")
 def serve_business_logo(key: str):
-    """Stream a client logo from S3 so the feedback page can display it."""
+    """Stream a client logo or transfer screenshot from S3 / local uploads."""
     try:
         body, content_type = get_logo_object(key)
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Logo not found.")
+        raise HTTPException(status_code=404, detail="File not found.")
     return Response(
         content=body,
         media_type=content_type,

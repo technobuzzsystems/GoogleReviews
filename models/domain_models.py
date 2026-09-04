@@ -13,8 +13,9 @@ class UserRole:
     FRANCHISE = "franchise"
 
     ALL = (ADMIN, SALES, ACCOUNT, MARKETING, FRANCHISE)
-    BUSINESS_MANAGERS = (ADMIN, SALES)
-    SALES_BOOK = (ADMIN, SALES)
+    BUSINESS_MANAGERS = (ADMIN, SALES, FRANCHISE)
+    SALES_BOOK = (ADMIN, SALES, FRANCHISE)
+    USER_MANAGERS = (ADMIN, FRANCHISE)
 
 
 class User(Base):
@@ -34,7 +35,37 @@ class User(Base):
     account_name = Column(String, default="")
     account_number = Column(String, default="")
     ifsc = Column(String, default="")
+    franchise_id = Column(Integer, ForeignKey("franchises.id"), nullable=True, index=True)
     is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class Franchise(Base):
+    __tablename__ = "franchises"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    name = Column(String, nullable=False)
+    area = Column(String, default="", nullable=False, index=True)
+    wallet_balance = Column(Float, default=0.0, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class FranchiseLedger(Base):
+    __tablename__ = "franchise_ledger"
+
+    id = Column(Integer, primary_key=True, index=True)
+    franchise_id = Column(Integer, ForeignKey("franchises.id"), nullable=False, index=True)
+    business_key = Column(String, nullable=False, index=True)
+    plan_code = Column(String, default="")
+    plan_amount = Column(Float, default=0.0, nullable=False)
+    admin_commission = Column(Float, default=0.0, nullable=False)
+    salesman_commission = Column(Float, default=0.0, nullable=False)
+    franchise_commission = Column(Float, default=0.0, nullable=False)
+    sales_executive_id = Column(Integer, ForeignKey("sales_executives.id"), nullable=True, index=True)
+    join_date = Column(Date, nullable=True)
+    note = Column(String, default="")
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
@@ -67,6 +98,8 @@ class BusinessConfigModel(Base):
     join_date = Column(Date, nullable=True)
     expiry_date = Column(Date, nullable=True)
     sales_executive_id = Column(Integer, ForeignKey("sales_executives.id"), nullable=True, index=True)
+    franchise_id = Column(Integer, ForeignKey("franchises.id"), nullable=True, index=True)
+    area = Column(String, default="", index=True)
 
 
 class SalesExecutive(Base):
@@ -77,6 +110,7 @@ class SalesExecutive(Base):
     name = Column(String, nullable=False)
     phone = Column(String, default="")
     commission_rate = Column(Float, default=10.0, nullable=False)
+    franchise_id = Column(Integer, ForeignKey("franchises.id"), nullable=True, index=True)
     wallet_balance = Column(Float, default=0.0, nullable=False)
     bank_name = Column(String, default="")
     account_name = Column(String, default="")
@@ -135,12 +169,15 @@ class WalletWithdrawal(Base):
     __tablename__ = "wallet_withdrawals"
 
     id = Column(Integer, primary_key=True, index=True)
-    sales_executive_id = Column(Integer, ForeignKey("sales_executives.id"), nullable=False, index=True)
+    party_type = Column(String, default="salesman", nullable=False, index=True)  # salesman | franchise
+    sales_executive_id = Column(Integer, ForeignKey("sales_executives.id"), nullable=True, index=True)
+    franchise_id = Column(Integer, ForeignKey("franchises.id"), nullable=True, index=True)
     amount = Column(Float, default=0.0, nullable=False)
     bank_name = Column(String, default="")
     account_name = Column(String, default="")
     account_number = Column(String, default="")
     ifsc = Column(String, default="")
+    screenshot_filename = Column(String, default="")
     status = Column(String, default="requested", nullable=False, index=True)
     note = Column(String, default="")
     requested_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)

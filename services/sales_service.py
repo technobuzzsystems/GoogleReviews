@@ -125,10 +125,12 @@ def get_executive_for_user(db: Session, user: User) -> Optional[SalesExecutive]:
     )
 
 
-def list_executives(db: Session, active_only: bool = True) -> list[SalesExecutive]:
+def list_executives(db: Session, active_only: bool = True, franchise_id: Optional[int] = None) -> list[SalesExecutive]:
     q = db.query(SalesExecutive)
     if active_only:
         q = q.filter(SalesExecutive.is_active.is_(True))
+    if franchise_id:
+        q = q.filter(SalesExecutive.franchise_id == franchise_id)
     return q.order_by(SalesExecutive.name.asc()).all()
 
 
@@ -181,6 +183,7 @@ def _bookings_query(
     executive_id: Optional[int] = None,
     booking_type: str = "",
     search: str = "",
+    franchise_id: Optional[int] = None,
 ):
     q = (
         db.query(Booking, Customer, SalesExecutive, BusinessConfigModel)
@@ -193,6 +196,10 @@ def _bookings_query(
         q = q.filter(Booking.business_key == business_key)
     if executive_id:
         q = q.filter(Booking.sales_executive_id == executive_id)
+    if franchise_id:
+        q = q.filter(
+            (SalesExecutive.franchise_id == franchise_id) | (BusinessConfigModel.franchise_id == franchise_id)
+        )
     if booking_type in ("new", "renewal"):
         q = q.filter(Booking.booking_type == booking_type)
     if search:
@@ -214,8 +221,9 @@ def list_bookings(
     search: str = "",
     page: int = 1,
     per_page: int = DEFAULT_SALES_PAGE_SIZE,
+    franchise_id: Optional[int] = None,
 ) -> dict:
-    q = _bookings_query(db, business_key, executive_id, booking_type, search)
+    q = _bookings_query(db, business_key, executive_id, booking_type, search, franchise_id=franchise_id)
     rows = q.order_by(Booking.booked_on.desc(), Booking.id.desc()).all()
     items = [
         _serialize_booking(booking, customer, executive, business.name if business else "")
@@ -252,7 +260,7 @@ def upsert_plan_booking(db: Session, business: BusinessConfigModel, *, commit: b
         return None
 
     amount = round_money(business.plan_amount)
-    rate = PLAN_COMMISSION_RATE
+    rate = float(executive.commission_rate or PLAN_COMMISSION_RATE)
     booked_on = business.join_date or date.today()
     phone = business.mobile or ""
     from services.payment_service import razorpay_configured
@@ -442,12 +450,28 @@ def save_booking(db: Session, data: dict) -> Booking:
     return booking
 
 
-def sales_stats(db: Session, business_key: str = "", executive_id: Optional[int] = None) -> dict:
+def sales_stats(db: Session, business_key: str = "", executive_id: Optional[int] = None, franchise_id: Optional[int] = None) -> dict:
     q = db.query(Booking).filter(Booking.status != "cancelled")
     if business_key:
         q = q.filter(Booking.business_key == business_key)
     if executive_id:
         q = q.filter(Booking.sales_executive_id == executive_id)
+    if franchise_id:
+        exec_ids = [e.id for e in list_executives(db, franchise_id=franchise_id)]
+        biz_keys = [
+            k for (k,) in db.query(BusinessConfigModel.key).filter(BusinessConfigModel.franchise_id == franchise_id).all()
+        ]
+        if exec_ids or biz_keys:
+            from sqlalchemy import or_
+
+            clauses = []
+            if exec_ids:
+                clauses.append(Booking.sales_executive_id.in_(exec_ids))
+            if biz_keys:
+                clauses.append(Booking.business_key.in_(biz_keys))
+            q = q.filter(or_(*clauses))
+        else:
+            q = q.filter(Booking.id == -1)
 
     bookings = q.all()
     total_sales = round_money(sum(b.amount or 0 for b in bookings))
@@ -473,7 +497,7 @@ def sales_stats(db: Session, business_key: str = "", executive_id: Optional[int]
             {
                 "id": exec_.id,
                 "name": exec_.name,
-                "commission_rate": PLAN_COMMISSION_RATE,
+                "commission_rate": exec_.commission_rate,
                 "bookings": len(e_bookings),
                 "sales": sales,
                 "collected": collected,

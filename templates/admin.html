@@ -19,7 +19,7 @@
 {% endblock %}
 
 {% block content %}
-<p class="page-lede">Renewals, unpaid clients, and wallet summary{% if not is_admin %} for your book{% endif %}.</p>
+<p class="page-lede">Renewals, unpaid clients, and wallet summary{% if is_franchise and current_franchise %} for {{ current_franchise.area or current_franchise.name }}{% elif not is_admin %} for your book{% endif %}.</p>
 {% if not razorpay_ready %}
 <p class="page-lede warn-line">Razorpay keys are not set. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env, then restart — until then, new plans are marked collected when you save the client.</p>
 {% endif %}
@@ -28,7 +28,7 @@
   <div class="stat-card">
     <span class="stat-icon">🏢</span>
     <div class="stat-value">{{ overview_counts.clients }}</div>
-    <div class="stat-label">{% if is_admin %}Total clients{% else %}Your clients{% endif %}</div>
+    <div class="stat-label">{% if is_admin %}Total clients{% elif is_franchise %}Area clients{% else %}Your clients{% endif %}</div>
     <div class="stat-badge">Active book</div>
   </div>
   <div class="stat-card yellow">
@@ -52,13 +52,21 @@
       <span>Plans ₹{{ '{:,.0f}'.format(commission_tile.plans or 0) }}</span>
       <span>Bookings ₹{{ '{:,.0f}'.format(commission_tile.bookings or 0) }}</span>
     </div>
+    {% if is_franchise %}
+    <div class="stat-split">
+      <span>Admin {{ admin_franchise_rate|int }}% ₹{{ '{:,.0f}'.format(commission_tile.admin_cut or 0) }}</span>
+      <span>Your remainder ₹{{ '{:,.0f}'.format(commission_tile.franchise_cut or 0) }}</span>
+    </div>
+    {% endif %}
   </div>
   {% if can_view_sales_book %}
   <div class="stat-card purple">
     <span class="stat-icon">👛</span>
     <div class="stat-value money">₹{{ '{:,.0f}'.format(overview_counts.wallet_balance or 0) }}</div>
-    <div class="stat-label">{% if is_admin %}Wallet balance{% else %}Your wallet{% endif %}</div>
-    {% if overview_counts.pending_transfer %}
+    <div class="stat-label">{% if is_admin %}Wallet balance{% elif is_franchise %}Franchise wallet{% else %}Your wallet{% endif %}</div>
+    {% if is_franchise and overview_counts.team_wallet %}
+    <div class="stat-badge">Team wallets ₹{{ '{:,.0f}'.format(overview_counts.team_wallet) }}</div>
+    {% elif overview_counts.pending_transfer %}
     <div class="stat-badge">₹{{ '{:,.0f}'.format(overview_counts.pending_transfer) }} requested</div>
     {% else %}
     <div class="stat-badge">In wallet · request transfer</div>
@@ -99,7 +107,7 @@
         </div>
         {% if can_manage_businesses %}
         <div class="biz-tile-actions">
-          <a class="biz-tile-link" href="/admin/businesses/{{ b.key }}/edit">Renew plan</a>
+          <a class="biz-tile-link primary" href="/admin/businesses/{{ b.key }}/edit">Renew plan</a>
         </div>
         {% endif %}
       </article>
@@ -137,16 +145,14 @@
         </div>
         {% if can_view_sales_book %}
         <div class="biz-tile-actions">
-          {% if razorpay_ready %}
           <button
             type="button"
-            class="biz-tile-link"
+            class="biz-tile-link primary"
             data-razorpay-pay
             data-business-key="{{ b.business_key }}"
             data-booking-id="{{ b.id }}"
           >Pay now</button>
           <a class="biz-tile-link ghost" href="/pay/{{ b.business_key }}" target="_blank" rel="noopener">Pay page</a>
-          {% endif %}
           <a class="biz-tile-link ghost" href="/admin/sales-book?business={{ b.business_key }}">Sales book</a>
         </div>
         {% endif %}

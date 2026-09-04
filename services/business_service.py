@@ -137,6 +137,9 @@ def _serialize_business(b: BusinessConfigModel, salesman_names: dict = None) -> 
         "email": getattr(b, "email", "") or "",
         "address": getattr(b, "address", "") or "",
         "feedback_path": feedback_path_for(b.key, getattr(b, "route_slug", "") or ""),
+        "payment_due": False,
+        "franchise_id": getattr(b, "franchise_id", None),
+        "area": getattr(b, "area", "") or "",
     }
 
 
@@ -174,6 +177,9 @@ def _serialize_business_card(b: BusinessConfigModel, salesman_names: dict = None
         "email": getattr(b, "email", "") or "",
         "address": getattr(b, "address", "") or "",
         "feedback_path": feedback_path_for(b.key, getattr(b, "route_slug", "") or ""),
+        "payment_due": False,
+        "franchise_id": getattr(b, "franchise_id", None),
+        "area": getattr(b, "area", "") or "",
     }
 
 
@@ -192,12 +198,21 @@ def _page_numbers(current: int, pages: int) -> list:
     return pages_out
 
 
-def _businesses_query(db: Session, sales_executive_id: int = None, search: str = "", date_from: str = "", date_to: str = ""):
+def _businesses_query(
+    db: Session,
+    sales_executive_id: int = None,
+    search: str = "",
+    date_from: str = "",
+    date_to: str = "",
+    franchise_id: int = None,
+):
     from sqlalchemy import or_
 
     q = db.query(BusinessConfigModel)
     if sales_executive_id:
         q = q.filter(BusinessConfigModel.sales_executive_id == sales_executive_id)
+    if franchise_id:
+        q = q.filter(BusinessConfigModel.franchise_id == franchise_id)
     term = (search or "").strip()
     if term:
         like = f"%{term}%"
@@ -243,31 +258,41 @@ def list_businesses_page(
     from sqlalchemy import func
     from sqlalchemy.orm import load_only
 
-    from models.domain_models import SalesExecutive, UserRole
-    from services.sales_service import get_executive_for_user
+    from models.domain_models import SalesExecutive
+    from services.franchise_service import scope_for_user
 
     per_page = per_page if per_page in BUSINESS_PAGE_SIZES else DEFAULT_BUSINESS_PAGE_SIZE
     page = max(1, int(page or 1))
     search = (search or "").strip()[:80]
 
+    scope = scope_for_user(db, user)
     exec_id = None
-    if user and getattr(user, "role", None) != UserRole.ADMIN:
-        own = get_executive_for_user(db, user)
-        if not own:
-            return {
-                "rows": [],
-                "total": 0,
-                "page": 1,
-                "pages": 0,
-                "per_page": per_page,
-                "search": search,
-                "page_numbers": [],
-                "start": 0,
-                "end": 0,
-            }
-        exec_id = own.id
+    franchise_id = None
+    if scope["blocked"]:
+        return {
+            "rows": [],
+            "total": 0,
+            "page": 1,
+            "pages": 0,
+            "per_page": per_page,
+            "search": search,
+            "page_numbers": [],
+            "start": 0,
+            "end": 0,
+        }
+    if scope["executive_id"]:
+        exec_id = scope["executive_id"]
+    if scope["franchise_id"]:
+        franchise_id = scope["franchise_id"]
 
-    q = _businesses_query(db, sales_executive_id=exec_id, search=search, date_from=date_from, date_to=date_to)
+    q = _businesses_query(
+        db,
+        sales_executive_id=exec_id,
+        search=search,
+        date_from=date_from,
+        date_to=date_to,
+        franchise_id=franchise_id,
+    )
     total = q.with_entities(func.count(BusinessConfigModel.key)).order_by(None).scalar() or 0
     pages = ceil(total / per_page) if total else 0
     if pages:
@@ -290,6 +315,8 @@ def list_businesses_page(
                 BusinessConfigModel.alternate_mobile,
                 BusinessConfigModel.email,
                 BusinessConfigModel.address,
+                BusinessConfigModel.franchise_id,
+                BusinessConfigModel.area,
             )
         )
         .order_by(BusinessConfigModel.join_date.desc(), BusinessConfigModel.name.asc())
@@ -307,8 +334,14 @@ def list_businesses_page(
 
     start = (page - 1) * per_page + 1 if total else 0
     end = min(page * per_page, total)
+    cards = [_serialize_business_card(b, salesman_names) for b in rows]
+    from services.payment_service import unpaid_business_keys
+
+    due_keys = unpaid_business_keys(db, [c["key"] for c in cards])
+    for card in cards:
+        card["payment_due"] = card["key"] in due_keys
     return {
-        "rows": [_serialize_business_card(b, salesman_names) for b in rows],
+        "rows": cards,
         "total": total,
         "page": page,
         "pages": pages,
@@ -401,15 +434,21 @@ def get_businesses_for_user(db: Session, user) -> dict:
 
 def user_owns_business(db: Session, user, business_key: str) -> bool:
     from models.domain_models import UserRole
+    from services.franchise_service import get_franchise_for_user
     from services.sales_service import get_executive_for_user
 
     if not user or not business_key:
         return False
     if user.role == UserRole.ADMIN:
         return True
-    own = get_executive_for_user(db, user)
     business = get_business(db, business_key)
-    if not own or not business:
+    if not business:
+        return False
+    if user.role == UserRole.FRANCHISE:
+        org = get_franchise_for_user(db, user)
+        return bool(org and business.get("franchise_id") == org.id)
+    own = get_executive_for_user(db, user)
+    if not own:
         return False
     return business.get("sales_executive_id") == own.id
 
@@ -468,7 +507,11 @@ def get_business(db: Session, business_key: str) -> dict:
         exec_ = db.query(SalesExecutive).filter(SalesExecutive.id == b.sales_executive_id).first()
         if exec_:
             salesman_names[exec_.id] = exec_.name
-    return _serialize_business(b, salesman_names)
+    data = _serialize_business(b, salesman_names)
+    from services.payment_service import unpaid_business_keys
+
+    data["payment_due"] = b.key in unpaid_business_keys(db, [b.key])
+    return data
 
 
 def _slug_taken(db: Session, value: str, exclude_key: str = None) -> bool:
@@ -585,6 +628,17 @@ def save_business(db: Session, business_key: str, data: dict):
     b.join_date = plan["join_date"]
     b.expiry_date = plan["expiry_date"]
     b.sales_executive_id = exec_id
+    b.area = (data.get("area") or "").strip()
+    raw_fr = data.get("franchise_id")
+    if raw_fr not in (None, "", 0, "0"):
+        b.franchise_id = int(raw_fr)
+    elif exec_id:
+        from models.domain_models import SalesExecutive
+
+        assigned = db.query(SalesExecutive).filter(SalesExecutive.id == exec_id).first()
+        b.franchise_id = assigned.franchise_id if assigned else None
+    else:
+        b.franchise_id = None
 
     db.commit()
 

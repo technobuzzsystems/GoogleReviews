@@ -8,7 +8,13 @@
 {% endblock %}
 
 {% block content %}
-<p class="wallet-note">Commission is credited to the wallet. Open <a class="link-accent" href="/admin/commission">Commission</a> for client-wise totals. Salesmen request a bank transfer; admin sends it.</p>
+<p class="wallet-note">
+  {% if is_franchise %}
+  Your remainder after admin’s {{ admin_franchise_rate|int }}% and each salesman’s commission sits in the franchise wallet. Team wallets are their set %. Salesmen request a bank transfer; admin sends it. Plan prices do not change.
+  {% else %}
+  Commission is credited to the wallet. Open <a class="link-accent" href="/admin/commission">Commission</a> for client-wise totals. Salesmen request a bank transfer; admin sends it.
+  {% endif %}
+</p>
 
 {% if form_success %}
 <div class="form-success">{{ form_success }}</div>
@@ -18,7 +24,7 @@
   <div class="stat-card purple">
     <span class="stat-icon">👛</span>
     <div class="stat-value money">₹{{ '{:,.0f}'.format(wallet_total) }}</div>
-    <div class="stat-label">{% if locked_executive %}Your wallet{% else %}Wallet available{% endif %}</div>
+    <div class="stat-label">{% if locked_executive %}Your wallet{% elif is_franchise %}Franchise wallet{% else %}Wallet available{% endif %}</div>
     <div class="stat-badge">Not yet requested</div>
   </div>
   <div class="stat-card green">

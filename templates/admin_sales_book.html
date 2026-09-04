@@ -6,7 +6,11 @@
 
 {% block content %}
 <p class="page-lede">
-  Client sales at plan value — 6 months ₹1,500, 1 year ₹2,000, 2 years ₹3,000. Commission is {{ plan_commission_rate|int }}% of the sale amount.
+  {% if is_franchise %}
+  Client sales at plan value — 6 months / 1 year / 2 years. You set each salesman’s commission. Admin receives {{ admin_franchise_rate|int }}% of franchise collections. Plan prices do not change.
+  {% else %}
+  Client sales at plan value — 6 months / 1 year / 2 years. Commission is the % set on each salesman. Plan prices do not change.
+  {% endif %}
 </p>
 
 <div class="stats-grid">
@@ -32,7 +36,7 @@
     <span class="stat-icon">💸</span>
     <div class="stat-value money">₹{{ '{:,.0f}'.format(stats.total_commission) }}</div>
     <div class="stat-label">{% if locked_executive %}Your commission{% else %}Booking commission{% endif %}</div>
-    <div class="stat-badge">{{ plan_commission_rate|int }}% of sales</div>
+    <div class="stat-badge">{% if is_franchise %}Set per salesman{% else %}Profile commission %{% endif %}</div>
   </div>
 </div>
 
@@ -112,16 +116,14 @@
             {% endif %}
           </td>
           <td class="td-actions">
-            {% if row.pending and razorpay_ready %}
+            {% if row.pending %}
             <button
               type="button"
               class="btn btn-primary btn-sm"
               data-razorpay-pay
               data-business-key="{{ row.business_key }}"
               data-booking-id="{{ row.id }}"
-            >Pay</button>
-            {% elif row.pending %}
-            <a class="btn btn-outline btn-sm" href="/pay/{{ row.business_key }}" target="_blank" rel="noopener">Pay page</a>
+            >Pay now</button>
             {% endif %}
           </td>
         </tr>

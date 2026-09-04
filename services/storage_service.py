@@ -28,6 +28,8 @@ EXT_CONTENT_TYPES = {
     ".webp": "image/webp",
     ".gif": "image/gif",
 }
+MEDIA_PREFIXES = ("logos", "transfers")
+LOCAL_TRANSFER_DIR = Path("static/uploads/transfers")
 
 
 def _max_logo_bytes() -> int:
@@ -68,8 +70,9 @@ def _s3_key_from_stored(value: str) -> str:
     if not value:
         return ""
     cfg = get_config()
-    prefix = _logo_prefix(cfg)
-    if value.startswith(prefix + "/") and ".." not in value:
+    if ".." in value:
+        return ""
+    if any(value.startswith(prefix + "/") for prefix in MEDIA_PREFIXES):
         return value.lstrip("/")
     if not (value.startswith("http://") or value.startswith("https://")):
         return ""
@@ -94,18 +97,22 @@ def _s3_key_from_stored(value: str) -> str:
             key = parts[1]
         else:
             return ""
-    if key.startswith(prefix + "/") and ".." not in key:
+    if any(key.startswith(prefix + "/") for prefix in MEDIA_PREFIXES) and ".." not in key:
         return key
     return ""
 
 
 def public_logo_url(logo_filename: str) -> str:
-    value = (logo_filename or "").strip()
+    return public_media_url(logo_filename)
+
+
+def public_media_url(stored: str) -> str:
+    value = (stored or "").strip()
     if not value:
         return ""
     s3_key = _s3_key_from_stored(value)
     if s3_key:
-        return "/media/logo/" + s3_key
+        return "/media/file/" + s3_key
     if value.startswith("http://") or value.startswith("https://"):
         return value
     return "/static/" + value.lstrip("/")
@@ -187,13 +194,54 @@ def save_logo_upload(upload: UploadFile, business_key: str) -> str:
     return key
 
 
+def save_transfer_screenshot(upload: UploadFile) -> str:
+    """Store a bank-transfer screenshot on S3, or locally if S3 is not set."""
+    if not upload or not (upload.filename or "").strip():
+        return ""
+    ext = _detect_extension(upload.filename, upload.content_type or "")
+    if not ext:
+        raise ValueError("Screenshot must be a PNG, JPG, WEBP, or GIF file.")
+    data = upload.file.read()
+    if not data:
+        raise ValueError("The selected screenshot file is empty.")
+    max_bytes = _max_logo_bytes()
+    if len(data) > max_bytes:
+        raise ValueError(f"Screenshot must be {get_config().MAX_FILE_SIZE_MB} MB or smaller.")
+    _validate_image_bytes(data, upload.content_type or "")
+    name = f"{uuid.uuid4().hex}{ext}"
+    content_type = (
+        (upload.content_type or "").lower()
+        if (upload.content_type or "").lower() in ALLOWED_LOGO_TYPES
+        else EXT_CONTENT_TYPES.get(ext, "image/jpeg")
+    )
+    if s3_configured():
+        cfg = get_config()
+        key = f"transfers/{name}"
+        extra = {"ContentType": content_type, "CacheControl": "public, max-age=31536000"}
+        acl = (cfg.S3_OBJECT_ACL or "").strip()
+        if acl:
+            extra["ACL"] = acl
+        try:
+            _s3_client(cfg).put_object(Bucket=cfg.S3_BUCKET, Key=key, Body=data, **extra)
+        except Exception as exc:
+            logger.exception("S3 transfer screenshot upload failed")
+            raise ValueError("Could not upload the transfer screenshot.") from exc
+        return key
+    LOCAL_TRANSFER_DIR.mkdir(parents=True, exist_ok=True)
+    (LOCAL_TRANSFER_DIR / name).write_bytes(data)
+    return f"uploads/transfers/{name}"
+
+
 def get_logo_object(key: str) -> tuple[bytes, str]:
-    """Fetch a logo object from S3. Raises FileNotFoundError if missing/invalid."""
+    """Fetch a logo or transfer screenshot. Raises FileNotFoundError if missing."""
     cfg = get_config()
-    prefix = _logo_prefix(cfg)
     key = (key or "").lstrip("/")
-    if not key.startswith(prefix + "/") or ".." in key:
-        raise FileNotFoundError("Invalid logo key.")
+    if ".." in key or not any(key.startswith(prefix + "/") for prefix in MEDIA_PREFIXES):
+        raise FileNotFoundError("Invalid media key.")
+    local_path = Path("static") / key
+    if key.startswith("uploads/") and local_path.is_file():
+        ext = Path(key).suffix.lower()
+        return local_path.read_bytes(), EXT_CONTENT_TYPES.get(ext, "image/jpeg")
     if not s3_configured():
         raise FileNotFoundError("S3 is not configured.")
     try:
@@ -207,5 +255,5 @@ def get_logo_object(key: str) -> tuple[bytes, str]:
     except FileNotFoundError:
         raise
     except Exception as exc:
-        logger.warning("S3 logo fetch failed for %s: %s", key, exc)
-        raise FileNotFoundError("Logo not found.") from exc
+        logger.warning("S3 media fetch failed for %s: %s", key, exc)
+        raise FileNotFoundError("File not found.") from exc

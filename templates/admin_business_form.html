@@ -77,7 +77,7 @@
         </label>
         {% endfor %}
       </div>
-      <div class="form-hint">Salesman earns {{ plan_commission_rate }}% of the plan amount in their wallet{% if razorpay_ready %} after Razorpay collection succeeds{% else %} when this business is added or the plan is renewed{% endif %}.</div>
+      <div class="form-hint">Salesman earns the commission % set on their profile{% if razorpay_ready %} after Razorpay collection succeeds{% else %} when this business is added or the plan is renewed{% endif %}. Franchise clients also pay a fixed {{ admin_franchise_rate|int }}% to admin. Plan prices are not changed.</div>
       {% if not razorpay_ready %}
       <div class="form-hint warn">Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env to collect this plan online, then restart the app.</div>
       {% endif %}
@@ -104,7 +104,7 @@
       <label for="sales_executive_id">Sales executive</label>
       {% if locked_executive %}
       <input type="hidden" name="sales_executive_id" value="{{ locked_executive.id }}">
-      <input type="text" value="{{ locked_executive.name }} (wallet 10%)" readonly>
+      <input type="text" value="{{ locked_executive.name }}" readonly>
       {% else %}
       <select id="sales_executive_id" name="sales_executive_id">
         <option value="">— Select salesman —</option>
@@ -112,7 +112,29 @@
         <option value="{{ ex.id }}" {% if business and business.sales_executive_id == ex.id %}selected{% endif %}>{{ ex.name }} — wallet ₹{{ '{:,.0f}'.format(ex.wallet_balance or 0) }}</option>
         {% endfor %}
       </select>
-      <div class="form-hint">Required so 10% commission is credited to this salesman’s wallet.</div>
+      <div class="form-hint">Required so commission is credited to this salesman’s wallet (rate is set on their user profile).</div>
+      {% endif %}
+    </div>
+
+    <div class="form-group">
+      <label for="area">Client area</label>
+      {% if locked_area %}
+      <input type="hidden" name="area" value="{{ locked_area }}">
+      <input type="hidden" name="franchise_id" value="{{ current_franchise.id }}">
+      <input type="text" value="{{ locked_area }}" readonly>
+      <div class="form-hint">Allocated to your franchise. You can only add clients in this area.</div>
+      {% else %}
+      <input type="text" id="area" name="area" value="{{ business.area if business else '' }}" placeholder="e.g. Pune" autocomplete="off">
+      {% if franchises %}
+      <label for="franchise_id" style="margin-top:12px">Franchise</label>
+      <select id="franchise_id" name="franchise_id">
+        <option value="">— Direct (company) —</option>
+        {% for fr in franchises %}
+        <option value="{{ fr.id }}" {% if business and business.franchise_id == fr.id %}selected{% endif %}>{{ fr.name }} · {{ fr.area }}</option>
+        {% endfor %}
+      </select>
+      <div class="form-hint">Assigning a franchise allocates this client to their area. Admin commission on those collections is {{ admin_franchise_rate|int }}%.</div>
+      {% endif %}
       {% endif %}
     </div>
 
@@ -178,13 +200,13 @@
 
     <div class="form-actions">
       <button type="submit" class="btn btn-primary">Save Business</button>
-      {% if business and razorpay_ready %}
+      {% if business and business.payment_due %}
       <button
         type="button"
         class="btn btn-green"
         data-razorpay-pay
         data-business-key="{{ business.key or business_key }}"
-      >Collect payment</button>
+      >Pay now</button>
       {% endif %}
       {% if pay_url %}
       <button type="button" class="btn btn-outline" data-copy-text="{{ pay_url }}">Copy payment link</button>
@@ -321,7 +343,7 @@
     var join = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
     expiryInput.value = fmt(addMonths(join, plan.months));
     var commission = (plan.amount * rate) / 100;
-    planPreview.textContent = "Plan ₹" + plan.amount.toLocaleString("en-IN") + " → salesman wallet +₹" + commission.toLocaleString("en-IN") + " (10%)";
+    planPreview.textContent = "Plan ₹" + plan.amount.toLocaleString("en-IN") + " → salesman wallet uses their profile commission %";
   }
   document.querySelectorAll('input[name="plan_code"]').forEach(function (el) {
     el.addEventListener("change", updatePlan);

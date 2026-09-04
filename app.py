@@ -5,6 +5,7 @@ TechnoBuzz AI-Powered QR Code Feedback System — FastAPI Application Entry Poin
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 import uvicorn
@@ -44,13 +45,14 @@ def create_app() -> FastAPI:
     """
     config = get_config()
     app = FastAPI(title="TechnoBuzz Feedback System", lifespan=lifespan)
+    is_prod = (os.getenv("FLASK_ENV", "development") or "").lower() == "production"
 
     app.add_middleware(
         SessionMiddleware,
         secret_key=config.SECRET_KEY,
         session_cookie="gr_admin_session",
         same_site="lax",
-        https_only=False,
+        https_only=is_prod,
         max_age=60 * 60 * 8,
     )
 

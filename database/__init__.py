@@ -50,6 +50,20 @@ def _ensure_index(table: str, name: str, ddl: str) -> None:
     logger.info("Added index %s on %s", name, table)
 
 
+def _ensure_nullable(table: str, column: str) -> None:
+    if "postgresql" not in (SQLALCHEMY_DATABASE_URL or "").lower():
+        return
+    inspector = inspect(engine)
+    if table not in inspector.get_table_names():
+        return
+    col = next((c for c in inspector.get_columns(table) if c["name"] == column), None)
+    if not col or col.get("nullable"):
+        return
+    with engine.begin() as conn:
+        conn.execute(text(f"ALTER TABLE {table} ALTER COLUMN {column} DROP NOT NULL"))
+    logger.info("Made column %s.%s nullable", table, column)
+
+
 def _ensure_column(table: str, column: str, ddl: str) -> None:
     inspector = inspect(engine)
     if table not in inspector.get_table_names():
@@ -73,6 +87,8 @@ def init_db():
         User,
         WalletLedger,
         WalletWithdrawal,
+        Franchise,
+        FranchiseLedger,
     )
     from services.auth_service import seed_default_users
     from services.business_service import (
@@ -112,6 +128,14 @@ def init_db():
     _ensure_column("wallet_withdrawals", "requested_by_user_id", "requested_by_user_id INTEGER")
     _ensure_column("wallet_withdrawals", "processed_by_user_id", "processed_by_user_id INTEGER")
     _ensure_column("wallet_withdrawals", "processed_at", "processed_at TIMESTAMP")
+    _ensure_column("wallet_withdrawals", "party_type", "party_type VARCHAR DEFAULT 'salesman'")
+    _ensure_column("wallet_withdrawals", "franchise_id", "franchise_id INTEGER")
+    _ensure_column("wallet_withdrawals", "screenshot_filename", "screenshot_filename VARCHAR DEFAULT ''")
+    _ensure_nullable("wallet_withdrawals", "sales_executive_id")
+    _ensure_column("users", "franchise_id", "franchise_id INTEGER")
+    _ensure_column("sales_executives", "franchise_id", "franchise_id INTEGER")
+    _ensure_column("businesses", "franchise_id", "franchise_id INTEGER")
+    _ensure_column("businesses", "area", "area VARCHAR DEFAULT ''")
     _ensure_index(
         "businesses",
         "ix_businesses_name",
@@ -139,6 +163,9 @@ def init_db():
     db = SessionLocal()
     try:
         seed_default_users(db)
+        from services.franchise_service import seed_default_franchise
+
+        seed_default_franchise(db)
         seed_initial_businesses(db)
         seed_sales_data(db)
         ensure_sales_users(db)

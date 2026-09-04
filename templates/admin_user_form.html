@@ -35,6 +35,28 @@
         {% if is_edit %}<div class="form-hint">Leave blank to keep the current password.</div>{% endif %}
       </div>
     </div>
+    <div class="form-group" id="franchiseAreaGroup">
+      <label for="area">Allocated client area</label>
+      <input type="text" id="area" name="area" value="{{ staff.area if staff else (current_franchise.area if current_franchise else '') }}" placeholder="e.g. Pune, Nashik" {% if is_franchise %}readonly{% endif %}>
+      <div class="form-hint">Clients in this area belong to the franchise. Plan prices stay the same. Admin receives a fixed {{ admin_franchise_rate|int }}% commission on franchise collections.</div>
+    </div>
+    {% if is_admin %}
+    <div class="form-group" id="salesFranchiseGroup">
+      <label for="franchise_id">Franchise (optional)</label>
+      <select id="franchise_id" name="franchise_id">
+        <option value="">— Company salesman (no franchise) —</option>
+        {% for fr in franchises %}
+        <option value="{{ fr.id }}" {% if staff and staff.franchise_id == fr.id %}selected{% endif %}>{{ fr.name }}{% if fr.area %} — {{ fr.area }}{% endif %}</option>
+        {% endfor %}
+      </select>
+      <div class="form-hint">Assign this salesman to a franchise so they only work that allocated area.</div>
+    </div>
+    {% endif %}
+    <div class="form-group" id="salesCommissionGroup">
+      <label for="commission_rate">Salesman commission %</label>
+      <input type="number" id="commission_rate" name="commission_rate" min="0" max="80" step="0.1" value="{{ staff.commission_rate if staff and staff.commission_rate is not none else plan_commission_rate }}">
+      <div class="form-hint">Set this to manage team revenue. It does not change plan amounts (6 months / 1 year / 2 years).</div>
+    </div>
     <div class="form-group">
       <label class="check-label tight" for="is_active">
         <input type="checkbox" id="is_active" name="is_active" value="1" {% if not staff or staff.get('is_active', True) %}checked{% endif %}>
@@ -97,4 +119,23 @@
     </div>
   </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var role = document.getElementById("role");
+  var area = document.getElementById("franchiseAreaGroup");
+  var comm = document.getElementById("salesCommissionGroup");
+  var frSales = document.getElementById("salesFranchiseGroup");
+  function sync() {
+    var v = role ? role.value : "";
+    if (area) area.style.display = (v === "franchise") ? "" : "none";
+    if (comm) comm.style.display = (v === "sales") ? "" : "none";
+    if (frSales) frSales.style.display = (v === "sales") ? "" : "none";
+  }
+  if (role) role.addEventListener("change", sync);
+  sync();
+})();
+</script>
 {% endblock %}

@@ -14,7 +14,7 @@ PLANS = {
     "2y": {"code": "2y", "label": "2 Years", "months": 24, "amount": 2999.0},
 }
 
-PLAN_COMMISSION_RATE = 25.0  # 25% of plan amount credited to salesman wallet
+PLAN_COMMISSION_RATE = 25.0  # default salesman wallet %; franchise can override per salesman
 CLIENT_PLAN_NOTE = "Client plan"
 
 
@@ -73,7 +73,7 @@ def credit_plan_to_wallet(
     plan_amount: float,
     join_date: Optional[date],
 ) -> float:
-    """Credit 10% of the plan amount to the salesman's wallet. Skips duplicates."""
+    """Credit salesman commission. Franchise clients also split 20% to admin (plan prices unchanged)."""
     if not sales_executive_id or not plan_code or not plan_amount:
         return 0.0
 
@@ -94,21 +94,55 @@ def credit_plan_to_wallet(
     if not executive:
         return 0.0
 
-    commission = round(float(plan_amount) * PLAN_COMMISSION_RATE / 100.0, 2)
-    executive.wallet_balance = round(float(executive.wallet_balance or 0) + commission, 2)
+    from services.franchise_service import ADMIN_FRANCHISE_COMMISSION_RATE, split_franchise_plan
+    from models.domain_models import Franchise, FranchiseLedger, BusinessConfigModel
+
+    rate = float(executive.commission_rate or PLAN_COMMISSION_RATE)
+    plan_amount = float(plan_amount)
+    salesman_cut = round(plan_amount * rate / 100.0, 2)
+    admin_cut = 0.0
+    franchise_cut = 0.0
+    franchise = None
+    business = db.query(BusinessConfigModel).filter(BusinessConfigModel.key == business_key).first()
+    franchise_id = (business.franchise_id if business else None) or executive.franchise_id
+    if franchise_id:
+        franchise = db.query(Franchise).filter(Franchise.id == franchise_id).first()
+    if franchise:
+        split = split_franchise_plan(plan_amount, rate)
+        admin_cut = split["admin"]
+        salesman_cut = split["salesman"]
+        franchise_cut = split["franchise"]
+
+    executive.wallet_balance = round(float(executive.wallet_balance or 0) + salesman_cut, 2)
     db.add(
         WalletLedger(
             sales_executive_id=executive.id,
             business_key=business_key,
             plan_code=plan_code,
             plan_amount=plan_amount,
-            commission_amount=commission,
+            commission_amount=salesman_cut,
             join_date=join_date,
-            note=f"10% commission on {PLANS.get(plan_code, {}).get('label', plan_code)} plan (₹{int(plan_amount)})",
+            note=f"{rate:g}% salesman commission on {PLANS.get(plan_code, {}).get('label', plan_code)} plan (₹{int(plan_amount)})",
         )
     )
+    if franchise:
+        franchise.wallet_balance = round(float(franchise.wallet_balance or 0) + franchise_cut, 2)
+        db.add(
+            FranchiseLedger(
+                franchise_id=franchise.id,
+                business_key=business_key,
+                plan_code=plan_code,
+                plan_amount=plan_amount,
+                admin_commission=admin_cut,
+                salesman_commission=salesman_cut,
+                franchise_commission=franchise_cut,
+                sales_executive_id=executive.id,
+                join_date=join_date,
+                note=f"Admin {ADMIN_FRANCHISE_COMMISSION_RATE:g}% · salesman {rate:g}% · franchise remainder",
+            )
+        )
     db.commit()
-    return commission
+    return salesman_cut
 
 
 def reverse_booking_wallet_credit(db: Session, booking: Booking, *, commit: bool = False) -> float:

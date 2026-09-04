@@ -6,7 +6,11 @@
 
 {% block content %}
 <p class="page-lede">
-  Only admin can create login accounts. Every role — admin, salesman, account, marketing, and franchise — must have a bank account number and IFSC.
+  {% if is_franchise %}
+  Add salesmen for your allocated area. You set their commission. Plan prices stay the same; admin receives {{ admin_franchise_rate|int }}% of each franchise collection.
+  {% else %}
+  Create franchise partners with an allocated client area, and salesmen with their commission %. Plan prices do not change. Franchise collections pay admin a fixed {{ admin_franchise_rate|int }}%.
+  {% endif %}
 </p>
 
 <div class="table-card">
@@ -23,6 +27,8 @@
           <th>Name</th>
           <th>Username</th>
           <th>Role</th>
+          <th>Area</th>
+          <th>Commission %</th>
           <th>Aadhaar</th>
           <th>Bank</th>
           <th>Account</th>
@@ -41,6 +47,8 @@
           </td>
           <td>{{ row.username }}</td>
           <td>{{ row.role_label }}</td>
+          <td>{{ row.area or '—' }}</td>
+          <td>{% if row.commission_rate is not none %}{{ row.commission_rate|int }}%{% else %}—{% endif %}</td>
           <td>{{ row.aadhaar_masked or '—' }}</td>
           <td>{{ row.bank_name or '—' }}<div class="muted">{{ row.account_name or '' }}</div></td>
           <td>{{ row.account_masked }}</td>
@@ -53,10 +61,10 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="9">
+          <td colspan="11">
             <div class="empty-state">
               <div class="empty-icon">👥</div>
-              <p>No users yet. Add an admin-created account.</p>
+              <p>{% if is_franchise %}No salesmen yet. Add your team and set each commission %{% else %}No users yet. Add an admin-created account.{% endif %}</p>
             </div>
           </td>
         </tr>

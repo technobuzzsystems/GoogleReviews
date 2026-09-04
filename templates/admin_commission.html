@@ -7,7 +7,9 @@
 {% block content %}
 <p class="page-lede">
   {% if is_admin %}
-  Company commission by client. Filter by year, or pick a month for that year’s month-wise view.
+  Company commission by client. Filter by year, or pick a month for that year’s month-wise view. Franchise collections pay a fixed {{ admin_franchise_rate|int }}% to admin; salesman % is set per person. Plan prices do not change.
+  {% elif is_franchise %}
+  Commission for your allocated area. Admin receives {{ admin_franchise_rate|int }}% of each collection. You set each salesman’s %. Plan prices stay the same.
   {% else %}
   Your commission by client for the selected month or year.
   {% endif %}
@@ -47,14 +49,14 @@
   <div class="stat-card green">
     <span class="stat-icon">💸</span>
     <div class="stat-value money">₹{{ '{:,.0f}'.format(report.totals.total) }}</div>
-    <div class="stat-label">{% if is_admin %}Total commission{% else %}Your commission{% endif %}</div>
+    <div class="stat-label">{% if is_admin %}Total commission{% elif is_franchise %}Team commission{% else %}Your commission{% endif %}</div>
     <div class="stat-badge">{{ report.period_label }}</div>
   </div>
   <div class="stat-card">
     <span class="stat-icon">📋</span>
     <div class="stat-value money">₹{{ '{:,.0f}'.format(report.totals.plan) }}</div>
-    <div class="stat-label">Plan commission</div>
-    <div class="stat-badge">10% of plans</div>
+    <div class="stat-label">{% if is_franchise %}Salesman plan cut{% else %}Plan commission{% endif %}</div>
+    <div class="stat-badge">{% if is_franchise %}Set per salesman{% else %}Profile commission %{% endif %}</div>
   </div>
   <div class="stat-card">
     <span class="stat-icon">📒</span>
@@ -68,6 +70,20 @@
     <div class="stat-label">Clients</div>
     <div class="stat-badge">With commission</div>
   </div>
+  {% if is_franchise or is_admin %}
+  <div class="stat-card yellow">
+    <span class="stat-icon">🏢</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(report.totals.admin_cut or 0) }}</div>
+    <div class="stat-label">Admin {{ admin_franchise_rate|int }}%</div>
+    <div class="stat-badge">Franchise collections only</div>
+  </div>
+  <div class="stat-card purple">
+    <span class="stat-icon">👛</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(report.totals.franchise_cut or 0) }}</div>
+    <div class="stat-label">Franchise remainder</div>
+    <div class="stat-badge">After admin + salesman</div>
+  </div>
+  {% endif %}
 </div>
 
 <div class="table-card">
@@ -82,7 +98,7 @@
       <thead>
         <tr>
           <th>Client</th>
-          {% if is_admin %}<th>Salesman</th>{% endif %}
+          {% if is_admin or is_franchise %}<th>Salesman</th>{% endif %}
           <th class="td-right">Base amount</th>
           <th class="td-right">Plan</th>
           <th class="td-right">Bookings</th>
@@ -97,7 +113,7 @@
             <strong>{{ row.name }}</strong>
             <div class="muted">{{ row.business_key }}</div>
           </td>
-          {% if is_admin %}<td>{{ row.salesman_name }}</td>{% endif %}
+          {% if is_admin or is_franchise %}<td>{{ row.salesman_name }}</td>{% endif %}
           <td class="td-right">₹{{ '{:,.0f}'.format(row.base_amount) }}</td>
           <td class="td-right">₹{{ '{:,.0f}'.format(row.plan) }}</td>
           <td class="td-right">₹{{ '{:,.0f}'.format(row.bookings) }}</td>
@@ -106,7 +122,7 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="{{ 7 if is_admin else 6 }}">
+          <td colspan="{{ 7 if is_admin or is_franchise else 6 }}">
             <div class="empty-state">
               <div class="empty-icon">💸</div>
               <p>No commission in {{ report.period_label }}.</p>
@@ -119,7 +135,7 @@
       <tfoot>
         <tr>
           <th>Total</th>
-          {% if is_admin %}<th></th>{% endif %}
+          {% if is_admin or is_franchise %}<th></th>{% endif %}
           <th class="td-right">₹{{ '{:,.0f}'.format(report.totals.base_amount) }}</th>
           <th class="td-right">₹{{ '{:,.0f}'.format(report.totals.plan) }}</th>
           <th class="td-right">₹{{ '{:,.0f}'.format(report.totals.bookings) }}</th>

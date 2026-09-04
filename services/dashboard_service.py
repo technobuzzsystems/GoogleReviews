@@ -12,6 +12,8 @@ from models.domain_models import (
     Booking,
     BusinessConfigModel,
     Customer,
+    Franchise,
+    FranchiseLedger,
     SalesExecutive,
     UserRole,
     WalletLedger,
@@ -27,12 +29,47 @@ DEFAULT_COMMISSION_PAGE_SIZE = 12
 
 
 def _scope_executive_id(db: Session, user) -> Optional[int]:
+    from services.franchise_service import scope_for_user
+
     if not user:
         return None
     if getattr(user, "role", None) == UserRole.ADMIN:
         return None
+    if getattr(user, "role", None) == UserRole.FRANCHISE:
+        return None
     own = get_executive_for_user(db, user)
     return own.id if own else -1
+
+
+def _scope_franchise_id(db: Session, user) -> Optional[int]:
+    from services.franchise_service import scope_for_user
+
+    scope = scope_for_user(db, user)
+    if scope["blocked"]:
+        return -1
+    return scope["franchise_id"]
+
+
+def _wallet_scope(db: Session, user) -> dict:
+    """Visibility for wallets, commission ledgers, and withdrawals."""
+    exec_id = _scope_executive_id(db, user)
+    fr_id = _scope_franchise_id(db, user)
+    empty = exec_id == -1 or fr_id == -1
+    return {
+        "empty": empty,
+        "exec_id": None if exec_id in (None, -1) else exec_id,
+        "franchise_id": None if fr_id in (None, -1) else fr_id,
+    }
+
+
+def _filter_wallet_ledger(q, scope: dict):
+    if scope.get("exec_id"):
+        return q.filter(WalletLedger.sales_executive_id == scope["exec_id"])
+    if scope.get("franchise_id"):
+        return q.join(SalesExecutive, SalesExecutive.id == WalletLedger.sales_executive_id).filter(
+            SalesExecutive.franchise_id == scope["franchise_id"]
+        )
+    return q
 
 
 def _salesman_names(db: Session) -> dict:
@@ -68,6 +105,11 @@ def list_renewal_clients(db: Session, user, limit: int = OVERVIEW_GRID_LIMIT) ->
     base = db.query(BusinessConfigModel).filter(BusinessConfigModel.expiry_date.isnot(None))
     if exec_id:
         base = base.filter(BusinessConfigModel.sales_executive_id == exec_id)
+    fr_id = _scope_franchise_id(db, user)
+    if fr_id == -1:
+        return {"rows": [], "total": 0}
+    if fr_id:
+        base = base.filter(BusinessConfigModel.franchise_id == fr_id)
 
     due = base.filter(BusinessConfigModel.expiry_date <= cutoff)
     due_total = due.with_entities(func.count(BusinessConfigModel.key)).order_by(None).scalar() or 0
@@ -102,6 +144,9 @@ def list_pending_payments(db: Session, user, limit: int = OVERVIEW_GRID_LIMIT) -
     exec_id = _scope_executive_id(db, user)
     if exec_id == -1:
         return {"rows": [], "total": 0, "amount_due": 0.0}
+    fr_id = _scope_franchise_id(db, user)
+    if fr_id == -1:
+        return {"rows": [], "total": 0, "amount_due": 0.0}
 
     q = (
         db.query(Booking, Customer, SalesExecutive)
@@ -112,6 +157,10 @@ def list_pending_payments(db: Session, user, limit: int = OVERVIEW_GRID_LIMIT) -
     )
     if exec_id:
         q = q.filter(Booking.sales_executive_id == exec_id)
+    if fr_id:
+        q = q.outerjoin(BusinessConfigModel, BusinessConfigModel.key == Booking.business_key).filter(
+            (SalesExecutive.franchise_id == fr_id) | (BusinessConfigModel.franchise_id == fr_id)
+        )
 
     total = q.with_entities(func.count(Booking.id)).order_by(None).scalar() or 0
     due_sum = (
@@ -197,10 +246,7 @@ def commission_track(db: Session, user, period: str = "month") -> dict:
     """Wallet + booking commission grouped by month, quarter, or year."""
     period = period if period in ("month", "quarter", "year") else "month"
     count = {"month": 12, "quarter": 8, "year": 5}[period]
-    exec_id = _scope_executive_id(db, user)
-    empty = exec_id == -1
-    if exec_id == -1:
-        exec_id = None
+    scope = _wallet_scope(db, user)
 
     today = date.today()
     buckets = _iter_period_keys(period, count, today)
@@ -208,7 +254,7 @@ def commission_track(db: Session, user, period: str = "month") -> dict:
     wallet_map = {k: 0.0 for k in keys}
     booking_map = {k: 0.0 for k in keys}
 
-    if not empty:
+    if not scope["empty"]:
         start = datetime.strptime(keys[0] + "-01", "%Y-%m-%d") if period == "month" else None
         if period == "quarter":
             year, q = int(keys[0][:4]), int(keys[0][-1])
@@ -216,8 +262,7 @@ def commission_track(db: Session, user, period: str = "month") -> dict:
         elif period == "year":
             start = datetime(int(keys[0]), 1, 1)
         wallet_q = db.query(WalletLedger).filter(WalletLedger.created_at >= start)
-        if exec_id:
-            wallet_q = wallet_q.filter(WalletLedger.sales_executive_id == exec_id)
+        wallet_q = _filter_wallet_ledger(wallet_q, scope)
         for row in wallet_q.all():
             if not row.created_at:
                 continue
@@ -282,37 +327,52 @@ def month_commission_track(db: Session, user, months: int = 6) -> list[dict]:
 
 
 def overview_counts(db: Session, user) -> dict:
-    exec_id = _scope_executive_id(db, user)
-    if exec_id == -1:
-        return {
-            "clients": 0,
-            "wallet_balance": 0.0,
-            "pending_transfer": 0.0,
-        }
+    scope = _wallet_scope(db, user)
+    empty = {
+        "clients": 0,
+        "wallet_balance": 0.0,
+        "team_wallet": 0.0,
+        "franchise_wallet": 0.0,
+        "pending_transfer": 0.0,
+        "area": "",
+    }
+    if scope["empty"]:
+        return empty
     bq = db.query(func.count(BusinessConfigModel.key))
     wq = db.query(func.coalesce(func.sum(SalesExecutive.wallet_balance), 0))
     pq = db.query(func.coalesce(func.sum(WalletWithdrawal.amount), 0)).filter(WalletWithdrawal.status == "requested")
-    if exec_id:
-        bq = bq.filter(BusinessConfigModel.sales_executive_id == exec_id)
-        wq = wq.filter(SalesExecutive.id == exec_id)
-        pq = pq.filter(WalletWithdrawal.sales_executive_id == exec_id)
+    if scope["exec_id"]:
+        bq = bq.filter(BusinessConfigModel.sales_executive_id == scope["exec_id"])
+        wq = wq.filter(SalesExecutive.id == scope["exec_id"])
+        pq = pq.filter(WalletWithdrawal.sales_executive_id == scope["exec_id"])
+    elif scope["franchise_id"]:
+        bq = bq.filter(BusinessConfigModel.franchise_id == scope["franchise_id"])
+        wq = wq.filter(SalesExecutive.franchise_id == scope["franchise_id"])
+        pq = pq.join(SalesExecutive, SalesExecutive.id == WalletWithdrawal.sales_executive_id).filter(
+            SalesExecutive.franchise_id == scope["franchise_id"]
+        )
+    team_wallet = round_money(wq.scalar() or 0)
+    franchise_wallet = 0.0
+    area = ""
+    if scope["franchise_id"] and getattr(user, "role", None) == UserRole.FRANCHISE:
+        org = db.query(Franchise).filter(Franchise.id == scope["franchise_id"]).first()
+        if org:
+            franchise_wallet = round_money(org.wallet_balance)
+            area = org.area or ""
+    wallet_balance = franchise_wallet if getattr(user, "role", None) == UserRole.FRANCHISE else team_wallet
     return {
         "clients": int(bq.scalar() or 0),
-        "wallet_balance": round_money(wq.scalar() or 0),
+        "wallet_balance": wallet_balance,
+        "team_wallet": team_wallet,
+        "franchise_wallet": franchise_wallet,
         "pending_transfer": round_money(pq.scalar() or 0),
+        "area": area,
     }
 
 
-def _ledger_scope(db: Session, user):
-    exec_id = _scope_executive_id(db, user)
-    empty = exec_id == -1
-    return (None if empty else exec_id), empty
-
-
-def _sum_ledger(db: Session, exec_id: Optional[int], since: Optional[date] = None, until: Optional[date] = None) -> dict:
+def _sum_ledger(db: Session, scope: dict, since: Optional[date] = None, until: Optional[date] = None) -> dict:
     q = db.query(WalletLedger)
-    if exec_id:
-        q = q.filter(WalletLedger.sales_executive_id == exec_id)
+    q = _filter_wallet_ledger(q, scope)
     if since:
         q = q.filter(WalletLedger.created_at >= datetime.combine(since, datetime.min.time()))
     if until:
@@ -331,34 +391,62 @@ def _sum_ledger(db: Session, exec_id: Optional[int], since: Optional[date] = Non
     }
 
 
+def _sum_franchise_split(db: Session, franchise_id: int, since: Optional[date] = None, until: Optional[date] = None) -> dict:
+    q = db.query(FranchiseLedger).filter(FranchiseLedger.franchise_id == franchise_id)
+    if since:
+        q = q.filter(FranchiseLedger.created_at >= datetime.combine(since, datetime.min.time()))
+    if until:
+        q = q.filter(FranchiseLedger.created_at < datetime.combine(until + timedelta(days=1), datetime.min.time()))
+    admin = salesman = franchise = plans = 0.0
+    for row in q.all():
+        admin += float(row.admin_commission or 0)
+        salesman += float(row.salesman_commission or 0)
+        franchise += float(row.franchise_commission or 0)
+        plans += float(row.plan_amount or 0)
+    return {
+        "admin": round_money(admin),
+        "salesman": round_money(salesman),
+        "franchise": round_money(franchise),
+        "plan_amount": round_money(plans),
+    }
+
+
 def actual_commission_tile(db: Session, user) -> dict:
-    """Salesman: this calendar month. Admin: all-time total."""
-    exec_id, empty = _ledger_scope(db, user)
+    """Salesman: this calendar month. Admin/franchise: all-time total for their scope."""
+    scope = _wallet_scope(db, user)
     today = date.today()
-    if empty:
-        return {
-            "total": 0.0,
-            "plans": 0.0,
-            "bookings": 0.0,
-            "label": today.strftime("%b %Y"),
-            "title": "Actual commission",
-            "is_total": False,
-        }
-    if getattr(user, "role", None) == UserRole.ADMIN:
-        sums = _sum_ledger(db, None)
+    blank = {
+        "total": 0.0,
+        "plans": 0.0,
+        "bookings": 0.0,
+        "label": today.strftime("%b %Y"),
+        "title": "Actual commission",
+        "is_total": False,
+        "admin_cut": 0.0,
+        "franchise_cut": 0.0,
+    }
+    if scope["empty"]:
+        return blank
+    if getattr(user, "role", None) in (UserRole.ADMIN, UserRole.FRANCHISE):
+        sums = _sum_ledger(db, scope)
+        split = _sum_franchise_split(db, scope["franchise_id"]) if scope["franchise_id"] else {}
         return {
             **sums,
-            "label": "All time",
-            "title": "Total commission",
+            "label": "All time" if user.role == UserRole.ADMIN else "Area collections",
+            "title": "Team commission" if user.role == UserRole.FRANCHISE else "Total commission",
             "is_total": True,
+            "admin_cut": split.get("admin", 0.0),
+            "franchise_cut": split.get("franchise", 0.0),
         }
     start, end = current_period_bounds("month", today)
-    sums = _sum_ledger(db, exec_id, start, end)
+    sums = _sum_ledger(db, scope, start, end)
     return {
         **sums,
         "label": today.strftime("%b %Y"),
         "title": "Actual commission",
         "is_total": False,
+        "admin_cut": 0.0,
+        "franchise_cut": 0.0,
     }
 
 
@@ -391,11 +479,11 @@ def client_commission_report(
     month = int(month or 0)
     if month < 0 or month > 12:
         month = 0
-    exec_id, empty = _ledger_scope(db, user)
+    scope = _wallet_scope(db, user)
+    empty = scope["empty"]
 
     year_q = db.query(func.min(WalletLedger.created_at), func.max(WalletLedger.created_at))
-    if exec_id:
-        year_q = year_q.filter(WalletLedger.sales_executive_id == exec_id)
+    year_q = _filter_wallet_ledger(year_q, scope)
     bounds = year_q.first() if not empty else (None, None)
     years = {today.year, today.year - 1}
     for stamp in bounds or ():
@@ -424,8 +512,10 @@ def client_commission_report(
             .filter(WalletLedger.created_at >= datetime.combine(since, datetime.min.time()))
             .filter(WalletLedger.created_at < datetime.combine(until + timedelta(days=1), datetime.min.time()))
         )
-        if exec_id:
-            q = q.filter(WalletLedger.sales_executive_id == exec_id)
+        if scope["exec_id"]:
+            q = q.filter(WalletLedger.sales_executive_id == scope["exec_id"])
+        elif scope["franchise_id"]:
+            q = q.filter(SalesExecutive.franchise_id == scope["franchise_id"])
         for entry, executive, business in q.all():
             key = entry.business_key or "—"
             rec = grouped.get(key)
@@ -463,12 +553,20 @@ def client_commission_report(
     end = min(page * per_page, client_count)
     page_rows = rows[start - 1 : end] if client_count else []
 
+    split = (
+        _sum_franchise_split(db, scope["franchise_id"], since, until)
+        if scope.get("franchise_id")
+        else {"admin": 0.0, "salesman": 0.0, "franchise": 0.0, "plan_amount": 0.0}
+    )
     totals = {
         "plan": round_money(sum(r["plan"] for r in rows)),
         "bookings": round_money(sum(r["bookings"] for r in rows)),
         "total": round_money(sum(r["total"] for r in rows)),
         "clients": client_count,
         "base_amount": round_money(sum(r["base_amount"] for r in rows)),
+        "admin_cut": split["admin"],
+        "franchise_cut": split["franchise"],
+        "salesman_cut": split["salesman"] or round_money(sum(r["plan"] for r in rows)),
     }
     months = [{"value": m, "label": date(2000, m, 1).strftime("%B")} for m in range(1, 13)]
     return {
@@ -499,6 +597,7 @@ def mask_account(number: str) -> str:
 def list_withdrawals(
     db: Session,
     sales_executive_id: Optional[int] = None,
+    franchise_id: Optional[int] = None,
     since: Optional[date] = None,
     until: Optional[date] = None,
     status: Optional[str] = None,
@@ -508,6 +607,8 @@ def list_withdrawals(
     )
     if sales_executive_id:
         q = q.filter(WalletWithdrawal.sales_executive_id == sales_executive_id)
+    if franchise_id:
+        q = q.filter(SalesExecutive.franchise_id == franchise_id)
     if status:
         q = q.filter(WalletWithdrawal.status == status)
     if since:
