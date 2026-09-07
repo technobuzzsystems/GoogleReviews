@@ -153,10 +153,22 @@ def save_logo_upload(upload: UploadFile, business_key: str) -> str:
     if not upload or not (upload.filename or "").strip():
         return ""
     if not s3_configured():
-        raise ValueError(
-            "S3 is not configured. Set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, "
-            "AWS_REGION, and S3_BUCKET in .env."
-        )
+        LOCAL_UPLOAD_DIR = Path("static/uploads/logos")
+        LOCAL_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        ext = _detect_extension(upload.filename, upload.content_type or "")
+        if not ext:
+            raise ValueError("Logo must be a PNG, JPG, WEBP, or GIF file.")
+        data = upload.file.read()
+        if not data:
+            raise ValueError("The selected logo file is empty.")
+        max_bytes = _max_logo_bytes()
+        if len(data) > max_bytes:
+            raise ValueError(f"Logo must be {get_config().MAX_FILE_SIZE_MB} MB or smaller.")
+        _validate_image_bytes(data, upload.content_type or "")
+        
+        name = f"{uuid.uuid4().hex}{ext}"
+        (LOCAL_UPLOAD_DIR / name).write_bytes(data)
+        return f"uploads/logos/{name}"
 
     ext = _detect_extension(upload.filename, upload.content_type or "")
     if not ext:
