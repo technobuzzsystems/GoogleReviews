@@ -1,0 +1,37 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="qr-wrap">
+  <div class="qr-hero">
+    {% if business.logo_url %}
+    <img class="qr-hero-logo" src="{{ business.logo_url }}" alt="{{ business.name }} logo" width="72" height="72" />
+    {% endif %}
+    <div>
+      <p class="qr-kicker">Feedback QR</p>
+      <h2 class="qr-title">{{ business.name }}</h2>
+      <p class="qr-lede">Print or share this poster. Scanning it opens the live review page.</p>
+    </div>
+  </div>
+
+  <div class="qr-poster">
+    <img
+      class="qr-image"
+      src="/admin/businesses/{{ business_key }}/qr.png"
+      alt="QR code for {{ business.name }}"
+    />
+  </div>
+
+  <p class="qr-url">{{ qr_url }}</p>
+  <div class="qr-powered">
+    <img src="{{ url_for('static', path='images/technobuzz_logo.jpg') }}" alt="TechnoBuzz" width="28" height="28" />
+    <span>Powered by <strong>TechnoBuzz</strong></span>
+  </div>
+
+  <div class="form-actions qr-actions">
+    <a class="btn btn-primary" href="/admin/businesses/{{ business_key }}/qr.png?download=1">Download QR</a>
+    <button type="button" class="btn btn-outline" data-copy-text="{{ qr_url }}">Copy page URL</button>
+    <a class="btn btn-outline" href="{{ feedback_path }}" target="_blank" rel="noopener">Open page</a>
+    <a href="/admin/businesses" class="btn btn-muted">Back to clients</a>
+  </div>
+</div>
+{% endblock %}

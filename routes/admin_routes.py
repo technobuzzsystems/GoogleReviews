@@ -81,6 +81,7 @@ from services.sales_service import (
 from models.schemas import GenerateExamplesRequest
 from services.gemini_service import generate_star_example_prompts
 from services.payment_service import razorpay_configured
+from services.qr_service import public_feedback_url, qr_png_bytes
 from services.storage_service import public_logo_url, s3_configured, save_logo_upload, save_transfer_screenshot
 from utils.google_review import build_google_review_url, extract_place_id
 from utils.validators import (
@@ -406,6 +407,61 @@ def edit_business(
     if not business or not user_owns_business(db, user, business_key):
         return RedirectResponse(url="/admin/businesses", status_code=302)
     return _render_business_form(request, user, db, business=business, business_key=business_key)
+
+
+@router.get("/businesses/{business_key}/qr.png")
+def business_qr_png(
+    request: Request,
+    business_key: str,
+    download: int = 0,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_business_access),
+):
+    business = get_business(db, business_key)
+    if not business or not user_owns_business(db, user, business_key):
+        raise HTTPException(status_code=404, detail="Business not found.")
+    path = business.get("feedback_path") or "/feedback"
+    url = public_feedback_url(request, path)
+    png = qr_png_bytes(
+        url,
+        company_name=business.get("name") or "",
+        logo_filename=business.get("logo_filename") or "",
+    )
+    safe = "".join(ch for ch in business_key if ch.isalnum() or ch in "-_") or "business"
+    disposition = "attachment" if download else "inline"
+    return Response(
+        content=png,
+        media_type="image/png",
+        headers={"Content-Disposition": f'{disposition}; filename="{safe}_qrcode.png"'},
+    )
+
+
+@router.get("/businesses/{business_key}/qr")
+def business_qr_page(
+    request: Request,
+    business_key: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_business_access),
+):
+    business = get_business(db, business_key)
+    if not business or not user_owns_business(db, user, business_key):
+        return RedirectResponse(url="/admin/businesses", status_code=302)
+    path = business.get("feedback_path") or "/feedback"
+    url = public_feedback_url(request, path)
+    return templates.TemplateResponse(
+        request=request,
+        name="admin_business_qr.html",
+        context=_admin_context(
+            request,
+            user,
+            business=business,
+            business_key=business_key,
+            feedback_path=path,
+            qr_url=url,
+            page_title="QR Code",
+            active_nav="businesses",
+        ),
+    )
 
 
 @router.post("/businesses")

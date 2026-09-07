@@ -42,8 +42,8 @@ class Config:
     COMPANY_EMAIL: str = os.getenv("COMPANY_EMAIL", "")
 
     # ─── Application ──────────────────────────────────────────────────────────
-    # Base URL used for QR code generation
-    APP_BASE_URL: str = os.getenv("APP_BASE_URL", "http://localhost:5001")
+    # Public site URL used on QR codes and shareable client links
+    APP_BASE_URL: str = os.getenv("APP_BASE_URL", "https://reviewhub.technobuzzsystems.com")
 
     # ─── Google Business Profile ───────────────────────────────────────────────
     # URL where customers can post their review on Google.

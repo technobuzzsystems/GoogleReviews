@@ -224,6 +224,10 @@
       <a class="btn btn-outline" href="/invoice/{{ business.invoice_no }}#send" target="_blank" rel="noopener">Send</a>
       {% endif %}
       {% endif %}
+      {% if business and feedback_path %}
+      <a class="btn btn-outline" href="{{ feedback_path }}" target="_blank" rel="noopener">Open page</a>
+      <a class="btn btn-outline" href="/admin/businesses/{{ business.key or business_key }}/qr">Make QR Code</a>
+      {% endif %}
       {% if pay_url %}
       <button type="button" class="btn btn-outline" data-copy-text="{{ pay_url }}">Copy payment link</button>
       <a class="btn btn-muted" href="{{ pay_url }}" target="_blank" rel="noopener">Open pay page</a>

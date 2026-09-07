@@ -111,6 +111,7 @@
       </dl>
       <div class="biz-tile-actions">
         <a class="biz-tile-link ghost" href="{{ b.feedback_path or '/feedback' }}" target="_blank" rel="noopener">Open page</a>
+        <a class="biz-tile-link ghost" href="/admin/businesses/{{ b.key }}/qr">Make QR Code</a>
         {% if b.plan_amount and b.payment_due %}
         <button
           type="button"
