@@ -178,6 +178,7 @@ def _serialize_business_card(b: BusinessConfigModel, salesman_names: dict = None
         "email": getattr(b, "email", "") or "",
         "address": getattr(b, "address", "") or "",
         "feedback_path": feedback_path_for(b.key, getattr(b, "route_slug", "") or ""),
+        "logo_url": public_logo_url(getattr(b, "logo_filename", "") or ""),
         "payment_due": False,
         "invoice_no": "",
         "franchise_id": getattr(b, "franchise_id", None),

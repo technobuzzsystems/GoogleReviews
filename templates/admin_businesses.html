@@ -64,7 +64,14 @@
           <h3 class="biz-tile-name" title="{{ b.name }}">{{ b.name }}</h3>
           <div class="biz-tile-key">{{ b.key }}</div>
         </div>
-        <div class="biz-tile-flags">
+        <a class="biz-tile-edit" href="/admin/businesses/{{ b.key }}/edit" title="Edit {{ b.name }}" aria-label="Edit {{ b.name }}">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+          </svg>
+        </a>
+      </div>
+      <div class="biz-tile-flags">
         {% if b.plan_status == 'active' %}
         <span class="badge active">Active</span>
         {% elif b.plan_status == 'expired' %}
@@ -77,7 +84,6 @@
         {% elif b.plan_amount %}
         <span class="badge active">Paid</span>
         {% endif %}
-        </div>
       </div>
       <dl class="biz-tile-meta">
         <div>
@@ -111,7 +117,7 @@
       </dl>
       <div class="biz-tile-actions">
         <a class="biz-tile-link ghost" href="{{ b.feedback_path or '/feedback' }}" target="_blank" rel="noopener">Open page</a>
-        <a class="biz-tile-link ghost" href="/admin/businesses/{{ b.key }}/qr">Make QR Code</a>
+        <a class="biz-tile-link ghost" href="/admin/businesses/{{ b.key }}/qr">QR code</a>
         {% if b.plan_amount and b.payment_due %}
         <button
           type="button"
@@ -121,10 +127,7 @@
         >Pay now</button>
         {% elif b.invoice_no %}
         <a class="biz-tile-link ghost" href="/invoice/{{ b.invoice_no }}" target="_blank" rel="noopener">Invoice</a>
-        <a class="biz-tile-link ghost" href="/invoice/{{ b.invoice_no }}/download">Download</a>
-        <a class="biz-tile-link ghost" href="/invoice/{{ b.invoice_no }}#send" target="_blank" rel="noopener">Send</a>
         {% endif %}
-        <a class="biz-tile-link" href="/admin/businesses/{{ b.key }}/edit">Edit</a>
       </div>
     </article>
     {% endfor %}

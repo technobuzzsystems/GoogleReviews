@@ -1087,7 +1087,7 @@ body.login-page {
 .biz-grid-wrap { overflow: hidden; }
 .biz-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   gap: 16px;
   padding: 20px 24px;
 }
@@ -1097,25 +1097,42 @@ body.login-page {
   flex-direction: column;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px 18px 14px;
+  border-radius: 16px;
+  padding: 16px 16px 14px;
   min-height: 0;
   content-visibility: auto;
   contain-intrinsic-size: 240px;
-  transition: border-color var(--transition), box-shadow var(--transition);
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
 }
 .biz-tile:hover {
   border-color: var(--border-light);
   box-shadow: var(--shadow);
 }
+.biz-tile-edit {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: var(--text-2);
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  margin-left: auto;
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
+}
+.biz-tile-edit:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(0, 180, 216, 0.1);
+}
 .biz-tile-top {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 14px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  margin-bottom: 10px;
 }
 .biz-tile-heading { min-width: 0; flex: 1; }
 .biz-tile-name {
@@ -1129,7 +1146,14 @@ body.login-page {
   overflow: hidden;
 }
 .biz-tile .badge { margin-left: 0; flex-shrink: 0; }
-.biz-tile-flags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.biz-tile-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
 .biz-tile-meta .badge { display: inline-flex; vertical-align: middle; }
 .biz-tile-key {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -1177,6 +1201,7 @@ body.login-page {
 }
 .biz-tile-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: auto;
   padding-top: 12px;
@@ -1186,7 +1211,7 @@ body.login-page {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  min-width: 0;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -1196,7 +1221,7 @@ body.login-page {
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
-  flex: 1;
+  flex: 1 1 calc(50% - 8px);
   transition: background var(--transition), border-color var(--transition), color var(--transition);
 }
 .biz-tile-link.ghost {
@@ -1208,6 +1233,7 @@ body.login-page {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   border-color: transparent;
   color: #fff;
+  flex: 1 1 100%;
 }
 .biz-tile-link:hover {
   border-color: var(--accent);
