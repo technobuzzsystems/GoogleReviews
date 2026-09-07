@@ -158,10 +158,6 @@ def qr_png_bytes(url: str, company_name: str = "", logo_filename: str = "") -> b
     qr.make(fit=True)
     qr_img = qr.make_image(fill_color=CLR_QR_FILL, back_color=CLR_QR_BACK).convert("RGBA")
     qw, qh = qr_img.size
-    if business_logo is not None:
-        badge_size = max(88, int(min(qw, qh) * 0.28))
-        badge = _badge(business_logo, badge_size)
-        qr_img.paste(badge, ((qw - badge_size) // 2, (qh - badge_size) // 2), badge)
 
     pad = 36
     header_h = 108
