@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from models.domain_models import Booking, BusinessConfigModel, SalesExecutive, WalletLedger
 
 PLANS = {
+    "15d": {"code": "15d", "label": "15 Days", "days": 15, "amount": 1.0},
     "6m": {"code": "6m", "label": "6 Months", "months": 6, "amount": 1499.0},
     "1y": {"code": "1y", "label": "1 Year", "months": 12, "amount": 1999.0},
     "2y": {"code": "2y", "label": "2 Years", "months": 24, "amount": 2999.0},
@@ -50,11 +51,16 @@ def resolve_plan(plan_code: str, join_date_value=None) -> dict:
             "label": "",
         }
     join_on = parse_date(join_date_value) or date.today()
+    if "days" in plan:
+        expiry_date = join_on + timedelta(days=plan["days"])
+    else:
+        expiry_date = add_months(join_on, plan["months"])
+
     return {
         "plan_code": plan["code"],
         "plan_amount": plan["amount"],
         "join_date": join_on,
-        "expiry_date": add_months(join_on, plan["months"]),
+        "expiry_date": expiry_date,
         "label": plan["label"],
     }
 

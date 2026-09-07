@@ -79,7 +79,7 @@
       <div class="plan-box">
         {% for code, plan in plans.items() %}
         <label class="plan-option">
-          <input type="radio" name="plan_code" value="{{ code }}" data-months="{{ plan.months }}" data-amount="{{ plan.amount }}" {% if (business and business.plan_code == code) or ((not business or not business.plan_code) and code == '6m') %}checked{% endif %} required>
+          <input type="radio" name="plan_code" value="{{ code }}" data-months="{{ plan.months | default(0) }}" data-days="{{ plan.days | default(0) }}" data-amount="{{ plan.amount }}" {% if (business and business.plan_code == code) or ((not business or not business.plan_code) and code == '6m') %}checked{% endif %} required>
           <strong>{{ plan.label }}</strong>
           ₹{{ '{:,.0f}'.format(plan.amount) }}
         </label>
@@ -339,9 +339,14 @@
   var planPreview = document.getElementById("planPreview");
   var rate = {{ plan_commission_rate }};
 
-  function addMonths(date, months) {
+  function addMonths(date, months, days) {
     var d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    d.setMonth(d.getMonth() + months);
+    if (months) {
+        d.setMonth(d.getMonth() + months);
+    }
+    if (days) {
+        d.setDate(d.getDate() + days);
+    }
     return d;
   }
   function fmt(d) {
@@ -353,7 +358,7 @@
   function selectedPlan() {
     var el = document.querySelector('input[name="plan_code"]:checked');
     if (!el) return null;
-    return { months: parseInt(el.dataset.months, 10), amount: parseFloat(el.dataset.amount) };
+    return { months: parseInt(el.dataset.months, 10), days: parseInt(el.dataset.days || 0, 10), amount: parseFloat(el.dataset.amount) };
   }
   function updatePlan() {
     if (joinInput && !joinInput.value) joinInput.value = fmt(new Date());
@@ -361,7 +366,7 @@
     if (!plan || !joinInput.value) return;
     var parts = joinInput.value.split("-");
     var join = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-    expiryInput.value = fmt(addMonths(join, plan.months));
+    expiryInput.value = fmt(addMonths(join, plan.months, plan.days));
     var commission = (plan.amount * rate) / 100;
     planPreview.textContent = "Plan ₹" + plan.amount.toLocaleString("en-IN") + " → wallet credit after payment is collected";
   }
