@@ -64,6 +64,7 @@
       <div class="form-group">
         <label for="collected_amount">Collected amount (₹)</label>
         <input type="number" id="collected_amount" name="collected_amount" min="0" step="0.01" value="0">
+        <div class="form-hint">Leave 0 if payment is still pending. Commission goes to the wallet only after this is fully collected.</div>
       </div>
     </div>
 
@@ -118,9 +119,6 @@ function applyClient() {
     amount.value = planAmt || '';
     amount.dataset.autofill = '1';
   }
-  if (collected && (!collected.value || collected.value === '0') && planAmt) {
-    collected.value = planAmt;
-  }
   if (exec && opt.dataset.exec) exec.value = opt.dataset.exec;
   update();
 }
@@ -128,7 +126,13 @@ function applyClient() {
 function update() {
   const a = parseFloat(amount.value || '0') || 0;
   const r = parseFloat(rate.value || defaultRate) || 0;
-  preview.textContent = 'Commission: ₹' + ((a * r) / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 }) + ' (' + r + '%)';
+  const c = parseFloat(collected && collected.value || '0') || 0;
+  const money = ((a * r) / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  if (a > 0 && c >= a) {
+    preview.textContent = 'Commission ₹' + money + ' (' + r + '%) will go to the wallet because this is fully collected.';
+  } else {
+    preview.textContent = 'Commission ₹' + money + ' (' + r + '%) stays pending until payment is collected.';
+  }
 }
 
 if (clients) {

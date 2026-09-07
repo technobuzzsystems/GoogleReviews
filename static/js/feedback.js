@@ -227,6 +227,7 @@ const UIState = {
                 color:#00E5FF;
                 letter-spacing:1px;
               ">Ctrl + V</kbd> ${escapeHtml(I18n.t('toPaste'))}<br />
+              ${escapeHtml(I18n.t('selectStars'))}<br />
               ${escapeHtml(I18n.t('clickPost'))} <strong>${escapeHtml(I18n.t('postWord'))}</strong> ✅
             </p>
           `;
@@ -251,6 +252,7 @@ const UIState = {
                 color:#00E5FF;
                 letter-spacing:1px;
               ">Ctrl + V</kbd> ${escapeHtml(I18n.t('toPaste'))}<br />
+              ${escapeHtml(I18n.t('selectStars'))}<br />
               ${escapeHtml(I18n.t('clickPost'))} <strong>${escapeHtml(I18n.t('postWord'))}</strong> ✅
             </p>
           `;

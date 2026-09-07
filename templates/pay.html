@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Pay {{ plan_label }} — {{ business.name }}</title>
   <meta name="robots" content="noindex, nofollow" />
   <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}" />
@@ -32,6 +32,13 @@
         <div class="success-icon-wrapper"><span class="success-checkmark">✅</span></div>
         <h2 class="success-title">Payment received</h2>
         <p class="success-subtitle">Thank you. This plan is marked collected in the sales book.</p>
+        {% if invoice_no %}
+        <div class="pay-actions">
+          <a class="btn-submit" href="/invoice/{{ invoice_no }}" style="text-decoration:none;text-align:center">
+            <span class="btn-submit-inner"><span class="btn-text">View / print invoice</span></span>
+          </a>
+        </div>
+        {% endif %}
       </div>
       {% elif amount > 0 %}
       <p class="pay-meta">{{ plan_label }}</p>
@@ -60,7 +67,7 @@
   </div>
   {% if razorpay_ready and not paid %}
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-  <script src="{{ url_for('static', path='js/razorpay_checkout.js') }}"></script>
+  <script src="{{ url_for('static', path='js/razorpay_checkout.js') }}?v=20260907a"></script>
   {% endif %}
 </body>
 </html>

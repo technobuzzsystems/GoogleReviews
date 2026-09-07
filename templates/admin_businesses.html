@@ -64,6 +64,7 @@
           <h3 class="biz-tile-name" title="{{ b.name }}">{{ b.name }}</h3>
           <div class="biz-tile-key">{{ b.key }}</div>
         </div>
+        <div class="biz-tile-flags">
         {% if b.plan_status == 'active' %}
         <span class="badge active">Active</span>
         {% elif b.plan_status == 'expired' %}
@@ -71,11 +72,17 @@
         {% else %}
         <span class="badge none">No plan</span>
         {% endif %}
+        {% if b.plan_amount and b.payment_due %}
+        <span class="badge due">Pending</span>
+        {% elif b.plan_amount %}
+        <span class="badge active">Paid</span>
+        {% endif %}
+        </div>
       </div>
       <dl class="biz-tile-meta">
         <div>
           <dt>Plan</dt>
-          <dd>{{ b.plan_label or '—' }}{% if b.plan_amount %} · ₹{{ '{:,.0f}'.format(b.plan_amount) }}{% endif %}{% if b.plan_amount and not b.payment_due %} · Paid{% elif b.payment_due %} · Due{% endif %}</dd>
+          <dd>{{ b.plan_label or '—' }}{% if b.plan_amount %} · ₹{{ '{:,.0f}'.format(b.plan_amount) }}{% endif %}</dd>
         </div>
         <div>
           <dt>Area</dt>
@@ -111,6 +118,8 @@
           data-razorpay-pay
           data-business-key="{{ b.key }}"
         >Pay now</button>
+        {% elif b.invoice_no %}
+        <a class="biz-tile-link ghost" href="/invoice/{{ b.invoice_no }}" target="_blank" rel="noopener">Invoice</a>
         {% endif %}
         <a class="biz-tile-link" href="/admin/businesses/{{ b.key }}/edit">Edit</a>
       </div>

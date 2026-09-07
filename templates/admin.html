@@ -135,7 +135,7 @@
       <article class="biz-tile">
         <div class="biz-tile-top">
           <h3 class="biz-tile-name" title="{{ b.name }}">{{ b.name }}</h3>
-          <span class="badge none">₹{{ '{:,.0f}'.format(b.remaining) }} due</span>
+          <span class="badge due">Pending</span>
         </div>
         <div class="biz-tile-key">{{ b.booking_type|capitalize }} · {{ b.booked_on or '—' }}</div>
         <div class="biz-tile-meta">

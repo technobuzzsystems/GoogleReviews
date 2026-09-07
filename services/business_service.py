@@ -138,6 +138,7 @@ def _serialize_business(b: BusinessConfigModel, salesman_names: dict = None) -> 
         "address": getattr(b, "address", "") or "",
         "feedback_path": feedback_path_for(b.key, getattr(b, "route_slug", "") or ""),
         "payment_due": False,
+        "invoice_no": "",
         "franchise_id": getattr(b, "franchise_id", None),
         "area": getattr(b, "area", "") or "",
     }
@@ -178,6 +179,7 @@ def _serialize_business_card(b: BusinessConfigModel, salesman_names: dict = None
         "address": getattr(b, "address", "") or "",
         "feedback_path": feedback_path_for(b.key, getattr(b, "route_slug", "") or ""),
         "payment_due": False,
+        "invoice_no": "",
         "franchise_id": getattr(b, "franchise_id", None),
         "area": getattr(b, "area", "") or "",
     }
@@ -335,11 +337,15 @@ def list_businesses_page(
     start = (page - 1) * per_page + 1 if total else 0
     end = min(page * per_page, total)
     cards = [_serialize_business_card(b, salesman_names) for b in rows]
-    from services.payment_service import unpaid_business_keys
+    from services.payment_service import pending_payment_keys
 
-    due_keys = unpaid_business_keys(db, [c["key"] for c in cards])
+    due_keys = pending_payment_keys(db, cards)
+    from services.invoice_service import invoice_nos_for_business_keys
+
+    invoice_nos = invoice_nos_for_business_keys(db, [c["key"] for c in cards])
     for card in cards:
         card["payment_due"] = card["key"] in due_keys
+        card["invoice_no"] = "" if card["payment_due"] else invoice_nos.get(card["key"], "")
     return {
         "rows": cards,
         "total": total,
@@ -508,9 +514,13 @@ def get_business(db: Session, business_key: str) -> dict:
         if exec_:
             salesman_names[exec_.id] = exec_.name
     data = _serialize_business(b, salesman_names)
-    from services.payment_service import unpaid_business_keys
+    from services.payment_service import pending_payment_keys
 
-    data["payment_due"] = b.key in unpaid_business_keys(db, [b.key])
+    data["payment_due"] = b.key in pending_payment_keys(db, [data])
+    from services.invoice_service import latest_invoice_for_business
+
+    invoice = None if data["payment_due"] else latest_invoice_for_business(db, b.key)
+    data["invoice_no"] = invoice.invoice_no if invoice else ""
     return data
 
 
@@ -576,13 +586,10 @@ def find_business_by_route(db: Session, slug: str) -> dict:
 
 
 def save_business(db: Session, business_key: str, data: dict):
-    """Save or update a business and credit 10% plan commission to the salesman wallet."""
-    from services.plan_service import credit_plan_to_wallet, resolve_plan
+    """Save or update a business. Plan commission is credited only after payment is collected."""
+    from services.plan_service import resolve_plan
 
     b = db.query(BusinessConfigModel).filter(BusinessConfigModel.key == business_key).first()
-    is_new = b is None
-    old_plan = (b.plan_code if b else "") or ""
-    old_join = b.join_date if b else None
     if not b:
         b = BusinessConfigModel(key=business_key)
         db.add(b)
@@ -642,20 +649,6 @@ def save_business(db: Session, business_key: str, data: dict):
 
     db.commit()
 
-    plan_changed = plan["plan_code"] and (
-        is_new or plan["plan_code"] != old_plan or plan["join_date"] != old_join
-    )
-    from services.payment_service import razorpay_configured
-
-    if plan_changed and exec_id and not razorpay_configured():
-        credit_plan_to_wallet(
-            db,
-            exec_id,
-            business_key,
-            plan["plan_code"],
-            plan["plan_amount"],
-            plan["join_date"],
-        )
     if plan["plan_code"] and exec_id:
         from services.sales_service import upsert_plan_booking
 

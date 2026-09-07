@@ -245,6 +245,22 @@ def bank_details_for_executive(db: Session, executive) -> Optional[dict]:
     }
 
 
+def bank_details_for_user(user) -> Optional[dict]:
+    if not user:
+        return None
+    account = (user.account_number or "").strip()
+    ifsc = (user.ifsc or "").strip()
+    if not account or not ifsc:
+        return None
+    return {
+        "bank_name": (user.bank_name or "").strip(),
+        "account_name": (user.account_name or "").strip() or (user.full_name or user.username),
+        "account_number": account,
+        "account_masked": _mask_account(account),
+        "ifsc": ifsc.upper(),
+    }
+
+
 def _sync_sales_executive(db: Session, user: User, *, franchise_id=None, commission_rate=None) -> None:
     from models.domain_models import SalesExecutive
     from services.plan_service import PLAN_COMMISSION_RATE

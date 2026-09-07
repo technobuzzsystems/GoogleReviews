@@ -12,7 +12,7 @@
   {% if is_franchise %}
   Your remainder after admin’s {{ admin_franchise_rate|int }}% and each salesman’s commission sits in the franchise wallet. Team wallets are their set %. Salesmen request a bank transfer; admin sends it. Plan prices do not change.
   {% else %}
-  Commission is credited to the wallet. Open <a class="link-accent" href="/admin/commission">Commission</a> for client-wise totals. Salesmen request a bank transfer; admin sends it.
+  Commission is credited to the wallet after payment is collected. Unpaid bookings stay pending. Open <a class="link-accent" href="/admin/commission">Commission</a> for client-wise totals. Salesmen request a bank transfer; admin sends it.
   {% endif %}
 </p>
 

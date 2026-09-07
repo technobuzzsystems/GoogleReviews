@@ -1,0 +1,349 @@
+{% extends "admin_base.html" %}
+
+{% block topbar_actions %}
+{% if is_admin %}
+<a href="/admin/franchises" class="btn btn-outline">All franchises</a>
+{% endif %}
+<a href="/admin/users" class="btn btn-outline">Users</a>
+{% endblock %}
+
+{% block content %}
+<p class="page-lede">
+  {{ detail.area or 'Allocated area' }} · plan prices unchanged · admin {{ admin_franchise_rate|int }}% · remaining {{ max_salesman_rate|int }}% is salesman (set by admin or franchise) plus franchise remainder.
+</p>
+
+{% if form_success %}
+<div class="form-success">{{ form_success }}</div>
+{% endif %}
+{% if form_error %}
+<div class="form-error">{{ form_error }}</div>
+{% endif %}
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-icon">📒</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(detail.totals.sales) }}</div>
+    <div class="stat-label">Collections</div>
+    <div class="stat-badge">{{ detail.clients }} client{{ '' if detail.clients == 1 else 's' }}</div>
+  </div>
+  <div class="stat-card yellow">
+    <span class="stat-icon">🏢</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(detail.totals.admin) }}</div>
+    <div class="stat-label">Admin {{ admin_franchise_rate|int }}%</div>
+    <div class="stat-badge">Company share</div>
+  </div>
+  <div class="stat-card">
+    <span class="stat-icon">👤</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(detail.totals.salesman) }}</div>
+    <div class="stat-label">Salesman commission</div>
+    <div class="stat-badge">Due ₹{{ '{:,.0f}'.format(detail.team_wallet) }}</div>
+  </div>
+  <div class="stat-card green">
+    <span class="stat-icon">🤝</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(detail.totals.franchise) }}</div>
+    <div class="stat-label">Franchise commission</div>
+    <div class="stat-badge">Wallet ₹{{ '{:,.0f}'.format(detail.wallet) }}</div>
+  </div>
+  <div class="stat-card purple">
+    <span class="stat-icon">💸</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(detail.due_total) }}</div>
+    <div class="stat-label">Amount to transfer</div>
+    <div class="stat-badge">Owner + team wallets</div>
+  </div>
+</div>
+
+<div class="overview-split">
+  <section class="table-card">
+    <div class="table-toolbar">
+      <div>
+        <div class="section-title">Salesman-wise</div>
+        <div class="section-subtitle">Commission earned and wallet still to pay</div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Salesman</th>
+            <th class="td-right">%</th>
+            <th class="td-right">Sales</th>
+            <th class="td-right">Commission</th>
+            <th class="td-right">To transfer</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in detail.salesmen %}
+          <tr>
+            <td>
+              <strong>{{ s.name }}</strong>
+              {% if s.phone %}<div class="muted">{{ s.phone }}</div>{% endif %}
+            </td>
+            <td class="td-right">{{ s.commission_rate|int }}%</td>
+            <td class="td-right">₹{{ '{:,.0f}'.format(s.sales) }}</td>
+            <td class="td-right">₹{{ '{:,.0f}'.format(s.commission) }}</td>
+            <td class="td-right amount-green">₹{{ '{:,.0f}'.format(s.wallet) }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5">
+              <div class="empty-state">
+                <p>No salesmen yet. Add them under Users.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="breakdown-card form-card">
+    <div class="section-header">
+      <div>
+        <div class="section-title">{% if is_admin %}Transfer with proof{% else %}Request franchise payout{% endif %}</div>
+        <div class="section-subtitle">
+          {% if is_admin %}Pay the franchise owner or a salesman and attach the bank screenshot. Both of you can open that proof later.
+          {% else %}Request your remainder. Admin transfers it and attaches the screenshot.
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% if is_admin %}
+    <form action="/admin/franchises/{{ detail.id }}/transfer" method="POST" enctype="multipart/form-data">
+      <div class="form-group">
+        <label for="party_type">Pay to</label>
+        <select id="party_type" name="party_type">
+          <option value="franchise" {% if form.party_type != 'salesman' %}selected{% endif %}>Franchise owner — wallet ₹{{ '{:,.0f}'.format(detail.wallet) }}</option>
+          <option value="salesman" {% if form.party_type == 'salesman' %}selected{% endif %}>Salesman</option>
+        </select>
+      </div>
+      <div class="form-group" id="salesmanPick" style="display:none">
+        <label for="sales_executive_id">Salesman</label>
+        <select id="sales_executive_id" name="sales_executive_id">
+          <option value="">— Select salesman —</option>
+          {% for e in executives %}
+          <option value="{{ e.id }}" {% if form.sales_executive_id|string == e.id|string %}selected{% endif %}>{{ e.name }} — ₹{{ '{:,.0f}'.format(e.wallet_balance or 0) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="bank-card {% if not franchise_bank %}is-missing{% endif %}" id="frBankCard">
+        <div class="bank-card-label">Franchise bank</div>
+        {% if franchise_bank %}
+        <div class="bank-card-body">
+          <strong>{{ franchise_bank.bank_name }}</strong>
+          <div>{{ franchise_bank.account_name }}</div>
+          <div class="muted">{{ franchise_bank.account_masked }} · {{ franchise_bank.ifsc }}</div>
+        </div>
+        {% else %}
+        <div class="bank-card-empty">Add bank details on the franchise user.</div>
+        {% endif %}
+      </div>
+      <div class="form-group">
+        <label for="amount">Amount (₹)</label>
+        <input type="number" id="amount" name="amount" min="1" step="1" value="{{ form.amount if form.amount else '' }}" required>
+      </div>
+      <div class="form-group">
+        <label for="screenshot">Transfer screenshot (proof)</label>
+        <input type="file" id="screenshot" name="screenshot" accept="image/png,image/jpeg,image/webp,image/gif" required>
+        <div class="form-hint">Required. Both admin and franchise can view this after the transfer.</div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Transfer now</button>
+      </div>
+    </form>
+    {% else %}
+    <form action="/admin/franchises/{{ detail.id }}/request" method="POST">
+      <div class="bank-card {% if not franchise_bank %}is-missing{% endif %}">
+        <div class="bank-card-label">Your saved bank</div>
+        {% if franchise_bank %}
+        <div class="bank-card-body">
+          <strong>{{ franchise_bank.bank_name }}</strong>
+          <div>{{ franchise_bank.account_name }}</div>
+          <div class="muted">{{ franchise_bank.account_masked }} · {{ franchise_bank.ifsc }}</div>
+        </div>
+        {% else %}
+        <div class="bank-card-empty">Ask admin to save your bank account under Users.</div>
+        {% endif %}
+      </div>
+      <div class="form-group">
+        <label for="amount">Amount (₹)</label>
+        <input type="number" id="amount" name="amount" min="1" step="1" max="{{ detail.wallet|int }}" value="{{ form.amount if form.amount else '' }}" required>
+        <div class="form-hint">Available franchise wallet ₹{{ '{:,.0f}'.format(detail.wallet) }}</div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" {% if not franchise_bank or not detail.wallet %}disabled{% endif %}>Request transfer</button>
+      </div>
+    </form>
+    {% endif %}
+  </section>
+</div>
+
+<div class="table-card">
+  <div class="table-toolbar">
+    <div>
+      <div class="section-title">Pending transfers</div>
+      <div class="section-subtitle">{% if is_admin %}Attach screenshot when you send{% else %}Waiting for admin{% endif %}</div>
+    </div>
+    <span class="stat-badge">{{ pending_transfers|length }}</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Pay to</th>
+          <th>Bank</th>
+          <th class="td-right">Amount</th>
+          {% if is_admin %}<th></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in pending_transfers %}
+        <tr>
+          <td class="muted">{{ row.created_at }}</td>
+          <td>{{ row.party_label }} · {{ row.party_name }}</td>
+          <td>{{ row.bank_name }}<div class="muted">{{ row.account_masked }} · {{ row.ifsc }}</div></td>
+          <td class="td-right amount-green">₹{{ '{:,.0f}'.format(row.amount) }}</td>
+          {% if is_admin %}
+          <td class="td-right">
+            <form class="row-actions" action="/admin/franchises/transfers/{{ row.id }}/send" method="POST" enctype="multipart/form-data">
+              <input type="file" name="screenshot" accept="image/png,image/jpeg,image/webp,image/gif" required>
+              <button type="submit" class="btn btn-primary btn-sm">Send + proof</button>
+            </form>
+            <form action="/admin/franchises/transfers/{{ row.id }}/reject" method="POST">
+              <button type="submit" class="btn btn-muted btn-sm">Reject</button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="{{ 5 if is_admin else 4 }}">
+            <div class="empty-state"><p>No pending transfer requests.</p></div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="table-card">
+  <div class="table-toolbar">
+    <div>
+      <div class="section-title">Transfer records (with proof)</div>
+      <div class="section-subtitle">Admin and franchise can both open the screenshot</div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Pay to</th>
+          <th>Bank</th>
+          <th>Status</th>
+          <th>Proof</th>
+          <th class="td-right">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in transfers %}
+        <tr>
+          <td class="muted">{{ row.processed_at or row.created_at }}</td>
+          <td>{{ row.party_label }} · {{ row.party_name }}</td>
+          <td>{{ row.bank_name }}<div class="muted">{{ row.account_masked }} · {{ row.ifsc }}</div></td>
+          <td>
+            {% if row.status == 'sent' %}<span class="badge active">Transferred</span>
+            {% elif row.status == 'rejected' %}<span class="badge expired">Rejected</span>
+            {% else %}<span class="badge none">{{ row.status_label }}</span>{% endif %}
+          </td>
+          <td>
+            {% if row.screenshot_url %}
+            <a class="proof-link" href="{{ row.screenshot_url }}" target="_blank" rel="noopener">
+              <img class="proof-thumb" src="{{ row.screenshot_url }}" alt="Transfer proof">
+              Open
+            </a>
+            {% else %}
+            <span class="muted">No screenshot</span>
+            {% endif %}
+          </td>
+          <td class="td-right amount-green">₹{{ '{:,.0f}'.format(row.amount) }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-state"><p>No transfer records yet.</p></div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="table-card">
+  <div class="table-toolbar">
+    <div>
+      <div class="section-title">Collection transactions</div>
+      <div class="section-subtitle">Each paid plan: admin {{ admin_franchise_rate|int }}% · salesman % · franchise remainder</div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Client</th>
+          <th>Salesman</th>
+          <th>Plan</th>
+          <th class="td-right">Amount</th>
+          <th class="td-right">Admin</th>
+          <th class="td-right">Salesman</th>
+          <th class="td-right">Franchise</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in detail.collections %}
+        <tr>
+          <td class="muted">{{ row.created_at or row.join_date }}</td>
+          <td>
+            <strong>{{ row.name }}</strong>
+            <div class="muted">{{ row.business_key }}</div>
+          </td>
+          <td>{{ row.salesman_name }}</td>
+          <td>{{ row.plan_label }}</td>
+          <td class="td-right">₹{{ '{:,.0f}'.format(row.plan_amount) }}</td>
+          <td class="td-right">₹{{ '{:,.0f}'.format(row.admin) }}</td>
+          <td class="td-right">₹{{ '{:,.0f}'.format(row.salesman) }}</td>
+          <td class="td-right amount-green">₹{{ '{:,.0f}'.format(row.franchise) }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8">
+            <div class="empty-state"><p>No franchise collections yet. Assign clients in this area and collect a plan.</p></div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if is_admin %}
+<script>
+(function () {
+  var party = document.getElementById("party_type");
+  var pick = document.getElementById("salesmanPick");
+  function sync() {
+    if (!pick) return;
+    pick.style.display = (party && party.value === "salesman") ? "" : "none";
+  }
+  if (party) party.addEventListener("change", sync);
+  sync();
+})();
+</script>
+{% endif %}
+{% endblock %}

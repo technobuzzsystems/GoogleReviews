@@ -16,11 +16,12 @@ from sqlalchemy.orm import Session
 
 from config import get_config
 from database import get_db
-from models.domain_models import User, UserRole
+from models.domain_models import Franchise, SalesExecutive, User, UserRole, WalletWithdrawal
 from services.auth_service import (
     ROLE_LABELS,
     authenticate_user,
     bank_details_for_executive,
+    bank_details_for_user,
     can_manage_businesses,
     can_manage_users,
     can_view_sales_book,
@@ -52,13 +53,18 @@ from services.dashboard_service import (
     list_withdrawals,
     overview_counts,
     reject_wallet_transfer,
+    request_franchise_transfer,
     request_wallet_transfer,
+    send_payout_now,
     transfer_wallet_to_bank,
     withdraw_wallet_to_bank,
 )
 from services.plan_service import PLANS, PLAN_COMMISSION_RATE
 from services.franchise_service import (
     ADMIN_FRANCHISE_COMMISSION_RATE,
+    MAX_SALESMAN_COMMISSION_RATE,
+    franchise_detail,
+    franchise_summaries,
     get_franchise_for_user,
     list_franchises,
     scope_for_user,
@@ -75,7 +81,7 @@ from services.sales_service import (
 from models.schemas import GenerateExamplesRequest
 from services.gemini_service import generate_star_example_prompts
 from services.payment_service import razorpay_configured
-from services.storage_service import public_logo_url, s3_configured, save_logo_upload
+from services.storage_service import public_logo_url, s3_configured, save_logo_upload, save_transfer_screenshot
 from utils.google_review import build_google_review_url, extract_place_id
 from utils.validators import (
     sanitize_string,
@@ -107,6 +113,7 @@ def _admin_context(request: Request, user: User, **extra):
         "plans": PLANS,
         "plan_commission_rate": PLAN_COMMISSION_RATE,
         "admin_franchise_rate": ADMIN_FRANCHISE_COMMISSION_RATE,
+        "max_salesman_rate": MAX_SALESMAN_COMMISSION_RATE,
         "company_name": config.COMPANY_NAME,
         "company_id": config.COMPANY_ID,
         "business_id": "technobuzz",
@@ -915,6 +922,240 @@ def wallet_reject_transfer(
     return RedirectResponse(url="/admin/wallet?rejected=1", status_code=303)
 
 
+def _store_transfer_shot(upload: UploadFile | None) -> str:
+    if not upload or not (upload.filename or "").strip():
+        return ""
+    return save_transfer_screenshot(upload)
+
+
+def _franchise_detail_view(
+    request: Request,
+    db: Session,
+    user: User,
+    franchise_id: int,
+    *,
+    error: str = "",
+    success: str = "",
+    form: dict = None,
+):
+    org = get_franchise_for_user(db, user)
+    if user.role == UserRole.FRANCHISE:
+        if not org or org.id != franchise_id:
+            return RedirectResponse(url="/admin/franchises", status_code=302)
+    detail = franchise_detail(db, franchise_id)
+    if not detail:
+        return RedirectResponse(url="/admin/franchises", status_code=302)
+    owner = db.query(User).filter(User.id == detail["owner"]["id"]).first() if detail["owner"]["id"] else None
+    fr_bank = bank_details_for_user(owner) if owner else None
+    execs = list_executives(db, franchise_id=franchise_id, active_only=False)
+    banks = {e.id: bank_details_for_executive(db, e) for e in execs}
+    pending = list_withdrawals(db, franchise_id=franchise_id, status="requested")
+    history = [w for w in list_withdrawals(db, franchise_id=franchise_id) if w["status"] != "requested"]
+    return templates.TemplateResponse(request=request, name="admin_franchise_detail.html", context=
+        _admin_context(
+            request,
+            user,
+            detail=detail,
+            franchise_bank=fr_bank,
+            executives=execs,
+            banks=banks,
+            pending_transfers=pending,
+            transfers=history,
+            form=form or {},
+            form_error=error,
+            form_success=success,
+            page_title=detail["name"],
+            active_nav="franchises",
+        ),
+        status_code=400 if error else 200,
+    )
+
+
+@router.get("/franchises")
+def franchises_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_user_manager),
+):
+    org = get_franchise_for_user(db, user)
+    if user.role == UserRole.FRANCHISE:
+        if not org:
+            return RedirectResponse(url="/admin/forbidden", status_code=302)
+        return RedirectResponse(url=f"/admin/franchises/{org.id}", status_code=302)
+    rows = franchise_summaries(db)
+    due_total = round(sum(r["due_total"] for r in rows), 2)
+    sales_total = round(sum(r["sales"] for r in rows), 2)
+    admin_total = round(sum(r["admin"] for r in rows), 2)
+    return templates.TemplateResponse(request=request, name="admin_franchises.html", context=
+        _admin_context(
+            request,
+            user,
+            franchises=rows,
+            due_total=due_total,
+            sales_total=sales_total,
+            admin_total=admin_total,
+            page_title="Franchises",
+            active_nav="franchises",
+        ),
+    )
+
+
+@router.get("/franchises/{franchise_id}")
+def franchise_detail_page(
+    request: Request,
+    franchise_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_user_manager),
+):
+    success = ""
+    if request.query_params.get("sent"):
+        success = "Transfer recorded. Screenshot is saved as proof."
+    elif request.query_params.get("requested"):
+        success = "Transfer request sent. Admin will pay and attach the screenshot."
+    elif request.query_params.get("rejected"):
+        success = "Request rejected. Amount returned to the wallet."
+    return _franchise_detail_view(request, db, user, franchise_id, success=success)
+
+
+@router.post("/franchises/{franchise_id}/transfer")
+async def franchise_send_payout(
+    request: Request,
+    franchise_id: int,
+    party_type: str = Form("franchise"),
+    sales_executive_id: str = Form(""),
+    amount: str = Form(""),
+    screenshot: UploadFile | None = File(None),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    posted = {"party_type": party_type, "sales_executive_id": sales_executive_id, "amount": amount}
+    detail = franchise_detail(db, franchise_id)
+    if not detail:
+        return RedirectResponse(url="/admin/franchises", status_code=302)
+    org = db.query(Franchise).filter(Franchise.id == franchise_id).first()
+    owner = db.query(User).filter(User.id == org.user_id).first() if org and org.user_id else None
+    party = (party_type or "franchise").strip()
+    executive = None
+    bank = None
+    if party == "salesman":
+        exec_id = int(sales_executive_id) if str(sales_executive_id).isdigit() else 0
+        executive = db.query(SalesExecutive).filter(SalesExecutive.id == exec_id, SalesExecutive.franchise_id == franchise_id).first()
+        bank = bank_details_for_executive(db, executive) if executive else None
+        if not executive:
+            return _franchise_detail_view(request, db, user, franchise_id, error="Select a salesman.", form=posted)
+    else:
+        party = "franchise"
+        bank = bank_details_for_user(owner) if owner else None
+
+    money, money_err = validate_withdraw_amount(
+        amount,
+        executive.wallet_balance if party == "salesman" and executive else (org.wallet_balance if org else 0),
+    )
+    error = money_err
+    if not bank:
+        error = error or "Add bank account and IFSC for this user first."
+    try:
+        shot = _store_transfer_shot(screenshot)
+    except ValueError as exc:
+        error = error or str(exc)
+    if not shot:
+        error = error or "Attach a transfer screenshot as proof."
+    if error:
+        return _franchise_detail_view(request, db, user, franchise_id, error=error, form=posted)
+    try:
+        send_payout_now(
+            db,
+            party_type=party,
+            amount=money,
+            bank=bank,
+            processed_by_user_id=user.id,
+            screenshot_filename=shot,
+            executive=executive,
+            franchise=org if party == "franchise" else None,
+        )
+    except ValueError as exc:
+        return _franchise_detail_view(request, db, user, franchise_id, error=str(exc), form=posted)
+    return RedirectResponse(url=f"/admin/franchises/{franchise_id}?sent=1", status_code=303)
+
+
+@router.post("/franchises/{franchise_id}/request")
+def franchise_request_payout(
+    request: Request,
+    franchise_id: int,
+    amount: str = Form(""),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_user_manager),
+):
+    org = get_franchise_for_user(db, user)
+    if user.role == UserRole.FRANCHISE and (not org or org.id != franchise_id):
+        return RedirectResponse(url="/admin/forbidden", status_code=302)
+    target = db.query(Franchise).filter(Franchise.id == franchise_id).first()
+    if not target:
+        return RedirectResponse(url="/admin/franchises", status_code=302)
+    owner = db.query(User).filter(User.id == target.user_id).first() if target.user_id else None
+    bank = bank_details_for_user(owner) if owner else None
+    money, money_err = validate_withdraw_amount(amount, target.wallet_balance)
+    error = money_err
+    if not bank:
+        error = error or "Add account number and IFSC for this franchise user first."
+    if error:
+        return _franchise_detail_view(request, db, user, franchise_id, error=error, form={"amount": amount})
+    try:
+        request_franchise_transfer(db, target, money, bank, requested_by_user_id=user.id)
+    except ValueError as exc:
+        return _franchise_detail_view(request, db, user, franchise_id, error=str(exc), form={"amount": amount})
+    return RedirectResponse(url=f"/admin/franchises/{franchise_id}?requested=1", status_code=303)
+
+
+@router.post("/franchises/transfers/{withdrawal_id}/send")
+async def franchise_approve_transfer(
+    request: Request,
+    withdrawal_id: int,
+    screenshot: UploadFile | None = File(None),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    row = db.query(WalletWithdrawal).filter(WalletWithdrawal.id == withdrawal_id).first()
+    if not row or not row.franchise_id:
+        return RedirectResponse(url="/admin/franchises", status_code=302)
+    franchise_id = row.franchise_id
+    try:
+        shot = _store_transfer_shot(screenshot)
+    except ValueError as exc:
+        return _franchise_detail_view(request, db, user, franchise_id, error=str(exc))
+    if not shot and not (row.screenshot_filename or "").strip():
+        return _franchise_detail_view(
+            request, db, user, franchise_id, error="Attach a transfer screenshot as proof."
+        )
+    try:
+        transfer_wallet_to_bank(
+            db,
+            withdrawal_id,
+            processed_by_user_id=user.id,
+            screenshot_filename=shot or row.screenshot_filename,
+        )
+    except ValueError as exc:
+        return _franchise_detail_view(request, db, user, franchise_id, error=str(exc))
+    return RedirectResponse(url=f"/admin/franchises/{franchise_id}?sent=1", status_code=303)
+
+
+@router.post("/franchises/transfers/{withdrawal_id}/reject")
+def franchise_reject_transfer(
+    request: Request,
+    withdrawal_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    row = db.query(WalletWithdrawal).filter(WalletWithdrawal.id == withdrawal_id).first()
+    if not row or not row.franchise_id:
+        return RedirectResponse(url="/admin/franchises", status_code=302)
+    try:
+        reject_wallet_transfer(db, withdrawal_id, processed_by_user_id=user.id)
+    except ValueError as exc:
+        return _franchise_detail_view(request, db, user, row.franchise_id, error=str(exc))
+    return RedirectResponse(url=f"/admin/franchises/{row.franchise_id}?rejected=1", status_code=303)
+
+
 def _user_form_view(request: Request, user: User, db: Session = None, *, staff=None, error: str = "", posted: dict = None):
     data = posted or staff or {}
     org = get_franchise_for_user(db, user) if db else None
@@ -1067,10 +1308,10 @@ def users_save(
             rate_val = float(commission_rate)
         except ValueError:
             rate_val = None
-        if rate_val is None or rate_val < 0 or rate_val > 80:
+        if rate_val is None or rate_val < 0 or rate_val > MAX_SALESMAN_COMMISSION_RATE:
             return _user_form_view(
                 request, user, db, staff=posted if posted["id"] else None,
-                error="Salesman commission must be between 0 and 80%.",
+                error=f"Salesman commission must be between 0 and {MAX_SALESMAN_COMMISSION_RATE:g}% (after admin {ADMIN_FRANCHISE_COMMISSION_RATE:g}%).",
                 posted=posted,
             )
 

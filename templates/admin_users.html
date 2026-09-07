@@ -7,9 +7,9 @@
 {% block content %}
 <p class="page-lede">
   {% if is_franchise %}
-  Add salesmen for your allocated area. You set their commission. Plan prices stay the same; admin receives {{ admin_franchise_rate|int }}% of each franchise collection.
+  Add salesmen for your allocated area. You and admin can set each salesman’s commission. Admin keeps {{ admin_franchise_rate|int }}%; the rest is yours after the salesman cut. Plan prices stay the same.
   {% else %}
-  Create franchise partners with an allocated client area, and salesmen with their commission %. Plan prices do not change. Franchise collections pay admin a fixed {{ admin_franchise_rate|int }}%.
+  Create franchise partners with an allocated client area. Admin keeps {{ admin_franchise_rate|int }}% of franchise collections. You or the franchise owner set each salesman’s % from the remaining {{ max_salesman_rate|int }}%.
   {% endif %}
 </p>
 

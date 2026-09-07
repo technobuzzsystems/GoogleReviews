@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from models.domain_models import Booking, BusinessConfigModel, Customer, SalesExecutive, User, UserRole
 from services.auth_service import hash_password
-from services.plan_service import CLIENT_PLAN_NOTE, PLAN_COMMISSION_RATE
+from services.plan_service import CLIENT_PLAN_NOTE, PLAN_COMMISSION_RATE, booking_is_collected
 
 
 SALES_PEOPLE = (
@@ -157,6 +157,7 @@ def _serialize_booking(booking: Booking, customer: Customer, executive: SalesExe
     amount = round_money(booking.amount)
     collected = round_money(booking.collected_amount)
     pending = round_money(max(amount - collected, 0))
+    collected_ok = booking_is_collected(booking)
     return {
         "id": booking.id,
         "booked_on": booking.booked_on.isoformat() if booking.booked_on else "",
@@ -172,8 +173,10 @@ def _serialize_booking(booking: Booking, customer: Customer, executive: SalesExe
         "pending": pending,
         "commission_rate": round_money(booking.commission_rate),
         "commission_amount": round_money(booking.commission_amount),
-        "status": booking.status,
+        "commission_earned": round_money(booking.commission_amount) if collected_ok else 0.0,
+        "status": booking.status if collected_ok else ("booked" if (booking.status or "") != "cancelled" else booking.status),
         "is_plan": (booking.notes or "").strip() == CLIENT_PLAN_NOTE,
+        "invoice_no": "",
     }
 
 
@@ -238,6 +241,11 @@ def list_bookings(
     start = (page - 1) * per_page + 1 if total else 0
     end = min(page * per_page, total)
     page_rows = items[start - 1 : end] if total else []
+    from services.invoice_service import invoice_nos_for_booking_ids
+
+    invoice_nos = invoice_nos_for_booking_ids(db, [row["id"] for row in page_rows])
+    for row in page_rows:
+        row["invoice_no"] = invoice_nos.get(row["id"], "")
     return {
         "rows": page_rows,
         "total": total,
@@ -252,7 +260,7 @@ def list_bookings(
 
 
 def upsert_plan_booking(db: Session, business: BusinessConfigModel, *, commit: bool = False) -> Optional[Booking]:
-    """Keep one sales-book row per client at the plan amount (10% commission, no extra wallet credit)."""
+    """Keep one sales-book row per client. Stays pending until payment is collected."""
     if not business or not business.plan_amount or not business.sales_executive_id:
         return None
     executive = db.query(SalesExecutive).filter(SalesExecutive.id == business.sales_executive_id).first()
@@ -263,9 +271,6 @@ def upsert_plan_booking(db: Session, business: BusinessConfigModel, *, commit: b
     rate = float(executive.commission_rate or PLAN_COMMISSION_RATE)
     booked_on = business.join_date or date.today()
     phone = business.mobile or ""
-    from services.payment_service import razorpay_configured
-
-    collect_now = not razorpay_configured()
 
     existing = (
         db.query(Booking)
@@ -280,6 +285,10 @@ def upsert_plan_booking(db: Session, business: BusinessConfigModel, *, commit: b
             customer.phone = phone or customer.phone
             customer.business_key = business.key
             customer.sales_executive_id = executive.id
+        period_changed = (
+            (existing.booked_on.isoformat() if existing.booked_on else "") != (booked_on.isoformat() if booked_on else "")
+            or round_money(existing.amount) != amount
+        )
         existing.sales_executive_id = executive.id
         existing.business_key = business.key
         existing.booking_type = "new"
@@ -288,7 +297,10 @@ def upsert_plan_booking(db: Session, business: BusinessConfigModel, *, commit: b
         existing.commission_amount = calc_commission(amount, rate)
         existing.notes = CLIENT_PLAN_NOTE
         existing.booked_on = booked_on
-        if collect_now or (existing.collected_amount or 0) >= amount:
+        if period_changed:
+            existing.collected_amount = 0.0
+            existing.status = "booked"
+        elif booking_is_collected(existing):
             existing.collected_amount = amount
             existing.status = "collected"
         else:
@@ -312,10 +324,10 @@ def upsert_plan_booking(db: Session, business: BusinessConfigModel, *, commit: b
         business_key=business.key,
         booking_type="new",
         amount=amount,
-        collected_amount=amount if collect_now else 0.0,
+        collected_amount=0.0,
         commission_rate=rate,
         commission_amount=calc_commission(amount, rate),
-        status="collected" if collect_now else "booked",
+        status="booked",
         notes=CLIENT_PLAN_NOTE,
         booked_on=booked_on,
     )
@@ -329,7 +341,30 @@ def upsert_plan_booking(db: Session, business: BusinessConfigModel, *, commit: b
 
 def align_sales_book_to_plans(db: Session) -> dict:
     """Replace dummy seed bookings with one row per client at that client's plan amount."""
-    from services.plan_service import reverse_booking_wallet_credit
+    from models.domain_models import Payment
+    from services.plan_service import reverse_booking_wallet_credit, reverse_plan_wallet_credits
+
+    paid_booking_ids = {
+        row[0]
+        for row in db.query(Payment.booking_id).filter(Payment.status == "paid", Payment.booking_id.isnot(None)).all()
+        if row[0]
+    }
+    paid_business_keys = {
+        row[0]
+        for row in db.query(Payment.business_key).filter(Payment.status == "paid").all()
+        if row[0]
+    }
+    for booking in (
+        db.query(Booking)
+        .filter(Booking.notes == CLIENT_PLAN_NOTE, Booking.status != "cancelled")
+        .all()
+    ):
+        if booking.id in paid_booking_ids:
+            continue
+        join_date = booking.booked_on if booking.business_key in paid_business_keys else None
+        reverse_plan_wallet_credits(db, booking.business_key, join_date, commit=False)
+        booking.collected_amount = 0.0
+        booking.status = "booked"
 
     removed = 0
     dummy_customer_ids = set()
@@ -476,7 +511,9 @@ def sales_stats(db: Session, business_key: str = "", executive_id: Optional[int]
     bookings = q.all()
     total_sales = round_money(sum(b.amount or 0 for b in bookings))
     total_collection = round_money(sum(b.collected_amount or 0 for b in bookings))
-    total_commission = round_money(sum(b.commission_amount or 0 for b in bookings))
+    total_commission = round_money(
+        sum(b.commission_amount or 0 for b in bookings if booking_is_collected(b))
+    )
     pending = round_money(max(total_sales - total_collection, 0))
     collection_pct = round((total_collection / total_sales * 100), 1) if total_sales else 0.0
 
@@ -491,7 +528,7 @@ def sales_stats(db: Session, business_key: str = "", executive_id: Optional[int]
         e_bookings = [b for b in bookings if b.sales_executive_id == exec_.id]
         sales = round_money(sum(b.amount or 0 for b in e_bookings))
         collected = round_money(sum(b.collected_amount or 0 for b in e_bookings))
-        commission = round_money(sum(b.commission_amount or 0 for b in e_bookings))
+        commission = round_money(sum(b.commission_amount or 0 for b in e_bookings if booking_is_collected(b)))
         share = round((sales / total_sales * 100), 1) if total_sales else 0.0
         exec_rows.append(
             {

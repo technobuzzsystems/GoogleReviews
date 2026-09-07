@@ -102,7 +102,11 @@ document.addEventListener('click', function (event) {
     orderUrl: btn.dataset.orderUrl || '/admin/api/payments/order',
     verifyUrl: btn.dataset.verifyUrl || '/admin/api/payments/verify',
     body: body,
-    onPaid: function () {
+    onPaid: function (data) {
+      if (data && data.invoice_no) {
+        window.location.href = '/invoice/' + encodeURIComponent(data.invoice_no);
+        return;
+      }
       window.location.reload();
     },
   }).catch(function (err) {

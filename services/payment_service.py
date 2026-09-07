@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from config import get_config
 from models.domain_models import Booking, BusinessConfigModel, Payment
-from services.plan_service import CLIENT_PLAN_NOTE, credit_plan_to_wallet
+from services.plan_service import CLIENT_PLAN_NOTE, credit_booking_to_wallet, credit_plan_to_wallet
 from services.sales_service import round_money, upsert_plan_booking
 
 logger = logging.getLogger(__name__)
@@ -116,6 +116,42 @@ def unpaid_business_keys(db: Session, keys: list[str]) -> set[str]:
         .all()
     )
     return {key for (key,) in rows if key}
+
+
+def paid_plan_business_keys(db: Session, keys: list[str]) -> set[str]:
+    """Business keys whose current plan booking is fully collected."""
+    clean = [k for k in keys if k]
+    if not clean:
+        return set()
+    rows = (
+        db.query(Booking.business_key)
+        .filter(
+            Booking.business_key.in_(clean),
+            Booking.status == "collected",
+            Booking.notes == CLIENT_PLAN_NOTE,
+            Booking.amount > 0,
+            Booking.collected_amount >= Booking.amount,
+        )
+        .distinct()
+        .all()
+    )
+    return {key for (key,) in rows if key}
+
+
+def pending_payment_keys(db: Session, cards: list[dict]) -> set[str]:
+    """Keys that still need payment: unpaid booking, or a plan with no collected payment."""
+    keys = [card.get("key") for card in cards if card.get("key")]
+    pending = set(unpaid_business_keys(db, keys))
+    plan_keys = [
+        card["key"]
+        for card in cards
+        if card.get("key") and float(card.get("plan_amount") or 0) > 0
+    ]
+    paid = paid_plan_business_keys(db, plan_keys)
+    for key in plan_keys:
+        if key not in paid:
+            pending.add(key)
+    return pending
 
 
 def due_amount(booking: Booking) -> float:
@@ -233,6 +269,8 @@ def mark_booking_paid(db: Session, booking: Booking) -> None:
             float(business.plan_amount or booking.amount or 0),
             business.join_date,
         )
+    else:
+        credit_booking_to_wallet(db, booking, commit=False)
 
 
 def apply_paid_order(
@@ -248,7 +286,15 @@ def apply_paid_order(
         raise ValueError("Unknown Razorpay order.")
 
     if payment.status == "paid":
-        return {"success": True, "already_paid": True, "booking_id": payment.booking_id}
+        from services.invoice_service import create_invoice_for_payment
+
+        invoice = create_invoice_for_payment(db, payment, commit=True)
+        return {
+            "success": True,
+            "already_paid": True,
+            "booking_id": payment.booking_id,
+            "invoice_no": invoice.invoice_no if invoice else "",
+        }
 
     if require_checkout_signature and not verify_checkout_signature(order_id, payment_id, signature):
         payment.status = "failed"
@@ -264,9 +310,17 @@ def apply_paid_order(
     payment.status = "paid"
     payment.paid_at = datetime.utcnow()
     mark_booking_paid(db, booking)
+    from services.invoice_service import create_invoice_for_payment
+
+    invoice = create_invoice_for_payment(db, payment, commit=False)
     db.commit()
-    logger.info("Payment captured order=%s payment=%s booking=%s", order_id, payment_id, booking.id)
-    return {"success": True, "already_paid": False, "booking_id": booking.id}
+    logger.info("Payment captured order=%s payment=%s booking=%s invoice=%s", order_id, payment_id, booking.id, invoice.invoice_no if invoice else "")
+    return {
+        "success": True,
+        "already_paid": False,
+        "booking_id": booking.id,
+        "invoice_no": invoice.invoice_no if invoice else "",
+    }
 
 
 def apply_webhook_event(db: Session, event: dict) -> None:

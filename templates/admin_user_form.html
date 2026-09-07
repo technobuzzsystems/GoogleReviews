@@ -54,8 +54,8 @@
     {% endif %}
     <div class="form-group" id="salesCommissionGroup">
       <label for="commission_rate">Salesman commission %</label>
-      <input type="number" id="commission_rate" name="commission_rate" min="0" max="80" step="0.1" value="{{ staff.commission_rate if staff and staff.commission_rate is not none else plan_commission_rate }}">
-      <div class="form-hint">Set this to manage team revenue. It does not change plan amounts (6 months / 1 year / 2 years).</div>
+      <input type="number" id="commission_rate" name="commission_rate" min="0" max="{{ max_salesman_rate }}" step="0.1" value="{{ staff.commission_rate if staff and staff.commission_rate is not none else plan_commission_rate }}">
+      <div class="form-hint">Admin and franchise owner can both set this. Admin keeps {{ admin_franchise_rate|int }}% of the plan. The remaining {{ max_salesman_rate|int }}% is shared: salesman gets this %, franchise keeps the rest. Plan amounts do not change.</div>
     </div>
     <div class="form-group">
       <label class="check-label tight" for="is_active">

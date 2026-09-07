@@ -598,17 +598,20 @@ def list_withdrawals(
     db: Session,
     sales_executive_id: Optional[int] = None,
     franchise_id: Optional[int] = None,
+    party_type: Optional[str] = None,
     since: Optional[date] = None,
     until: Optional[date] = None,
     status: Optional[str] = None,
 ) -> list[dict]:
-    q = db.query(WalletWithdrawal, SalesExecutive).join(
-        SalesExecutive, SalesExecutive.id == WalletWithdrawal.sales_executive_id
-    )
+    from services.storage_service import public_media_url
+
+    q = db.query(WalletWithdrawal)
     if sales_executive_id:
         q = q.filter(WalletWithdrawal.sales_executive_id == sales_executive_id)
     if franchise_id:
-        q = q.filter(SalesExecutive.franchise_id == franchise_id)
+        q = q.filter(WalletWithdrawal.franchise_id == franchise_id)
+    if party_type:
+        q = q.filter(WalletWithdrawal.party_type == party_type)
     if status:
         q = q.filter(WalletWithdrawal.status == status)
     if since:
@@ -617,13 +620,27 @@ def list_withdrawals(
         q = q.filter(WalletWithdrawal.created_at < datetime.combine(until + timedelta(days=1), datetime.min.time()))
     rows = q.order_by(WalletWithdrawal.created_at.desc(), WalletWithdrawal.id.desc()).all()
     labels = {"requested": "Requested", "sent": "Transferred", "rejected": "Rejected"}
+    exec_names = {e.id: e.name for e in db.query(SalesExecutive).all()}
+    fr_names = {f.id: f.name for f in db.query(Franchise).all()}
     result = []
-    for entry, executive in rows:
+    for entry in rows:
+        party = (entry.party_type or "salesman").strip() or "salesman"
+        if party == "franchise":
+            party_name = fr_names.get(entry.franchise_id, "Franchise")
+            party_label = "Franchise"
+        else:
+            party_name = exec_names.get(entry.sales_executive_id, "Salesman")
+            party_label = "Salesman"
+        shot = (entry.screenshot_filename or "").strip()
         result.append(
             {
                 "id": entry.id,
-                "sales_executive_id": executive.id,
-                "executive_name": executive.name,
+                "party_type": party,
+                "party_label": party_label,
+                "party_name": party_name,
+                "sales_executive_id": entry.sales_executive_id,
+                "franchise_id": entry.franchise_id,
+                "executive_name": party_name,
                 "amount": round_money(entry.amount),
                 "bank_name": entry.bank_name,
                 "account_name": entry.account_name,
@@ -632,6 +649,8 @@ def list_withdrawals(
                 "status": entry.status,
                 "status_label": labels.get(entry.status, entry.status),
                 "note": entry.note,
+                "screenshot_filename": shot,
+                "screenshot_url": public_media_url(shot) if shot else "",
                 "created_at": entry.created_at.strftime("%Y-%m-%d %H:%M") if entry.created_at else "",
                 "processed_at": entry.processed_at.strftime("%Y-%m-%d %H:%M") if entry.processed_at else "",
             }
@@ -658,7 +677,9 @@ def request_wallet_transfer(
 
     executive.wallet_balance = round_money(balance - money)
     row = WalletWithdrawal(
+        party_type="salesman",
         sales_executive_id=executive.id,
+        franchise_id=executive.franchise_id,
         amount=money,
         bank_name=bank.get("bank_name") or "",
         account_name=bank.get("account_name") or executive.name,
@@ -674,21 +695,64 @@ def request_wallet_transfer(
     return row
 
 
+def request_franchise_transfer(
+    db: Session,
+    franchise: Franchise,
+    amount: float,
+    bank: dict,
+    requested_by_user_id: Optional[int] = None,
+) -> WalletWithdrawal:
+    money = round_money(amount)
+    balance = round_money(franchise.wallet_balance)
+    if money <= 0:
+        raise ValueError("Enter an amount greater than zero.")
+    if money > balance:
+        raise ValueError("Amount is more than the available franchise wallet.")
+    if not bank or not bank.get("account_number") or not bank.get("ifsc"):
+        raise ValueError("Add account number and IFSC for this franchise user first.")
+
+    franchise.wallet_balance = round_money(balance - money)
+    row = WalletWithdrawal(
+        party_type="franchise",
+        sales_executive_id=None,
+        franchise_id=franchise.id,
+        amount=money,
+        bank_name=bank.get("bank_name") or "",
+        account_name=bank.get("account_name") or franchise.name,
+        account_number=bank["account_number"],
+        ifsc=bank["ifsc"],
+        status="requested",
+        note=f"Franchise payout request · {bank['ifsc']}",
+        requested_by_user_id=requested_by_user_id,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return row
+
+
 def transfer_wallet_to_bank(
     db: Session,
     withdrawal_id: int,
     processed_by_user_id: Optional[int] = None,
+    screenshot_filename: str = "",
 ) -> WalletWithdrawal:
-    """Admin sends a requested amount to the salesman's saved bank account."""
+    """Admin sends a requested amount and attaches transfer-proof screenshot."""
     row = db.query(WalletWithdrawal).filter(WalletWithdrawal.id == withdrawal_id).first()
     if not row:
         raise ValueError("Transfer request not found.")
     if row.status == "sent":
+        if screenshot_filename:
+            row.screenshot_filename = screenshot_filename
+            db.commit()
+            db.refresh(row)
         return row
     if row.status != "requested":
         raise ValueError("Only requested transfers can be sent to the bank.")
     row.status = "sent"
     row.note = f"Transferred to bank · {row.ifsc}"
+    if screenshot_filename:
+        row.screenshot_filename = screenshot_filename
     row.processed_by_user_id = processed_by_user_id
     row.processed_at = datetime.utcnow()
     db.commit()
@@ -707,13 +771,82 @@ def reject_wallet_transfer(
         raise ValueError("Transfer request not found.")
     if row.status != "requested":
         raise ValueError("Only requested transfers can be rejected.")
-    executive = db.query(SalesExecutive).filter(SalesExecutive.id == row.sales_executive_id).first()
-    if executive:
-        executive.wallet_balance = round_money(float(executive.wallet_balance or 0) + float(row.amount or 0))
+    if (row.party_type or "salesman") == "franchise" and row.franchise_id:
+        franchise = db.query(Franchise).filter(Franchise.id == row.franchise_id).first()
+        if franchise:
+            franchise.wallet_balance = round_money(float(franchise.wallet_balance or 0) + float(row.amount or 0))
+    else:
+        executive = db.query(SalesExecutive).filter(SalesExecutive.id == row.sales_executive_id).first()
+        if executive:
+            executive.wallet_balance = round_money(float(executive.wallet_balance or 0) + float(row.amount or 0))
     row.status = "rejected"
     row.note = "Request rejected · returned to wallet"
     row.processed_by_user_id = processed_by_user_id
     row.processed_at = datetime.utcnow()
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+def send_payout_now(
+    db: Session,
+    *,
+    party_type: str,
+    amount: float,
+    bank: dict,
+    processed_by_user_id: Optional[int] = None,
+    screenshot_filename: str = "",
+    executive: Optional[SalesExecutive] = None,
+    franchise: Optional[Franchise] = None,
+) -> WalletWithdrawal:
+    """Admin pays franchise or salesman immediately and stores screenshot proof."""
+    money = round_money(amount)
+    if money <= 0:
+        raise ValueError("Enter an amount greater than zero.")
+    if not bank or not bank.get("account_number") or not bank.get("ifsc"):
+        raise ValueError("Bank account and IFSC are required.")
+    if not (screenshot_filename or "").strip():
+        raise ValueError("Attach a transfer screenshot as proof.")
+
+    party_type = (party_type or "salesman").strip()
+    if party_type == "franchise":
+        if not franchise:
+            raise ValueError("Select a franchise.")
+        balance = round_money(franchise.wallet_balance)
+        if money > balance:
+            raise ValueError("Amount is more than the franchise wallet.")
+        franchise.wallet_balance = round_money(balance - money)
+        party_name = franchise.name
+        exec_id = None
+        fr_id = franchise.id
+    else:
+        if not executive:
+            raise ValueError("Select a salesman.")
+        balance = round_money(executive.wallet_balance)
+        if money > balance:
+            raise ValueError("Amount is more than the salesman wallet.")
+        executive.wallet_balance = round_money(balance - money)
+        party_name = executive.name
+        exec_id = executive.id
+        fr_id = executive.franchise_id
+
+    now = datetime.utcnow()
+    row = WalletWithdrawal(
+        party_type=party_type,
+        sales_executive_id=exec_id,
+        franchise_id=fr_id,
+        amount=money,
+        bank_name=bank.get("bank_name") or "",
+        account_name=bank.get("account_name") or party_name,
+        account_number=bank["account_number"],
+        ifsc=bank["ifsc"],
+        screenshot_filename=screenshot_filename,
+        status="sent",
+        note=f"Transferred to bank · {bank['ifsc']}",
+        processed_by_user_id=processed_by_user_id,
+        processed_at=now,
+    )
+    db.add(row)
     db.commit()
     db.refresh(row)
     return row
@@ -740,7 +873,9 @@ def withdraw_wallet_to_bank(
     executive.wallet_balance = round_money(balance - money)
     now = datetime.utcnow()
     row = WalletWithdrawal(
+        party_type="salesman",
         sales_executive_id=executive.id,
+        franchise_id=executive.franchise_id,
         amount=money,
         bank_name=bank_name,
         account_name=account_name,

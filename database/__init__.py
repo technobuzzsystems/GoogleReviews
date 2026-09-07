@@ -83,6 +83,7 @@ def init_db():
         BusinessConfigModel,
         Customer,
         Payment,
+        Invoice,
         SalesExecutive,
         User,
         WalletLedger,
@@ -97,6 +98,7 @@ def init_db():
         seed_initial_businesses,
     )
     from services.plan_service import backfill_booking_wallet_credits
+    from services.invoice_service import backfill_invoices_for_paid_payments
     from services.sales_service import align_sales_book_to_plans, ensure_sales_users, seed_sales_data
 
     Base.metadata.create_all(bind=engine)
@@ -173,5 +175,6 @@ def init_db():
         distribute_businesses_to_sales(db)
         align_sales_book_to_plans(db)
         backfill_booking_wallet_credits(db)
+        backfill_invoices_for_paid_payments(db)
     finally:
         db.close()

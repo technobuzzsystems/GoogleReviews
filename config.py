@@ -36,6 +36,10 @@ class Config:
     # ─── Company (single-company setup — extend for multi-company later) ──────
     COMPANY_NAME: str = os.getenv("COMPANY_NAME", "TechnoBuzz")
     COMPANY_ID: str   = os.getenv("COMPANY_ID", "TECHNOBUZZ-001")
+    COMPANY_ADDRESS: str = os.getenv("COMPANY_ADDRESS", "")
+    COMPANY_GSTIN: str = os.getenv("COMPANY_GSTIN", "")
+    COMPANY_PHONE: str = os.getenv("COMPANY_PHONE", "")
+    COMPANY_EMAIL: str = os.getenv("COMPANY_EMAIL", "")
 
     # ─── Application ──────────────────────────────────────────────────────────
     # Base URL used for QR code generation

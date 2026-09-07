@@ -205,3 +205,26 @@ class Payment(Base):
     notes = Column(Text, default="")
     paid_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class Invoice(Base):
+    __tablename__ = "invoices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    invoice_no = Column(String, unique=True, nullable=False, index=True)
+    payment_id = Column(Integer, ForeignKey("payments.id"), unique=True, nullable=False, index=True)
+    booking_id = Column(Integer, ForeignKey("bookings.id"), nullable=True, index=True)
+    business_key = Column(String, nullable=False, index=True)
+    bill_to_name = Column(String, default="")
+    bill_to_email = Column(String, default="")
+    bill_to_phone = Column(String, default="")
+    bill_to_address = Column(Text, default="")
+    plan_code = Column(String, default="")
+    plan_label = Column(String, default="")
+    description = Column(String, default="")
+    amount = Column(Float, default=0.0, nullable=False)
+    currency = Column(String, default="INR", nullable=False)
+    razorpay_payment_id = Column(String, default="")
+    razorpay_order_id = Column(String, default="")
+    paid_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

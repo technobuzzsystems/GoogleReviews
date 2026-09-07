@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>{% block title %}{{ page_title|default('Admin') }} — TechnoBuzz{% endblock %}</title>
   <meta name="robots" content="noindex, nofollow" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
@@ -13,6 +13,7 @@
   {% block extra_head %}{% endblock %}
 </head>
 <body>
+<div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
 <div class="layout">
   <aside class="sidebar" id="adminSidebar" role="navigation" aria-label="Admin navigation">
     <div class="sidebar-brand">
@@ -44,6 +45,9 @@
       </a>
       {% endif %}
       {% if can_manage_users %}
+      <a href="/admin/franchises" class="nav-item {% if active_nav == 'franchises' %}active{% endif %}">
+        <span class="nav-icon">🤝</span> Franchises
+      </a>
       <a href="/admin/users" class="nav-item {% if active_nav == 'users' %}active{% endif %}">
         <span class="nav-icon">👥</span> Users
       </a>
@@ -69,8 +73,8 @@
 
   <div class="main">
     <header class="topbar">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <button type="button" class="menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+      <div class="topbar-start">
+        <button type="button" class="menu-btn" id="menuBtn" aria-label="Open menu" aria-controls="adminSidebar" aria-expanded="false">☰</button>
         <div class="topbar-title">{% block topbar_title %}{{ page_title|default('Overview') }}{% endblock %}</div>
         {% block topbar_extra %}{% endblock %}
       </div>
@@ -85,15 +89,34 @@
 </div>
 <script>
   (function () {
-    var btn = document.getElementById('menuBtn');
-    var side = document.getElementById('adminSidebar');
-    if (btn && side) {
-      btn.addEventListener('click', function () { side.classList.toggle('open'); });
+    var btn = document.getElementById("menuBtn");
+    var side = document.getElementById("adminSidebar");
+    var overlay = document.getElementById("sidebarOverlay");
+    function setOpen(open) {
+      if (!side) return;
+      side.classList.toggle("open", open);
+      document.body.classList.toggle("nav-open", open);
+      if (overlay) overlay.hidden = !open;
+      if (btn) btn.setAttribute("aria-expanded", open ? "true" : "false");
     }
+    if (btn && side) {
+      btn.addEventListener("click", function () { setOpen(!side.classList.contains("open")); });
+    }
+    if (overlay) overlay.addEventListener("click", function () { setOpen(false); });
+    if (side) {
+      side.querySelectorAll("a").forEach(function (link) {
+        link.addEventListener("click", function () {
+          if (window.matchMedia("(max-width: 768px)").matches) setOpen(false);
+        });
+      });
+    }
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") setOpen(false);
+    });
   })();
 </script>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<script src="{{ url_for('static', path='js/razorpay_checkout.js') }}"></script>
+<script src="{{ url_for('static', path='js/razorpay_checkout.js') }}?v=20260907a"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

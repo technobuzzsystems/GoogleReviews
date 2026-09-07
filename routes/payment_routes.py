@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from config import get_config
 from database import get_db
-from models.domain_models import BusinessConfigModel
+from models.domain_models import BusinessConfigModel, Payment
 from services.auth_service import require_sales_book
 from services.payment_service import (
     apply_paid_order,
@@ -21,6 +21,12 @@ from services.payment_service import (
     razorpay_configured,
     unpaid_booking,
     verify_webhook_signature,
+)
+from services.invoice_service import (
+    create_invoice_for_payment,
+    get_invoice,
+    invoice_view_data,
+    latest_invoice_for_business,
 )
 from services.plan_service import PLANS
 from services.storage_service import public_logo_url
@@ -41,6 +47,22 @@ class AdminOrderBody(BaseModel):
     booking_id: int = Field(default=0, ge=0)
 
 
+def _invoice_no_for_paid_business(db: Session, business: BusinessConfigModel) -> str:
+    invoice = latest_invoice_for_business(db, business.key)
+    if invoice:
+        return invoice.invoice_no
+    payment = (
+        db.query(Payment)
+        .filter(Payment.business_key == business.key, Payment.status == "paid")
+        .order_by(Payment.id.desc())
+        .first()
+    )
+    if not payment:
+        return ""
+    invoice = create_invoice_for_payment(db, payment, commit=True)
+    return invoice.invoice_no if invoice else ""
+
+
 def _pay_context(request: Request, business: BusinessConfigModel, db: Session, *, paid: bool, error: str = ""):
     cfg = get_config()
     booking = unpaid_booking(db, business_key=business.key)
@@ -56,7 +78,20 @@ def _pay_context(request: Request, business: BusinessConfigModel, db: Session, *
         "error": error,
         "razorpay_ready": razorpay_configured(),
         "company_name": cfg.COMPANY_NAME,
+        "invoice_no": _invoice_no_for_paid_business(db, business) if paid else "",
     }
+
+
+@router.get("/invoice/{invoice_no}")
+def invoice_page(request: Request, invoice_no: str, db: Session = Depends(get_db)):
+    invoice = get_invoice(db, invoice_no)
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found.")
+    return templates.TemplateResponse(
+        request=request,
+        name="invoice.html",
+        context={"request": request, "invoice": invoice_view_data(invoice)},
+    )
 
 
 @router.get("/pay/{business_key}")

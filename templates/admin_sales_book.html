@@ -35,7 +35,7 @@
   <div class="stat-card">
     <span class="stat-icon">💸</span>
     <div class="stat-value money">₹{{ '{:,.0f}'.format(stats.total_commission) }}</div>
-    <div class="stat-label">{% if locked_executive %}Your commission{% else %}Booking commission{% endif %}</div>
+    <div class="stat-label">{% if locked_executive %}Your commission{% else %}Collected commission{% endif %}</div>
     <div class="stat-badge">{% if is_franchise %}Set per salesman{% else %}Profile commission %{% endif %}</div>
   </div>
 </div>
@@ -105,11 +105,18 @@
           <td class="td-right">₹{{ '{:,.0f}'.format(row.collected_amount) }}</td>
           <td class="td-right {% if row.pending %}amount-red{% endif %}">₹{{ '{:,.0f}'.format(row.pending) }}</td>
           <td class="td-right">{{ '{:,.0f}'.format(row.commission_rate) }}%</td>
-          <td class="td-right amount-green">₹{{ '{:,.0f}'.format(row.commission_amount) }}</td>
+          <td class="td-right {% if row.pending %}muted{% else %}amount-green{% endif %}">
+            {% if row.pending %}
+            ₹{{ '{:,.0f}'.format(row.commission_amount) }}
+            <div class="muted">Wallet after payment</div>
+            {% else %}
+            ₹{{ '{:,.0f}'.format(row.commission_earned or row.commission_amount) }}
+            {% endif %}
+          </td>
           <td>
-            {% if row.status == 'collected' %}
+            {% if row.status == 'collected' and not row.pending %}
             <span class="badge active">Collected</span>
-            {% elif row.status == 'booked' %}
+            {% elif row.status == 'booked' or row.pending %}
             <span class="badge due">Pending</span>
             {% else %}
             <span class="badge none">{{ row.status|capitalize }}</span>
@@ -124,6 +131,8 @@
               data-business-key="{{ row.business_key }}"
               data-booking-id="{{ row.id }}"
             >Pay now</button>
+            {% elif row.invoice_no %}
+            <a class="btn btn-outline btn-sm" href="/invoice/{{ row.invoice_no }}" target="_blank" rel="noopener">Invoice</a>
             {% endif %}
           </td>
         </tr>

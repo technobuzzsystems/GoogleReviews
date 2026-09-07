@@ -65,6 +65,17 @@ def plan_status(expiry_date: Optional[date]) -> str:
     return "active" if expiry_date >= date.today() else "expired"
 
 
+def booking_is_collected(booking: Optional[Booking]) -> bool:
+    """True only when the booking is fully paid/collected."""
+    if not booking:
+        return False
+    amount = round(float(booking.amount or 0), 2)
+    collected = round(float(booking.collected_amount or 0), 2)
+    if amount <= 0 or collected < amount:
+        return False
+    return (booking.status or "").strip().lower() in {"collected", "paid"}
+
+
 def credit_plan_to_wallet(
     db: Session,
     sales_executive_id: Optional[int],
@@ -73,7 +84,7 @@ def credit_plan_to_wallet(
     plan_amount: float,
     join_date: Optional[date],
 ) -> float:
-    """Credit salesman commission. Franchise clients also split 20% to admin (plan prices unchanged)."""
+    """Credit salesman commission. Franchise clients split 53% to admin; remainder is franchise + salesman."""
     if not sales_executive_id or not plan_code or not plan_amount:
         return 0.0
 
@@ -162,9 +173,46 @@ def reverse_booking_wallet_credit(db: Session, booking: Booking, *, commit: bool
     return money
 
 
+def reverse_plan_wallet_credits(db: Session, business_key: str, join_date=None, *, commit: bool = False) -> float:
+    """Remove plan-commission wallet entries for an unpaid plan period."""
+    if not business_key:
+        return 0.0
+    from models.domain_models import Franchise, FranchiseLedger
+
+    total = 0.0
+    entries = (
+        db.query(WalletLedger)
+        .filter(WalletLedger.business_key == business_key, WalletLedger.plan_code != "")
+        .all()
+    )
+    for entry in entries:
+        if join_date and entry.join_date and entry.join_date != join_date:
+            continue
+        money = round(float(entry.commission_amount or 0), 2)
+        executive = db.query(SalesExecutive).filter(SalesExecutive.id == entry.sales_executive_id).first()
+        if executive:
+            executive.wallet_balance = round(max(float(executive.wallet_balance or 0) - money, 0.0), 2)
+        db.delete(entry)
+        total += money
+    ledgers = db.query(FranchiseLedger).filter(FranchiseLedger.business_key == business_key).all()
+    for row in ledgers:
+        if join_date and row.join_date and row.join_date != join_date:
+            continue
+        franchise = db.query(Franchise).filter(Franchise.id == row.franchise_id).first()
+        if franchise:
+            cut = round(float(row.franchise_commission or 0), 2)
+            franchise.wallet_balance = round(max(float(franchise.wallet_balance or 0) - cut, 0.0), 2)
+        db.delete(row)
+    if commit:
+        db.commit()
+    return total
+
+
 def credit_booking_to_wallet(db: Session, booking: Booking, *, commit: bool = False) -> float:
-    """Credit booking commission into the salesman wallet. Skips duplicates."""
+    """Credit booking commission into the salesman wallet after collection. Skips duplicates."""
     if not booking or not booking.sales_executive_id:
+        return 0.0
+    if not booking_is_collected(booking):
         return 0.0
     if (booking.notes or "").strip() == CLIENT_PLAN_NOTE:
         return 0.0

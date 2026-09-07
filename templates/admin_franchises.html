@@ -1,0 +1,97 @@
+{% extends "admin_base.html" %}
+
+{% block topbar_actions %}
+<a href="/admin/users/new" class="btn btn-primary">+ Add franchise user</a>
+{% endblock %}
+
+{% block content %}
+<p class="page-lede">
+  All franchise partners, their area sales, the fixed {{ admin_franchise_rate|int }}% admin share, and the remaining {{ max_salesman_rate|int }}% for franchise + salesman. Open a franchise for salesman-wise records and screenshot proof.
+</p>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-icon">🤝</span>
+    <div class="stat-value">{{ franchises|length }}</div>
+    <div class="stat-label">Franchises</div>
+    <div class="stat-badge">Partners</div>
+  </div>
+  <div class="stat-card">
+    <span class="stat-icon">📒</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(sales_total or 0) }}</div>
+    <div class="stat-label">Area collections</div>
+    <div class="stat-badge">Plan amounts</div>
+  </div>
+  <div class="stat-card yellow">
+    <span class="stat-icon">🏢</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(admin_total or 0) }}</div>
+    <div class="stat-label">Admin {{ admin_franchise_rate|int }}%</div>
+    <div class="stat-badge">Company share</div>
+  </div>
+  <div class="stat-card purple">
+    <span class="stat-icon">💸</span>
+    <div class="stat-value money">₹{{ '{:,.0f}'.format(due_total or 0) }}</div>
+    <div class="stat-label">Amount to transfer</div>
+    <div class="stat-badge">Franchise + salesmen wallets</div>
+  </div>
+</div>
+
+<div class="table-card">
+  <div class="table-toolbar">
+    <div>
+      <div class="section-title">Franchise partners</div>
+      <div class="section-subtitle">Click a row to see sales, splits, and transfer proof</div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Franchise</th>
+          <th>Area</th>
+          <th class="td-right">Clients</th>
+          <th class="td-right">Salesmen</th>
+          <th class="td-right">Collections</th>
+          <th class="td-right">Admin {{ admin_franchise_rate|int }}%</th>
+          <th class="td-right">Salesman cut</th>
+          <th class="td-right">Franchise cut</th>
+          <th class="td-right">To transfer</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in franchises %}
+        <tr>
+          <td>
+            <strong>{{ row.name }}</strong>
+            <div class="muted">{{ row.owner_name }}{% if row.owner_phone %} · {{ row.owner_phone }}{% endif %}</div>
+            {% if not row.is_active %}<span class="badge none">Inactive</span>{% endif %}
+          </td>
+          <td>{{ row.area or '—' }}</td>
+          <td class="td-right">{{ row.clients }}</td>
+          <td class="td-right">{{ row.salesmen }}</td>
+          <td class="td-right">₹{{ '{:,.0f}'.format(row.sales) }}</td>
+          <td class="td-right">₹{{ '{:,.0f}'.format(row.admin) }}</td>
+          <td class="td-right">₹{{ '{:,.0f}'.format(row.salesman) }}</td>
+          <td class="td-right amount-green">₹{{ '{:,.0f}'.format(row.franchise) }}</td>
+          <td class="td-right">
+            <strong>₹{{ '{:,.0f}'.format(row.due_total) }}</strong>
+            <div class="muted">Owner ₹{{ '{:,.0f}'.format(row.wallet) }} · Team ₹{{ '{:,.0f}'.format(row.team_wallet) }}</div>
+          </td>
+          <td class="td-right"><a class="biz-tile-link primary" href="/admin/franchises/{{ row.id }}">Records</a></td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="10">
+            <div class="empty-state">
+              <div class="empty-icon">🤝</div>
+              <p>No franchise partners yet. Add a user with the Franchise role and an allocated area.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

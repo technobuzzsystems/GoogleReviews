@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
   <!-- SEO -->
   <title>Share Your Feedback — {{ company_name }}</title>
@@ -14,7 +14,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v=20260905d" />
 </head>
 
 <body class="theme-{{ business_id }}">
@@ -84,6 +84,16 @@
           <span data-i18n="welcomeLine1">We'd love to hear about your experience!</span><br />
           <span data-i18n="welcomeLine2">Your feedback helps us grow and serve you better. 💙</span>
         </p>
+
+        <aside class="paste-hint" role="note">
+          <p class="paste-hint-title" data-i18n="pasteHintTitle">How this works</p>
+          <ol>
+            <li data-i18n="pasteHintAi">AI writes review options for you.</li>
+            <li data-i18n="pasteHintCopy">When you select a review, it is copied automatically.</li>
+            <li data-i18n="pasteHintPaste">When the Google page opens, only paste it in the box.</li>
+            <li data-i18n="pasteHintStars">Choose the stars you want, then tap Post.</li>
+          </ol>
+        </aside>
       </header>
 
       <div class="section-divider" role="separator"></div>
@@ -171,15 +181,17 @@
 
         <!-- ── Submit Button ───────────────────────────── -->
         <div class="submit-section" id="submitSection">
+          <p class="submit-hint" data-i18n="submitHint">Your review is already copied. On the next page, paste it and choose stars.</p>
           <button
             type="button"
             id="btnSubmit"
             class="btn-submit"
-            aria-label="Submit your selected feedback"
+            data-i18n-aria="submitBtn"
+            aria-label="Copied — paste on next page"
           >
             <span class="btn-submit-inner">
               <span class="btn-spinner" id="btnSpinner" aria-hidden="true"></span>
-              <span class="btn-text"    id="btnText" data-i18n="submitBtn">Submit Feedback</span>
+              <span class="btn-text"    id="btnText" data-i18n="submitBtn">Copied — paste on next page</span>
             </span>
           </button>
         </div>
@@ -263,9 +275,11 @@
         <div class="google-instructions-card" id="googleInstructions">
           <div class="instructions-icon" aria-hidden="true">ℹ️</div>
           <p class="instructions-text">
-            <span data-i18n="googlePolicy">Google requires every review to be submitted by the customer using their own Google account.</span><br />
-            <span data-i18n="googleCopied">We've copied your review for convenience.</span><br />
-            <span data-i18n="googleClickPaste">Click "Post on Google", paste your review, and click Post.</span>
+            <strong data-i18n="pasteHintTitle">How this works</strong><br />
+            <span data-i18n="pasteHintAi">AI writes review options for you.</span><br />
+            <span data-i18n="pasteHintCopy">When you select a review, it is copied automatically.</span><br />
+            <span data-i18n="pasteHintPaste">When the Google page opens, only paste it in the box.</span><br />
+            <span data-i18n="pasteHintStars">Choose the stars you want, then tap Post.</span>
           </p>
         </div>
 
@@ -287,7 +301,7 @@
   </div>
 
   <!-- JavaScript -->
-  <script src="{{ url_for('static', path='js/i18n.js') }}"></script>
-  <script src="{{ url_for('static', path='js/feedback.js') }}" defer></script>
+  <script src="{{ url_for('static', path='js/i18n.js') }}?v=20260905d"></script>
+  <script src="{{ url_for('static', path='js/feedback.js') }}?v=20260905d" defer></script>
 </body>
 </html>
