@@ -120,6 +120,8 @@
         >Pay now</button>
         {% elif b.invoice_no %}
         <a class="biz-tile-link ghost" href="/invoice/{{ b.invoice_no }}" target="_blank" rel="noopener">Invoice</a>
+        <a class="biz-tile-link ghost" href="/invoice/{{ b.invoice_no }}/download">Download</a>
+        <a class="biz-tile-link ghost" href="/invoice/{{ b.invoice_no }}#send" target="_blank" rel="noopener">Send</a>
         {% endif %}
         <a class="biz-tile-link" href="/admin/businesses/{{ b.key }}/edit">Edit</a>
       </div>

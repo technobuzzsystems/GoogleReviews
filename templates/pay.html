@@ -35,7 +35,13 @@
         {% if invoice_no %}
         <div class="pay-actions">
           <a class="btn-submit" href="/invoice/{{ invoice_no }}" style="text-decoration:none;text-align:center">
-            <span class="btn-submit-inner"><span class="btn-text">View / print invoice</span></span>
+            <span class="btn-submit-inner"><span class="btn-text">View invoice</span></span>
+          </a>
+          <a class="btn-submit" href="/invoice/{{ invoice_no }}/download" style="text-decoration:none;text-align:center;background:#0d8a5b">
+            <span class="btn-submit-inner"><span class="btn-text">Download invoice</span></span>
+          </a>
+          <a class="btn-submit" href="/invoice/{{ invoice_no }}#send" style="text-decoration:none;text-align:center;background:#243746">
+            <span class="btn-submit-inner"><span class="btn-text">Send invoice</span></span>
           </a>
         </div>
         {% endif %}

@@ -4,7 +4,7 @@ import json
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from config import get_config
 from database import get_db
 from models.domain_models import BusinessConfigModel, Payment
-from services.auth_service import require_sales_book
+from services.auth_service import can_view_sales_book, get_session_user, require_sales_book
 from services.payment_service import (
     apply_paid_order,
     apply_webhook_event,
@@ -22,11 +22,15 @@ from services.payment_service import (
     unpaid_booking,
     verify_webhook_signature,
 )
+from services.email_service import smtp_configured
 from services.invoice_service import (
     create_invoice_for_payment,
     get_invoice,
+    invoice_pdf_bytes,
+    invoice_pdf_filename,
     invoice_view_data,
     latest_invoice_for_business,
+    send_invoice,
 )
 from services.plan_service import PLANS
 from services.storage_service import public_logo_url
@@ -42,9 +46,21 @@ class CheckoutVerifyBody(BaseModel):
     razorpay_signature: str = Field(..., min_length=8, max_length=200)
 
 
+class InvoiceSendBody(BaseModel):
+    channel: str = Field(..., min_length=5, max_length=12)
+    to: str = Field(default="", max_length=200)
+
+
 class AdminOrderBody(BaseModel):
     business_key: str = Field(default="", max_length=120)
     booking_id: int = Field(default=0, ge=0)
+
+
+def _invoice_or_404(db: Session, invoice_no: str):
+    invoice = get_invoice(db, invoice_no)
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found.")
+    return invoice
 
 
 def _invoice_no_for_paid_business(db: Session, business: BusinessConfigModel) -> str:
@@ -84,14 +100,47 @@ def _pay_context(request: Request, business: BusinessConfigModel, db: Session, *
 
 @router.get("/invoice/{invoice_no}")
 def invoice_page(request: Request, invoice_no: str, db: Session = Depends(get_db)):
-    invoice = get_invoice(db, invoice_no)
-    if not invoice:
-        raise HTTPException(status_code=404, detail="Invoice not found.")
+    invoice = _invoice_or_404(db, invoice_no)
     return templates.TemplateResponse(
         request=request,
         name="invoice.html",
-        context={"request": request, "invoice": invoice_view_data(invoice)},
+        context={
+            "request": request,
+            "invoice": invoice_view_data(invoice),
+            "smtp_ready": smtp_configured(),
+        },
     )
+
+
+@router.get("/invoice/{invoice_no}/download")
+def invoice_download(invoice_no: str, db: Session = Depends(get_db)):
+    invoice = _invoice_or_404(db, invoice_no)
+    filename = invoice_pdf_filename(invoice.invoice_no)
+    return Response(
+        content=invoice_pdf_bytes(invoice),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/invoice/{invoice_no}/send")
+def invoice_send(
+    request: Request,
+    invoice_no: str,
+    body: InvoiceSendBody,
+    db: Session = Depends(get_db),
+):
+    invoice = _invoice_or_404(db, invoice_no)
+    user = get_session_user(request, db)
+    try:
+        return send_invoice(
+            invoice,
+            channel=body.channel,
+            to=body.to,
+            as_staff=can_view_sales_book(user),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/pay/{business_key}")

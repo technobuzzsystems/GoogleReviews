@@ -133,6 +133,8 @@
             >Pay now</button>
             {% elif row.invoice_no %}
             <a class="btn btn-outline btn-sm" href="/invoice/{{ row.invoice_no }}" target="_blank" rel="noopener">Invoice</a>
+            <a class="btn btn-outline btn-sm" href="/invoice/{{ row.invoice_no }}/download">Download</a>
+            <a class="btn btn-outline btn-sm" href="/invoice/{{ row.invoice_no }}#send" target="_blank" rel="noopener">Send</a>
             {% endif %}
           </td>
         </tr>

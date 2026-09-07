@@ -66,6 +66,14 @@ class Config:
     RAZORPAY_KEY_SECRET: str = os.getenv("RAZORPAY_KEY_SECRET", "")
     RAZORPAY_WEBHOOK_SECRET: str = os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
 
+    # ─── SMTP (optional invoice email) ────────────────────────────────────────
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587") or "587")
+    SMTP_USER: str = os.getenv("SMTP_USER", "")
+    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+    SMTP_FROM: str = os.getenv("SMTP_FROM", "")
+    SMTP_TLS: bool = os.getenv("SMTP_TLS", "true").lower() not in {"0", "false", "no"}
+
 
 class DevelopmentConfig(Config):
     """Development-specific configuration."""
@@ -103,4 +111,13 @@ def get_config() -> Config:
     cfg.RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "").strip()
     cfg.RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
     cfg.RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", "").strip()
+    cfg.SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
+    try:
+        cfg.SMTP_PORT = int(os.getenv("SMTP_PORT", "587") or "587")
+    except ValueError:
+        cfg.SMTP_PORT = 587
+    cfg.SMTP_USER = os.getenv("SMTP_USER", "").strip()
+    cfg.SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "").strip()
+    cfg.SMTP_FROM = os.getenv("SMTP_FROM", "").strip()
+    cfg.SMTP_TLS = os.getenv("SMTP_TLS", "true").lower() not in {"0", "false", "no"}
     return cfg

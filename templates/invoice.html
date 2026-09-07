@@ -35,6 +35,44 @@
       background: #00b4d8;
     }
     .toolbar .ghost { background: #243746; }
+    .toolbar .send-btn { background: #0d8a5b; }
+    .send-panel {
+      display: none;
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 16px 16px 0;
+    }
+    .send-panel.open { display: block; }
+    .send-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: 0 8px 24px rgba(10, 20, 30, 0.1);
+      display: grid;
+      gap: 10px;
+    }
+    .send-card h2 { margin: 0; font-size: 1rem; }
+    .send-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .send-row input {
+      flex: 1;
+      min-width: 180px;
+      border: 1px solid #dbe4ec;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font: inherit;
+    }
+    .send-row button {
+      appearance: none;
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #fff;
+      background: #00b4d8;
+    }
+    .send-status { margin: 0; font-size: 0.9rem; color: #5b6b78; min-height: 1.2em; }
+    .send-status.err { color: #c0392b; }
     .sheet {
       max-width: 820px;
       margin: 24px auto 48px;
@@ -76,15 +114,31 @@
     .note { margin-top: 28px; padding-top: 16px; border-top: 1px dashed #dbe4ec; font-size: 0.85rem; color: #5b6b78; }
     @media print {
       body { background: #fff; }
-      .toolbar { display: none; }
+      .toolbar, .send-panel { display: none !important; }
       .sheet { margin: 0; box-shadow: none; border-radius: 0; max-width: none; }
     }
   </style>
 </head>
 <body>
   <div class="toolbar">
-    <button type="button" onclick="window.print()">Print / Save PDF</button>
+    <a href="/invoice/{{ invoice.invoice_no }}/download">Download</a>
+    <button type="button" class="send-btn" id="btnSendToggle">Send</button>
+    <button type="button" onclick="window.print()">Print</button>
     <a class="ghost" href="/pay/{{ invoice.business_key }}">Back</a>
+  </div>
+  <div class="send-panel" id="sendPanel">
+    <div class="send-card">
+      <h2>Send invoice {{ invoice.invoice_no }}</h2>
+      <div class="send-row">
+        <input type="email" id="sendEmail" value="{{ invoice.bill_to_email }}" placeholder="Client email" autocomplete="email" />
+        <button type="button" data-send-channel="email">{{ 'Send email' if smtp_ready else 'Open email app' }}</button>
+      </div>
+      <div class="send-row">
+        <input type="tel" id="sendPhone" value="{{ invoice.bill_to_phone }}" placeholder="WhatsApp mobile" inputmode="numeric" />
+        <button type="button" data-send-channel="whatsapp">Send WhatsApp</button>
+      </div>
+      <p class="send-status" id="sendStatus"></p>
+    </div>
   </div>
   <main class="sheet">
     <div class="top">
@@ -147,5 +201,61 @@
 
     <p class="note">This invoice is generated after successful Razorpay collection. Amount is inclusive of the plan price. Thank you for your business.</p>
   </main>
+  <script>
+  (function () {
+    var panel = document.getElementById("sendPanel");
+    var toggle = document.getElementById("btnSendToggle");
+    var statusEl = document.getElementById("sendStatus");
+    var invoiceNo = {{ invoice.invoice_no|tojson }};
+    function setStatus(text, isErr) {
+      statusEl.textContent = text || "";
+      statusEl.classList.toggle("err", !!isErr);
+    }
+    function openPanel() {
+      panel.classList.add("open");
+      toggle.textContent = "Close send";
+    }
+    function closePanel() {
+      panel.classList.remove("open");
+      toggle.textContent = "Send";
+    }
+    toggle.addEventListener("click", function () {
+      if (panel.classList.contains("open")) closePanel();
+      else openPanel();
+    });
+    if (window.location.hash === "#send") openPanel();
+    document.addEventListener("click", function (event) {
+      var btn = event.target.closest("[data-send-channel]");
+      if (!btn) return;
+      var channel = btn.getAttribute("data-send-channel");
+      var to = channel === "whatsapp"
+        ? (document.getElementById("sendPhone").value || "")
+        : (document.getElementById("sendEmail").value || "");
+      btn.disabled = true;
+      setStatus("Sending…");
+      fetch("/invoice/" + encodeURIComponent(invoiceNo) + "/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel: channel, to: to }),
+      }).then(function (res) {
+        return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+      }).then(function (result) {
+        if (!result.ok) throw new Error(result.data.detail || result.data.error || "Could not send invoice.");
+        if (result.data.sent) {
+          setStatus("Sent to " + (result.data.to || to) + ".");
+          return;
+        }
+        if (result.data.url) {
+          window.open(result.data.url, "_blank", "noopener");
+          setStatus(channel === "whatsapp" ? "WhatsApp opened." : "Email app opened.");
+        }
+      }).catch(function (err) {
+        setStatus(err.message || "Could not send invoice.", true);
+      }).finally(function () {
+        btn.disabled = false;
+      });
+    });
+  })();
+  </script>
 </body>
 </html>

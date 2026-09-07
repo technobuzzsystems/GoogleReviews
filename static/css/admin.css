@@ -1082,13 +1082,6 @@ body.login-page {
   cursor: pointer;
 }
 .login-card button[type="submit"]:hover { opacity: 0.95; }
-.login-hint {
-  margin-top: 20px;
-  font-size: 0.75rem;
-  color: var(--text-3);
-  line-height: 1.55;
-}
-.login-hint code { color: var(--accent); }
 
 .biz-stats { margin-bottom: 20px; max-width: 280px; }
 .biz-grid-wrap { overflow: hidden; }
