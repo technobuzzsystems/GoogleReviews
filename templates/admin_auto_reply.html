@@ -1,0 +1,1209 @@
+{% extends "admin_base.html" %}
+{% block title %}Google Reviews AI Auto-Replier — {{ selected_business.name or company_name }}{% endblock %}
+
+{% block topbar_title %}Google Reviews AI Auto-Replier{% endblock %}
+
+{% block topbar_extra %}
+<div style="display: flex; align-items: center; gap: 8px; margin-left: 12px;">
+  <label for="businessSelectTop" style="font-size: 11px; color: var(--text-3); font-weight: 600; text-transform: uppercase;">Business:</label>
+  <select id="businessSelectTop" class="top-biz-select" onchange="window.location.href='/admin/auto-reply?business=' + this.value">
+    {% if is_admin %}
+    <option value="all" {% if business_id == 'all' %}selected{% endif %}>🌐 All Businesses (Combined View)</option>
+    {% endif %}
+    {% for key, b in businesses.items() %}
+    <option value="{{ key }}" {% if key == business_id %}selected{% endif %}>
+      🏢 {{ b.name }} ({{ key }})
+    </option>
+    {% endfor %}
+  </select>
+</div>
+{% endblock %}
+
+{% block topbar_actions %}
+<button type="button" class="btn btn-primary" onclick="triggerCloudSync('{{ business_id }}')" style="display: flex; align-items: center; gap: 6px;">
+  <span>⚡ Check & Sync Reviews</span>
+</button>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  .top-biz-select {
+    background: #112236;
+    color: #00b4d8;
+    border: 1px solid #1e3a50;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s;
+  }
+  .top-biz-select:hover, .top-biz-select:focus {
+    border-color: #00b4d8;
+    box-shadow: 0 0 0 2px rgba(0, 180, 216, 0.2);
+  }
+
+  .reply-hub-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 24px;
+    margin-top: 20px;
+  }
+  @media (max-width: 1080px) {
+    .reply-hub-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .hub-card {
+    background: var(--bg-card, #0d1b2a);
+    border: 1px solid var(--border, #1e3a50);
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hub-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .hub-card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-1, #e8f4fd);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .hub-card-subtitle {
+    font-size: 0.78rem;
+    color: var(--text-2, #7a9bb5);
+    margin-top: 2px;
+  }
+
+  /* Form Styles (Dark Theme) */
+  .dark-form-group {
+    margin-bottom: 16px;
+  }
+  .dark-form-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-2, #7a9bb5);
+    margin-bottom: 6px;
+    letter-spacing: 0.02em;
+  }
+  .dark-input, .dark-select, .dark-textarea {
+    width: 100%;
+    background: #112236;
+    border: 1px solid #1e3a50;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.875rem;
+    color: #e8f4fd;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+  }
+  .dark-input:focus, .dark-select:focus, .dark-textarea:focus {
+    outline: none;
+    border-color: #00b4d8;
+    box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.2);
+    background: #14283f;
+  }
+  .dark-textarea {
+    resize: vertical;
+    line-height: 1.5;
+  }
+  .dark-input::placeholder, .dark-textarea::placeholder {
+    color: #3e6480;
+  }
+
+  /* Sample chips */
+  .sample-chips-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .sample-chip-btn {
+    background: #162b40;
+    border: 1px solid #244560;
+    color: #93c5fd;
+    padding: 5px 11px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .sample-chip-btn:hover {
+    background: #1e3a50;
+    border-color: #00b4d8;
+    color: #ffffff;
+    transform: translateY(-1px);
+  }
+
+  /* Result Box */
+  .result-reply-card {
+    margin-top: 18px;
+    background: linear-gradient(145deg, #112236 0%, #0d1b2a 100%);
+    border: 1px solid #00b4d8;
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 4px 16px rgba(0, 180, 216, 0.15);
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .reply-text-box {
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: #f1f5f9;
+    white-space: pre-wrap;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 12px 14px;
+    border-radius: 8px;
+    border-left: 3px solid #00b4d8;
+    margin: 10px 0;
+  }
+
+  .badge-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+  .badge-tag.cyan { background: rgba(0, 180, 216, 0.18); color: #38bdf8; border: 1px solid rgba(0, 180, 216, 0.3); }
+  .badge-tag.green { background: rgba(0, 200, 150, 0.18); color: #34d399; border: 1px solid rgba(0, 200, 150, 0.3); }
+  .badge-tag.purple { background: rgba(167, 139, 250, 0.18); color: #c084fc; border: 1px solid rgba(167, 139, 250, 0.3); }
+  .badge-tag.yellow { background: rgba(255, 184, 48, 0.18); color: #fbbf24; border: 1px solid rgba(255, 184, 48, 0.3); }
+
+  /* Switch */
+  .switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: #112236;
+    border-radius: 8px;
+    border: 1px solid #1e3a50;
+    margin-bottom: 14px;
+  }
+  .switch-toggle {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+  }
+  .switch-toggle input { opacity: 0; width: 0; height: 0; }
+  .slider-round {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #1e3a50;
+    transition: .3s;
+    border-radius: 24px;
+  }
+  .slider-round:before {
+    position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+  }
+  input:checked + .slider-round { background-color: #00b4d8; }
+  input:checked + .slider-round:before { transform: translateX(20px); }
+
+  /* Steps card */
+  .step-card-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  .step-card-row:last-child { border-bottom: none; }
+  .step-circle {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: #00b4d8; color: #060d1a;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 11px; flex-shrink: 0;
+  }
+
+  /* Table styling */
+  .logs-table-wrapper {
+    overflow-x: auto;
+    margin-top: 14px;
+  }
+  .logs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  .logs-table th {
+    background: #112236;
+    color: var(--text-2, #7a9bb5);
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 1px solid #1e3a50;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+  }
+  .logs-table td {
+    padding: 12px;
+    border-bottom: 1px solid #162b40;
+    color: var(--text-1, #e8f4fd);
+    vertical-align: top;
+  }
+  .logs-table tr:hover {
+    background: rgba(0, 180, 216, 0.04);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<p class="page-lede" style="color: var(--text-2, #7a9bb5); margin-bottom: 20px;">
+  Google Business Profile AI Auto-Replier for <strong style="color: #00b4d8;">{{ selected_business.name or company_name }}</strong>. Automatically detects customer reviews (Marathi, English, Hindi, etc.), writes contextual AI replies with Google Gemini, auto-fills, and automatically submits them to Google!
+</p>
+
+<!-- Top Stats Grid -->
+<div class="stats-grid">
+  <div class="stat-card purple">
+    <span class="stat-icon">🤖</span>
+    <div class="stat-value">Gemini AI</div>
+    <div class="stat-label">Multi-lingual AI Engine</div>
+    <div class="stat-badge">मराठी · हिन्दी · English · Gujarati</div>
+  </div>
+  <div class="stat-card green">
+    <span class="stat-icon">⚡</span>
+    <div class="stat-value">Auto-Send</div>
+    <div class="stat-label">Google Auto-Submit Mode</div>
+    <div class="stat-badge">{% if settings.auto_send_enabled %}Active ({{ settings.auto_send_delay }}s Countdown){% else %}Manual Assist{% endif %}</div>
+  </div>
+  <div class="stat-card">
+    <span class="stat-icon">🏢</span>
+    <div class="stat-value" style="font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ selected_business.name }}">
+      {{ selected_business.name or 'All Businesses' }}
+    </div>
+    <div class="stat-label">Active Organization</div>
+    <div class="stat-badge">{{ selected_business.key or 'technobuzz' }}</div>
+  </div>
+  <div class="stat-card">
+    <span class="stat-icon">💬</span>
+    <div class="stat-value">{{ reply_logs|length }}</div>
+    <div class="stat-label">Recent AI Replies Logged</div>
+    <div class="stat-badge">Database Audit Trail</div>
+  </div>
+</div>
+
+<!-- ── Full-Width Hero Card: Direct Google Cloud API (24/7 Zero-Browser Mode) ── -->
+<div class="hub-card" style="margin-top: 24px; border: 1.5px solid rgba(139, 92, 246, 0.45); background: linear-gradient(135deg, #18193a 0%, #0d1b2a 100%); box-shadow: 0 8px 30px rgba(139, 92, 246, 0.15);">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <div style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, #7c3aed, #2563eb); display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 4px 16px rgba(124, 58, 237, 0.45); flex-shrink: 0;">
+        ☁️
+      </div>
+      <div>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h3 style="margin: 0; font-size: 1.18rem; font-weight: 700; color: #f8fafc;">
+            Direct Google Cloud Auto-Replier (Official API)
+          </h3>
+          <span class="badge-tag purple" style="font-size: 11px; padding: 3px 9px;">24/7 Zero-Browser Mode</span>
+          {% if google_account and google_account.is_connected %}
+          <span class="badge-tag green" style="font-size: 11px;">● Connected & Active</span>
+          {% else %}
+          <span class="badge-tag" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 11px;">● Not Connected</span>
+          {% endif %}
+        </div>
+        <div style="font-size: 0.82rem; color: #94a3b8; margin-top: 4px;">
+          Google Business Profile API द्वारे २४ तास बॅकग्राउंडमध्ये आपोआप रिप्लाय (Browser किंवा Tab उघडा ठेवण्याची गरज नाही!)
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+      {% if google_account and google_account.is_connected %}
+      <div style="text-align: right; margin-right: 6px;">
+        <div style="font-size: 0.82rem; font-weight: 700; color: #4ade80;">
+          🟢 {{ google_account.location_name or selected_business.name }}
+        </div>
+        <div style="font-size: 0.72rem; color: #7a9bb5;">
+          Auto-Sync: Every 60s (Active)
+        </div>
+      </div>
+      <button type="button" id="btnCloudSync" class="btn btn-primary" onclick="triggerCloudSync('{{ business_id }}')" style="padding: 10px 18px; font-weight: 700;">
+        <span>⚡ Sync & Auto-Reply Now</span>
+      </button>
+      <button type="button" class="btn btn-outline" style="color: #f87171; border-color: rgba(239, 68, 68, 0.4); padding: 10px 14px;" onclick="disconnectGoogleCloud('{{ business_id }}')">
+        <span>Disconnect</span>
+      </button>
+      {% else %}
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <a href="/auth/google/connect?business={{ business_id }}" class="btn btn-primary" style="padding: 10px 18px; font-weight: 700; font-size: 13px; background: linear-gradient(135deg, #2563eb, #7c3aed); text-decoration: none; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);">
+          <span>🔗 Connect Google Business Profile</span>
+        </a>
+        <button type="button" class="btn btn-outline" style="padding: 10px 14px; font-size: 12px;" onclick="openCredsModal()" title="Enter or Update Google OAuth Client ID & Secret">
+          <span>⚙️ Configure Credentials</span>
+        </button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="reply-hub-grid">
+
+  <!-- ── Left Column: Live AI Review Reply Tester ──────────────────────────── -->
+  <section class="hub-card">
+    <div class="hub-card-header">
+      <div>
+        <div class="hub-card-title">🧪 Live AI Review Reply Tester</div>
+        <div class="hub-card-subtitle">Test how AI crafts authentic replies in Marathi, English, or Hindi</div>
+      </div>
+      <span class="badge-tag purple">⚡ Instant Gemini Test</span>
+    </div>
+
+    <!-- Quick Preset Buttons -->
+    <div class="dark-form-label">Quick Review Samples:</div>
+    <div class="sample-chips-row">
+      <button type="button" class="sample-chip-btn" onclick="loadSample('marathi_tech')">
+        🌟 5★ Marathi (Web & IT)
+      </button>
+      <button type="button" class="sample-chip-btn" onclick="loadSample('marathi_battery')">
+        🌟 5★ Marathi (Battery & Solar)
+      </button>
+      <button type="button" class="sample-chip-btn" onclick="loadSample('english_it')">
+        🌟 5★ English (Cloud & Security)
+      </button>
+      <button type="button" class="sample-chip-btn" onclick="loadSample('hindi_service')">
+        🌟 5★ Hindi (Quick Support)
+      </button>
+      <button type="button" class="sample-chip-btn" onclick="loadSample('critical')">
+        ⚠️ 2★ Critical (Slow Response)
+      </button>
+    </div>
+
+    <form id="simulatorForm" onsubmit="generateSimulatorReply(event)">
+      <div class="dark-form-group">
+        <label class="dark-form-label" for="simReviewerName">
+          Reviewer Name <span style="font-weight: 400; color: #64748b;">(Leave blank if anonymous — AI will naturally greet without digits)</span>
+        </label>
+        <input type="text" id="simReviewerName" class="dark-input" value="Harshada Ghadge" placeholder="e.g. Harshada Ghadge or leave empty" />
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;" class="dark-form-group">
+        <div>
+          <label class="dark-form-label" for="simRating">Star Rating</label>
+          <select id="simRating" class="dark-select">
+            <option value="5">★★★★★ (5 Stars - Excellent)</option>
+            <option value="4">★★★★☆ (4 Stars - Good)</option>
+            <option value="3">★★★☆☆ (3 Stars - Average)</option>
+            <option value="2">★★☆☆☆ (2 Stars - Disappointed)</option>
+            <option value="1">★☆☆☆☆ (1 Star - Very Poor)</option>
+          </select>
+        </div>
+        <div>
+          <label class="dark-form-label" for="simTone">AI Tone</label>
+          <select id="simTone" class="dark-select">
+            <option value="professional_warm">Professional & Warm</option>
+            <option value="casual_friendly">Friendly & Cheerful</option>
+            <option value="formal">Executive Formal</option>
+            <option value="short">Short & Crisp</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="dark-form-group">
+        <label class="dark-form-label" for="simReviewText">Customer Review Text</label>
+        <textarea id="simReviewText" class="dark-textarea" rows="3" placeholder="Paste customer review here...">आमच्या नवीन वेबसाईटचं डिझाइन अप्रतिम आहे! युजर इंटरफेस खूप सोपा आणि आकर्षक बनवला आहे. टीमचं काम खरंच कौतुकास्पद.</textarea>
+      </div>
+
+      <button type="submit" id="btnSimGenerate" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-weight: 700;">
+        <span>⚡ Generate AI Reply with Gemini</span>
+      </button>
+    </form>
+
+    <!-- Generated Result Card -->
+    <div id="simResultBox" class="result-reply-card" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <span id="simLangBadge" class="badge-tag green">Marathi</span>
+          <span id="simToneBadge" class="badge-tag purple">Warm</span>
+          <span id="simSentimentBadge" class="badge-tag cyan">Positive</span>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button type="button" class="btn btn-sm btn-outline" style="padding: 4px 10px; font-size: 11px;" onclick="copyReplyText()">📋 Copy</button>
+          <button type="button" id="btnTestSend" class="btn btn-sm btn-primary" style="padding: 4px 12px; font-size: 11px;" onclick="postSimulatorReplyAsSent()">🚀 Log as Sent</button>
+        </div>
+      </div>
+      <div id="simReplyDisplay" class="reply-text-box"></div>
+      <div style="font-size: 11px; color: var(--text-3); text-align: right;">Generated for: {{ selected_business.name or company_name }}</div>
+    </div>
+  </section>
+
+
+  <!-- ── Right Column: Configuration & Chrome Extension ───────────────────── -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+
+    <!-- Auto-Reply Settings Card -->
+    <section class="hub-card">
+      <div class="hub-card-header">
+        <div>
+          <div class="hub-card-title">⚙️ Business Auto-Reply Settings</div>
+          <div class="hub-card-subtitle">Custom preferences for {{ selected_business.name or company_name }}</div>
+        </div>
+      </div>
+
+      <form id="settingsForm" onsubmit="saveSettings(event)">
+        <div class="switch-row">
+          <div>
+            <div style="font-weight: 600; font-size: 0.85rem; color: #e8f4fd;">Enable Auto-Pilot (Auto-Submit)</div>
+            <div style="font-size: 0.72rem; color: #7a9bb5;">Chrome Extension will automatically submit the reply to Google</div>
+          </div>
+          <label class="switch-toggle">
+            <input type="checkbox" id="set_auto_send" {% if settings.auto_send_enabled %}checked{% endif %}>
+            <span class="slider-round"></span>
+          </label>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;" class="dark-form-group">
+          <div>
+            <label class="dark-form-label" for="set_delay">Countdown Delay (Sec)</label>
+            <input type="number" id="set_delay" class="dark-input" min="0" max="15" value="{{ settings.auto_send_delay }}" />
+          </div>
+          <div>
+            <label class="dark-form-label" for="set_lang">Language Mode</label>
+            <select id="set_lang" class="dark-select">
+              <option value="auto" {% if settings.reply_language_mode == 'auto' %}selected{% endif %}>Auto-Detect (Match Review)</option>
+              <option value="mr" {% if settings.reply_language_mode == 'mr' %}selected{% endif %}>Always Marathi (मराठी)</option>
+              <option value="en" {% if settings.reply_language_mode == 'en' %}selected{% endif %}>Always English</option>
+              <option value="hi" {% if settings.reply_language_mode == 'hi' %}selected{% endif %}>Always Hindi (हिन्दी)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="dark-form-group">
+          <label class="dark-form-label" for="set_signature">Sign-Off Signature</label>
+          <input type="text" id="set_signature" class="dark-input" value="{{ settings.reply_signature }}" placeholder="e.g. — Team {{ selected_business.name or company_name }}" />
+        </div>
+
+        <button type="submit" id="btnSaveSettings" class="btn btn-outline" style="width: 100%; justify-content: center;">
+          <span>💾 Save Business Preferences</span>
+        </button>
+      </form>
+    </section>
+
+    <!-- 24/7 Cloud Auto-Pilot Live Monitor Card -->
+    <section class="hub-card">
+      <div class="hub-card-header">
+        <div>
+          <div class="hub-card-title">☁️ 24/7 Cloud Auto-Pilot Monitor</div>
+          <div class="hub-card-subtitle">Zero-Extension · Zero-Browser · 100% Server-Side</div>
+        </div>
+        <span class="badge-tag {% if google_account and google_account.is_connected %}green{% else %}purple{% endif %}">
+          {% if google_account and google_account.is_connected %}Active{% else %}Standby{% endif %}
+        </span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #112236; border-radius: 8px; border: 1px solid #1e3a50;">
+          <span style="font-size: 0.8rem; color: #7a9bb5;">Google Cloud Connection:</span>
+          {% if google_account and google_account.is_connected %}
+          <span style="font-size: 0.82rem; font-weight: 700; color: #4ade80;">🟢 Connected</span>
+          {% else %}
+          <span style="font-size: 0.82rem; font-weight: 700; color: #f87171;">🔴 Not Connected</span>
+          {% endif %}
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #112236; border-radius: 8px; border: 1px solid #1e3a50;">
+          <span style="font-size: 0.8rem; color: #7a9bb5;">Linked Business Profile:</span>
+          <span style="font-size: 0.82rem; font-weight: 700; color: #e8f4fd;">
+            {{ (google_account.location_name if google_account and google_account.location_name else selected_business.name) or 'Not linked' }}
+          </span>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #112236; border-radius: 8px; border: 1px solid #1e3a50;">
+          <span style="font-size: 0.8rem; color: #7a9bb5;">Auto-Sync Schedule:</span>
+          <span style="font-size: 0.82rem; font-weight: 700; color: #38bdf8;">Every 60 Seconds (24/7)</span>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #112236; border-radius: 8px; border: 1px solid #1e3a50;">
+          <span style="font-size: 0.8rem; color: #7a9bb5;">Browser / Tab Dependency:</span>
+          <span style="font-size: 0.82rem; font-weight: 700; color: #a78bfa;">Zero (PC can be OFF)</span>
+        </div>
+
+        {% if google_account and google_account.is_connected %}
+        <button type="button" class="btn btn-primary" onclick="triggerCloudSync('{{ business_id }}')" style="width: 100%; justify-content: center; padding: 11px; margin-top: 4px; font-weight: 700;">
+          <span>⚡ Sync & Auto-Reply Now</span>
+        </button>
+        {% else %}
+        <a href="/auth/google/connect?business={{ business_id }}" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 11px; margin-top: 4px; font-weight: 700; text-decoration: none;">
+          <span>🔗 Connect Google Business Profile</span>
+        </a>
+        {% endif %}
+      </div>
+
+      <!-- Optional Developer / Legacy Browser Extension Accordion -->
+      <details style="margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+        <summary style="font-size: 0.76rem; color: #64748b; cursor: pointer;">
+          🔌 Optional: Chrome Extension (Legacy Browser Mode)
+        </summary>
+        <div style="margin-top: 10px; font-size: 0.78rem; color: #94a3b8; line-height: 1.5;">
+          जर तुम्हाला डायरेक्ट क्लाउडऐवजी ब्राउझरमधून मॅन्युअली रिव्ह्यू पाहायचा असेल तर:
+          <div style="margin-top: 8px; display: flex; gap: 8px;">
+            <a href="/api/reviews/extension/download?business={{ business_id }}" class="btn btn-sm btn-outline" style="font-size: 11px; text-decoration: none;" download>
+              <span>⬇ Download Extension ZIP</span>
+            </a>
+            <button type="button" class="btn btn-sm btn-outline" style="font-size: 11px;" onclick="copyConsoleScript()">
+              <span>📋 Console Script</span>
+            </button>
+          </div>
+        </div>
+      </details>
+    </section>
+
+  </div>
+</div>
+
+
+<!-- ── Recent Auto-Reply Activity Logs ──────────────────────────────────────── -->
+<section class="hub-card" style="margin-top: 24px;">
+  <div class="hub-card-header">
+    <div>
+      <div class="hub-card-title">📜 Recent Auto-Reply Audit Logs</div>
+      <div class="hub-card-subtitle">Showing recent AI replies for <strong>{{ selected_business.name or company_name }}</strong></div>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <span class="badge-tag green">{{ reply_logs|length }} Logged</span>
+      {% if reply_logs %}
+      <button type="button" class="btn btn-sm btn-outline" style="padding: 3px 10px; font-size: 11px; color: #f87171; border-color: rgba(239, 68, 68, 0.4);" onclick="clearReplyLogs('{{ business_id }}')">
+        🗑️ Clear Logs
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  <div id="logsWrapper">
+    {% if reply_logs %}
+    <div class="logs-table-wrapper">
+      <table class="logs-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Organization</th>
+            <th>Reviewer</th>
+            <th>Rating</th>
+            <th>Customer Review</th>
+            <th>AI Generated Response</th>
+            <th>Language</th>
+            <th>Source / Status</th>
+          </tr>
+        </thead>
+        <tbody id="logsTableBody">
+          {% for log in reply_logs %}
+          <tr>
+            <td style="white-space: nowrap; font-size: 11px; color: #64748b;">
+              {{ log.created_at.strftime('%d %b, %H:%M') if log.created_at else '—' }}
+            </td>
+            <td>
+              <span class="badge-tag purple" style="font-size: 10px; font-weight: 700; text-transform: capitalize;">
+                🏢 {{ log.business_key }}
+              </span>
+            </td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="width: 24px; height: 24px; border-radius: 50%; background: #1e3a50; color: #38bdf8; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;">
+                  {{ (log.reviewer_name or 'C')[0]|upper }}
+                </span>
+                <strong>{{ log.reviewer_name or 'Valued Customer' }}</strong>
+              </div>
+            </td>
+            <td>
+              <span style="color: #f59e0b; font-weight: 700; white-space: nowrap;">★ {{ log.rating }}</span>
+            </td>
+            <td style="max-width: 240px; font-size: 12px; color: #cbd5e1;" title="{{ log.review_text }}">
+              {{ log.review_text[:95] }}{% if log.review_text|length > 95 %}…{% endif %}
+            </td>
+            <td style="max-width: 320px; font-size: 12px; color: #e2e8f0; line-height: 1.5;" title="{{ log.reply_text }}">
+              {{ log.reply_text[:130] }}{% if log.reply_text|length > 130 %}…{% endif %}
+            </td>
+            <td>
+              <span class="badge-tag cyan">{{ log.language|upper }}</span>
+            </td>
+            <td>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                {% if log.status == 'sent' %}
+                <span class="badge-tag green" style="font-size: 10px;">🟢 Sent / Replied</span>
+                {% elif log.status == 'failed' %}
+                <span class="badge-tag" style="background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 10px;">🔴 Failed</span>
+                {% else %}
+                <span class="badge-tag purple" style="font-size: 10px;">✨ Generated</span>
+                {% endif %}
+                <span style="font-size: 9.5px; color: #7a9bb5;">
+                  {% if log.source == 'cloud_api' %}☁️ Google Cloud
+                  {% elif log.source in ['extension', 'extension_autopilot'] %}⚡ Extension
+                  {% elif log.source == 'simulator' %}🧪 Live Tester
+                  {% else %}⚡ AI Assistant{% endif %}
+                </span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 40px 20px; color: var(--text-2, #7a9bb5);" id="emptyLogsMsg">
+      <div style="font-size: 2rem; margin-bottom: 8px;">📭</div>
+      <p style="margin: 0; font-size: 0.9rem;">No auto-reply activity logged yet for this business.</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<script>
+  const SAMPLES = {
+    marathi_tech: {
+      name: "Harshada Ghadge",
+      rating: 5,
+      tone: "professional_warm",
+      text: "आमच्या नवीन वेबसाईटचं डिझाइन अप्रतिम आहे! युजर इंटरफेस खूप सोपा आणि आकर्षक बनवला आहे. टीमचं काम खरंच कौतुकास्पद."
+    },
+    marathi_battery: {
+      name: "शुभम पवार",
+      rating: 5,
+      tone: "professional_warm",
+      text: "रुतुजा बॅटरी कडून मी नवीन इन्व्हर्टर बॅटरी घेतली. अतिशय जलद इन्स्टॉलेशन आणि उत्तम सर्व्हिस मिळाली. खूप छान अनुभव!"
+    },
+    english_it: {
+      name: "Vinamra Advertising",
+      rating: 5,
+      tone: "professional_warm",
+      text: "TechnoBuzz absolutely crushed it with our new cloud infrastructure. The migration was so smooth, we barely noticed any downtime, and our systems are running faster than ever."
+    },
+    hindi_service: {
+      name: "राजेश कुमार",
+      rating: 5,
+      tone: "professional_warm",
+      text: "बहुत ही बढ़िया और संतोषजनक सेवा। टीम का व्यवहार बहुत मददगार था और समय पर काम पूरा किया।"
+    },
+    critical: {
+      name: "Pratibha Varale",
+      rating: 2,
+      tone: "formal",
+      text: "Service was okay but response time to support tickets was quite slow. Expected better communication."
+    }
+  };
+
+  function loadSample(key) {
+    const s = SAMPLES[key];
+    if (!s) return;
+    document.getElementById("simReviewerName").value = s.name;
+    document.getElementById("simRating").value = s.rating;
+    document.getElementById("simTone").value = s.tone;
+    document.getElementById("simReviewText").value = s.text;
+  }
+
+  async function generateSimulatorReply(e) {
+    e.preventDefault();
+    const btn = document.getElementById("btnSimGenerate");
+    const name = document.getElementById("simReviewerName").value.trim();
+    const rating = parseInt(document.getElementById("simRating").value, 10);
+    const tone = document.getElementById("simTone").value;
+    const text = document.getElementById("simReviewText").value.trim();
+
+    if (!text) {
+      alert("Please enter customer review text.");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = "<span>⏳ Crafting AI Reply with Gemini...</span>";
+
+    try {
+      const res = await fetch("/api/reviews/generate-reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          review_text: text,
+          reviewer_name: name,
+          rating: rating,
+          business_id: "{{ selected_business.key or 'technobuzz' }}",
+          business_name: "{{ selected_business.name or company_name }}",
+          tone: tone,
+          language: "auto",
+          auto_sign: true,
+        })
+      });
+
+      if (!res.ok) throw new Error("Server returned " + res.status);
+      const data = await res.json();
+
+      const box = document.getElementById("simResultBox");
+      const display = document.getElementById("simReplyDisplay");
+      const langBadge = document.getElementById("simLangBadge");
+      const toneBadge = document.getElementById("simToneBadge");
+      const sentimentBadge = document.getElementById("simSentimentBadge");
+
+      currentSimData = {
+        name: name,
+        rating: rating,
+        tone: tone,
+        text: text,
+        reply: data.reply || "",
+        language: data.language || "auto",
+        detected_language: data.detected_language || "Auto",
+      };
+
+      display.textContent = data.reply || "";
+      langBadge.textContent = data.detected_language || data.language || "Auto";
+      toneBadge.textContent = data.tone || tone;
+      sentimentBadge.textContent = data.sentiment ? data.sentiment.toUpperCase() : "POSITIVE";
+
+      box.style.display = "block";
+      fetchAndRenderLogs();
+    } catch (err) {
+      alert("Failed to generate AI reply: " + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = "<span>⚡ Generate AI Reply with Gemini</span>";
+    }
+  }
+
+  let currentSimData = null;
+
+  async function postSimulatorReplyAsSent() {
+    if (!currentSimData || !currentSimData.reply) {
+      alert("Please generate an AI reply first.");
+      return;
+    }
+    const btn = document.getElementById("btnTestSend");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "⏳ Logging...";
+    }
+    try {
+      const res = await fetch("/api/reviews/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          business_id: "{{ selected_business.key or 'technobuzz' }}",
+          reviewer_name: currentSimData.name || "Valued Customer",
+          rating: currentSimData.rating || 5,
+          review_text: currentSimData.text || "",
+          reply_text: currentSimData.reply || "",
+          language: currentSimData.language || "auto",
+          tone: currentSimData.tone || "professional_warm",
+          status: "sent",
+          source: "simulator"
+        })
+      });
+      if (!res.ok) throw new Error("Failed to log reply");
+      await fetchAndRenderLogs();
+      alert("✅ Successfully logged with status: SENT!");
+    } catch(err) {
+      alert("Error: " + err.message);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "🚀 Log as Sent";
+      }
+    }
+  }
+
+  async function fetchAndRenderLogs() {
+    const bizKey = "{{ business_id }}";
+    const url = bizKey && bizKey !== "all" ? `/api/reviews/history?business_id=${bizKey}&limit=50` : `/api/reviews/history?limit=50`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const logs = await res.json();
+      const tbody = document.getElementById("logsTableBody");
+      const wrapper = document.getElementById("logsWrapper");
+      if (!tbody && wrapper && logs.length > 0) {
+        window.location.reload();
+        return;
+      }
+      if (!tbody) return;
+
+      if (logs.length === 0) {
+        wrapper.innerHTML = `
+          <div style="text-align: center; padding: 40px 20px; color: var(--text-2, #7a9bb5);" id="emptyLogsMsg">
+            <div style="font-size: 2rem; margin-bottom: 8px;">📭</div>
+            <p style="margin: 0; font-size: 0.9rem;">No auto-reply activity logged yet for this business.</p>
+          </div>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = logs.map(log => {
+        let dateStr = "—";
+        if (log.created_at) {
+          try {
+            const d = new Date(log.created_at);
+            const day = d.getDate();
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const m = months[d.getMonth()];
+            const h = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            dateStr = `${day} ${m}, ${h}:${min}`;
+          } catch(e) { dateStr = (log.created_at || '').slice(0, 16); }
+        }
+
+        const initial = (log.reviewer_name || "C")[0].toUpperCase();
+        const rName = log.reviewer_name || "Valued Customer";
+        const revShort = (log.review_text || "").length > 95 ? (log.review_text || "").slice(0, 95) + "…" : (log.review_text || "");
+        const repShort = (log.reply_text || "").length > 130 ? (log.reply_text || "").slice(0, 130) + "…" : (log.reply_text || "");
+        
+        let statusHtml = '';
+        if (log.status === 'sent') {
+          statusHtml = '<span class="badge-tag green" style="font-size: 10px;">🟢 Sent / Replied</span>';
+        } else if (log.status === 'failed') {
+          statusHtml = '<span class="badge-tag" style="background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 10px;">🔴 Failed</span>';
+        } else {
+          statusHtml = '<span class="badge-tag purple" style="font-size: 10px;">✨ Generated</span>';
+        }
+
+        let sourceLabel = '⚡ AI Assistant';
+        if (log.source === 'cloud_api') sourceLabel = '☁️ Google Cloud';
+        else if (log.source === 'extension' || log.source === 'extension_autopilot') sourceLabel = '⚡ Extension';
+        else if (log.source === 'simulator') sourceLabel = '🧪 Live Tester';
+
+        return `
+          <tr>
+            <td style="white-space: nowrap; font-size: 11px; color: #64748b;">${dateStr}</td>
+            <td>
+              <span class="badge-tag purple" style="font-size: 10px; font-weight: 700; text-transform: capitalize;">
+                🏢 ${log.business_key}
+              </span>
+            </td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="width: 24px; height: 24px; border-radius: 50%; background: #1e3a50; color: #38bdf8; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;">
+                  ${initial}
+                </span>
+                <strong>${rName}</strong>
+              </div>
+            </td>
+            <td>
+              <span style="color: #f59e0b; font-weight: 700; white-space: nowrap;">★ ${log.rating}</span>
+            </td>
+            <td style="max-width: 240px; font-size: 12px; color: #cbd5e1;" title="${log.review_text || ''}">
+              ${revShort}
+            </td>
+            <td style="max-width: 320px; font-size: 12px; color: #e2e8f0; line-height: 1.5;" title="${log.reply_text || ''}">
+              ${repShort}
+            </td>
+            <td>
+              <span class="badge-tag cyan">${(log.language || "AUTO").toUpperCase()}</span>
+            </td>
+            <td>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                ${statusHtml}
+                <span style="font-size: 9.5px; color: #7a9bb5;">
+                  ${sourceLabel}
+                </span>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    } catch(err) {
+      console.warn("Logs poll error:", err);
+    }
+  }
+
+  // Periodic Auto-refresh logs table every 10 seconds
+  setInterval(fetchAndRenderLogs, 10000);
+
+  function copyReplyText() {
+    const text = document.getElementById("simReplyDisplay").textContent;
+    if (text) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert("✅ Reply copied to clipboard!");
+      });
+    }
+  }
+
+  function copyExtensionPath() {
+    navigator.clipboard.writeText('D:\\google-reviews\\GoogleReviews\\static\\extension').then(() => {
+      alert('✅ Extension folder path copied!\nPaste this into Chrome Unpacked Extension dialog.');
+    });
+  }
+
+  async function saveSettings(e) {
+    e.preventDefault();
+    const btn = document.getElementById("btnSaveSettings");
+    const autoSend = document.getElementById("set_auto_send").checked;
+    const delay = parseInt(document.getElementById("set_delay").value, 10) || 2;
+    const lang = document.getElementById("set_lang").value;
+    const sig = document.getElementById("set_signature").value.trim();
+
+    btn.disabled = true;
+    btn.innerHTML = "<span>Saving...</span>";
+
+    try {
+      const res = await fetch("/api/reviews/settings/{{ selected_business.key or 'technobuzz' }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          business_id: "{{ selected_business.key or 'technobuzz' }}",
+          auto_send_enabled: autoSend,
+          auto_send_delay: delay,
+          reply_language_mode: lang,
+          reply_signature: sig,
+        })
+      });
+
+      if (!res.ok) throw new Error("Failed to save settings");
+      alert("✅ Preferences saved successfully for {{ selected_business.name or company_name }}!");
+    } catch (err) {
+      alert("Error saving settings: " + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = "<span>💾 Save Business Preferences</span>";
+    }
+  }
+
+  function copyConsoleScript() {
+    const script = `(async function autoReplyGoogle(){
+      console.log('⚡ TechnoBuzz Google AI Auto-Replier starting on Google page...');
+      const replyButtons = Array.from(document.querySelectorAll('button, div[role="button"]')).filter(b => {
+        if (b.closest('#searchform, form[role="search"], .RNNXgb, .A8SBwf')) return false;
+        const t = (b.innerText || '').trim().toLowerCase();
+        return (t === 'reply' || t === 'उत्तर द्या' || t === 'जवाब दें') && !b.dataset.tbProcessed;
+      });
+
+      if (replyButtons.length === 0) {
+        alert('ℹ️ No unreplied reviews found on this Google page!');
+        return;
+      }
+
+      alert('🚀 Found ' + replyButtons.length + ' unreplied review(s)! Starting AI Auto-Reply & Auto-Send now...');
+
+      for (let i = 0; i < replyButtons.length; i++) {
+        const btn = replyButtons[i];
+        btn.dataset.tbProcessed = 'true';
+        btn.click();
+        await new Promise(r => setTimeout(r, 1500));
+
+        const modal = document.querySelector('div[role="dialog"], div[aria-modal="true"], g-dialog') || document.body;
+        const textarea = modal.querySelector('textarea, div[role="textbox"][contenteditable="true"]');
+        if (!textarea) continue;
+
+        let reviewText = '';
+        let reviewerName = '';
+
+        // Extract reviewer name
+        const nameCandidate = modal.querySelector("a[href*='contrib'], [data-ved] h2, [data-ved] span, h1, h2, h3, h4, strong");
+        if (nameCandidate) {
+          const raw = (nameCandidate.innerText || '').split('·')[0].trim();
+          if (raw && !/^\\d/.test(raw) && raw.length > 1 && !raw.toLowerCase().includes('review') && !raw.toLowerCase().includes('photo')) {
+            reviewerName = raw;
+          }
+        }
+
+        modal.querySelectorAll('p, span, div').forEach(el => {
+          const t = (el.innerText || '').trim();
+          if (t.length > 15 && !t.includes('Reply to review') && !t.includes('Replying publicly') && !t.includes('4,000')) {
+            if (t.length > reviewText.length) reviewText = t;
+          }
+        });
+
+        // Call AI backend
+        let reply = '';
+        try {
+          const res = await fetch('http://localhost:5001/api/reviews/generate-reply', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              review_text: reviewText || 'Great experience',
+              reviewer_name: reviewerName,
+              rating: 5,
+              business_id: '{{ selected_business.key or "technobuzz" }}',
+              business_name: '{{ selected_business.name or "TechnoBuzz Systems" }}',
+              tone: 'professional_warm'
+            })
+          });
+          const d = await res.json();
+          reply = d.reply;
+        } catch(e) {
+          const nameGreet = reviewerName ? reviewerName + ' जी, ' : 'नमस्कार, ';
+          reply = nameGreet + 'आमच्या सेवेबद्दल आपला मोलाचा अभिप्राय दिल्याबद्दल मनःपूर्वक धन्यवाद! — Team {{ selected_business.name or "TechnoBuzz Systems" }}';
+        }
+
+        // Fill textarea using insertText
+        textarea.focus();
+        let execOk = false;
+        try {
+          document.execCommand('selectAll', false, null);
+          execOk = document.execCommand('insertText', false, reply);
+        } catch(e) {}
+
+        if (!execOk) {
+          if (textarea.tagName.toLowerCase() === 'textarea') {
+            const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+            if (nativeSetter) nativeSetter.call(textarea, reply);
+            else textarea.value = reply;
+          } else {
+            textarea.innerText = reply;
+          }
+        }
+        ['input', 'change', 'keydown', 'keyup', 'blur'].forEach(ev => textarea.dispatchEvent(new Event(ev, {bubbles: true})));
+
+        console.log('✅ Injected reply:', reply);
+        await new Promise(r => setTimeout(r, 2000));
+
+        // Click Google Reply Submit Button
+        const submitBtn = Array.from(modal.querySelectorAll('button')).find(b => {
+          const t = (b.innerText || '').trim().toLowerCase();
+          return t === 'reply' || t === 'उत्तर द्या' || t === 'post';
+        });
+        if (submitBtn) {
+          console.log('🚀 Submitting reply to Google!');
+          submitBtn.click();
+        }
+        await new Promise(r => setTimeout(r, 2500));
+      }
+      alert('🎉 All reviews have been auto-replied and sent successfully!');
+    })();`;
+
+    navigator.clipboard.writeText(script).then(() => {
+      alert('✅ 1-Click Console Script copied to clipboard!\n\nNow:\n1. Switch to your Google Search tab ({{ selected_business.key or "technobuzzsystems" }}).\n2. Press F12 (Console).\n3. Paste (Ctrl+V) and press Enter!');
+    });
+  }
+
+  // ─── Direct Google Cloud API Actions ────────────────────────────────────────
+  async function triggerCloudSync(bizKey) {
+    const btn = document.getElementById("btnCloudSync");
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = "<span>⏳ Syncing with Google Cloud...</span>";
+    }
+
+    try {
+      const res = await fetch("/api/google-business/sync/" + bizKey, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.error || "Sync failed");
+
+      alert(`✅ Sync Complete!\n\nFound: ${data.unreplied_found} unreplied review(s)\nAuto-Replied: ${data.replied_count}`);
+      window.location.reload();
+    } catch (err) {
+      alert("Cloud Sync Error: " + err.message);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = "<span>⚡ Sync & Auto-Reply Now</span>";
+      }
+    }
+  }
+
+  async function disconnectGoogleCloud(bizKey) {
+    if (!confirm("Are you sure you want to disconnect Google Business Profile for this business?")) return;
+
+    try {
+      const res = await fetch("/api/google-business/disconnect/" + bizKey, { method: "POST" });
+      if (!res.ok) throw new Error("Disconnect failed");
+      alert("✅ Google Business Profile disconnected.");
+      window.location.reload();
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+  }
+
+  function openCredsModal() {
+    document.getElementById("credsModal").style.display = "flex";
+  }
+
+  function closeCredsModal() {
+    document.getElementById("credsModal").style.display = "none";
+  }
+
+  async function saveGoogleCredsFromModal(e) {
+    e.preventDefault();
+    const cid = document.getElementById("modalClientId").value.trim();
+    const csec = document.getElementById("modalClientSecret").value.trim();
+
+    if (!cid || !csec) {
+      alert("Please enter both Client ID and Client Secret.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/google-business/save-creds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ client_id: cid, client_secret: csec })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Failed to save credentials");
+
+      alert("✅ Google Cloud Credentials Saved! You can now click 'Connect Google Business Profile'.");
+      closeCredsModal();
+      window.location.reload();
+    } catch (err) {
+      alert("Error saving credentials: " + err.message);
+    }
+  }
+
+  async function clearReplyLogs(bizKey) {
+    if (!confirm("Are you sure you want to clear old test logs?")) return;
+    try {
+      const url = bizKey && bizKey !== 'all' ? `/api/reviews/logs/clear?business_id=${bizKey}` : `/api/reviews/logs/clear`;
+      const res = await fetch(url, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error("Failed to clear logs");
+      alert(`✅ Cleared ${data.deleted_count} logs successfully.`);
+      window.location.reload();
+    } catch (err) {
+      alert("Error clearing logs: " + err.message);
+    }
+  }
+</script>
+
+<!-- Google Cloud Credentials Modal -->
+<div id="credsModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.75); z-index: 999999; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+  <div style="background: #0d1b2a; border: 1px solid #1e3a50; border-radius: 14px; width: 90%; max-width: 520px; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.6);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
+      <div style="font-weight: 700; color: #e8f4fd; font-size: 1.1rem;">🔑 Configure Google OAuth 2.0 Credentials</div>
+      <button type="button" onclick="closeCredsModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;">&times;</button>
+    </div>
+    
+    <p style="font-size: 0.8rem; color: #7a9bb5; margin-bottom: 16px; line-height: 1.4;">
+      Google Cloud Console &rarr; <strong>APIs & Services &rarr; Credentials</strong> मधून तयार केलेला OAuth 2.0 Client ID आणि Secret येथे टाका:
+    </p>
+
+    <form onsubmit="saveGoogleCredsFromModal(event)">
+      <div class="dark-form-group">
+        <label class="dark-form-label" for="modalClientId">Google Client ID</label>
+        <input type="text" id="modalClientId" class="dark-input" placeholder="e.g. 123456789-xyz.apps.googleusercontent.com" required />
+      </div>
+
+      <div class="dark-form-group">
+        <label class="dark-form-label" for="modalClientSecret">Google Client Secret</label>
+        <input type="password" id="modalClientSecret" class="dark-input" placeholder="e.g. GOCSPX-abc123xyz" required />
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+        <button type="button" class="btn btn-outline" onclick="closeCredsModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary"><span>💾 Save Credentials</span></button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+

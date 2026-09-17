@@ -41,6 +41,7 @@ from services.auth_service import (
 from services.business_service import (
     BUSINESS_PAGE_SIZES,
     get_business,
+    get_businesses_for_user,
     list_businesses_page,
     save_business,
     user_owns_business,
@@ -84,6 +85,7 @@ from services.payment_service import razorpay_configured
 from services.qr_service import public_feedback_url, qr_png_bytes
 from services.storage_service import public_logo_url, s3_configured, save_logo_upload, save_transfer_screenshot
 from utils.google_review import build_google_review_url, extract_place_id
+from services.reply_service import get_business_reply_settings, get_review_reply_logs
 from utils.validators import (
     sanitize_string,
     validate_account_number,
@@ -93,6 +95,7 @@ from utils.validators import (
     validate_mobile,
     validate_withdraw_amount,
 )
+
 
 router = APIRouter(prefix="/admin")
 config = get_config()
@@ -272,6 +275,78 @@ def admin_dashboard(
             active_nav="overview",
         ),
     )
+
+
+# ─── GET /admin/auto-reply ───────────────────────────────────────────────────
+@router.get("/auto-reply")
+def auto_reply_dashboard(
+    request: Request,
+    business: str = "",
+    db: Session = Depends(get_db),
+    user: User = Depends(require_login),
+):
+    """Render the AI Review Auto-Replier management dashboard."""
+    from models.domain_models import GoogleBusinessAccount, UserRole
+    from services.google_business_service import is_google_api_configured
+
+    google_configured = is_google_api_configured()
+    visible_businesses = get_businesses_for_user(db, user)
+
+    # Resolve default business for user
+    if not business:
+        if user.role == UserRole.ADMIN:
+            business = "technobuzz" if "technobuzz" in visible_businesses else (next(iter(visible_businesses.keys())) if visible_businesses else "technobuzz")
+        elif visible_businesses:
+            business = next(iter(visible_businesses.keys()))
+        else:
+            business = "technobuzz"
+
+    # Enforce permissions for non-admin users
+    if business != "all" and not user_owns_business(db, user, business):
+        if visible_businesses:
+            business = next(iter(visible_businesses.keys()))
+        else:
+            business = "technobuzz"
+
+    if business == "all" and user.role == UserRole.ADMIN:
+        b_config = {"name": "All Organizations", "key": "all", "scope": "All multi-tenant client businesses"}
+        settings = {
+            "business_key": "all",
+            "company_name": "All Organizations",
+            "reply_tone": "professional_warm",
+            "reply_signature": "",
+            "reply_language_mode": "auto",
+            "auto_send_enabled": True,
+            "auto_send_delay": 2,
+        }
+        reply_logs = get_review_reply_logs(db, business_key=None, limit=100)
+        google_account = None
+    else:
+        if business == "all":
+            business = next(iter(visible_businesses.keys())) if visible_businesses else "technobuzz"
+        b_config = visible_businesses.get(business) or get_business(db, business) or {}
+        settings = get_business_reply_settings(db, business)
+        reply_logs = get_review_reply_logs(db, business_key=business, limit=50)
+        google_account = db.query(GoogleBusinessAccount).filter_by(business_key=business).first()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="admin_auto_reply.html",
+        context=_admin_context(
+            request,
+            user,
+            selected_business=b_config,
+            settings=settings,
+            reply_logs=reply_logs,
+            google_account=google_account,
+            google_configured=google_configured,
+            business_id=business,
+            businesses=visible_businesses,
+            page_title="AI Auto-Reply Hub",
+            active_nav="auto_reply",
+        ),
+    )
+
 
 
 # ─── GET /admin/api/stats ──────────────────────────────────────────────────────

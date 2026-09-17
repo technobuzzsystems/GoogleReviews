@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TechnoBuzz AI Review Replier</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="header">
+    <div class="logo">⚡ TechnoBuzz</div>
+    <span class="badge">AI AUTO-REPLY</span>
+  </div>
+
+  <div class="content">
+    <div class="setting-group">
+      <label class="label" for="apiBaseUrl">Backend Server URL</label>
+      <input type="text" id="apiBaseUrl" class="input" placeholder="http://localhost:5001" />
+      <span class="hint">Your TechnoBuzz Feedback Server URL</span>
+    </div>
+
+    <div class="setting-group">
+      <label class="label" for="businessId">Business Key</label>
+      <input type="text" id="businessId" class="input" placeholder="technobuzz" />
+    </div>
+
+    <div class="setting-group">
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-title">Autonomous Zero-Click Mode</div>
+          <div class="toggle-sub">Auto-replies all reviews without clicking any button</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="autonomousAutoPilot" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-title">Auto-Send Replies</div>
+          <div class="toggle-sub">Auto-submits to Google after generating</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="autoSendEnabled" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <label class="label" for="autoSendDelaySec">Auto-Send Countdown (Seconds)</label>
+      <input type="number" id="autoSendDelaySec" class="input" min="0" max="15" value="2" />
+    </div>
+
+    <div class="setting-group">
+      <label class="label" for="tone">AI Reply Tone</label>
+      <select id="tone" class="select">
+        <option value="professional_warm">Professional & Warm</option>
+        <option value="casual_friendly">Friendly & Cheerful</option>
+        <option value="formal">Executive Formal</option>
+        <option value="short">Short & Sweet</option>
+      </select>
+    </div>
+
+    <div class="setting-group">
+      <label class="label" for="languageMode">Language Detection</label>
+      <select id="languageMode" class="select">
+        <option value="auto">Auto-Detect (Match Marathi / Hindi / English)</option>
+        <option value="mr">Marathi (मराठी)</option>
+        <option value="hi">Hindi (हिन्दी)</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+
+    <button type="button" id="btnSave" class="btn-save">💾 Save Preferences</button>
+    <div id="saveMsg" class="save-msg" style="display:none;">Saved successfully!</div>
+
+    <div class="divider"></div>
+
+    <div class="footer-links">
+      <a href="http://localhost:5001/admin/auto-reply" target="_blank">Open Admin Dashboard</a>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

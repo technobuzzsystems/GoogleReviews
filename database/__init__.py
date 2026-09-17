@@ -90,6 +90,7 @@ def init_db():
         WalletWithdrawal,
         Franchise,
         FranchiseLedger,
+        ReviewReplyLog,
     )
     from services.auth_service import seed_default_users
     from services.business_service import (
@@ -111,6 +112,11 @@ def init_db():
     _ensure_column("businesses", "alternate_mobile", "alternate_mobile VARCHAR DEFAULT ''")
     _ensure_column("businesses", "email", "email VARCHAR DEFAULT ''")
     _ensure_column("businesses", "address", "address TEXT DEFAULT ''")
+    _ensure_column("businesses", "reply_tone", "reply_tone VARCHAR DEFAULT 'professional_warm'")
+    _ensure_column("businesses", "reply_signature", "reply_signature VARCHAR DEFAULT ''")
+    _ensure_column("businesses", "reply_language_mode", "reply_language_mode VARCHAR DEFAULT 'auto'")
+    _ensure_column("businesses", "auto_send_enabled", "auto_send_enabled BOOLEAN DEFAULT TRUE")
+    _ensure_column("businesses", "auto_send_delay", "auto_send_delay INTEGER DEFAULT 2")
     _ensure_column("sales_executives", "wallet_balance", "wallet_balance FLOAT DEFAULT 0")
     _ensure_column("sales_executives", "bank_name", "bank_name VARCHAR DEFAULT ''")
     _ensure_column("sales_executives", "account_name", "account_name VARCHAR DEFAULT ''")
@@ -138,6 +144,7 @@ def init_db():
     _ensure_column("sales_executives", "franchise_id", "franchise_id INTEGER")
     _ensure_column("businesses", "franchise_id", "franchise_id INTEGER")
     _ensure_column("businesses", "area", "area VARCHAR DEFAULT ''")
+
     _ensure_index(
         "businesses",
         "ix_businesses_name",

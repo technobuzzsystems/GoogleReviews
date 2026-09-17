@@ -4,6 +4,7 @@ app.py
 TechnoBuzz AI-Powered QR Code Feedback System — FastAPI Application Entry Point.
 """
 
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -12,14 +13,18 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from config import get_config
-from database import init_db
+from database import SessionLocal, init_db
 from routes.admin_routes import router as admin_router
 from routes.feedback_routes import router as feedback_router
+from routes.google_business_routes import router as google_business_router
 from routes.payment_routes import router as payment_router
+from routes.review_reply_routes import router as review_reply_router
 from services.auth_service import AuthRedirect
+from services.google_business_service import sync_all_active_businesses
 from utils.network import build_lan_url
 
 # ─── Logging Setup ────────────────────────────────────────────────────────────
@@ -31,11 +36,35 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+async def _periodic_google_sync_worker():
+    """Background worker that continuously scans and auto-replies for connected Google Business accounts."""
+    logger.info("[OK] 24/7 Google Business Review Auto-Sync Worker started (60s interval)")
+    while True:
+        try:
+            await asyncio.sleep(60)
+            db = SessionLocal()
+            try:
+                sync_all_active_businesses(db)
+            finally:
+                db.close()
+        except asyncio.CancelledError:
+            logger.info("24/7 Google Business Review Auto-Sync Worker stopped.")
+            break
+        except Exception as e:
+            logger.error("Error in background google review sync worker: %s", str(e))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
     logger.info("[OK] Database initialized")
+    sync_task = asyncio.create_task(_periodic_google_sync_worker())
     yield
+    sync_task.cancel()
+    try:
+        await sync_task
+    except asyncio.CancelledError:
+        pass
 
 
 def create_app() -> FastAPI:
@@ -47,6 +76,16 @@ def create_app() -> FastAPI:
     app = FastAPI(title="TechnoBuzz Feedback System", lifespan=lifespan)
     is_prod = (os.getenv("FLASK_ENV", "development") or "").lower() == "production"
 
+    # Allow CORS from google.com, local development, and production domains
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=r"https?://.*",
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     app.add_middleware(
         SessionMiddleware,
         secret_key=config.SECRET_KEY,
@@ -56,13 +95,17 @@ def create_app() -> FastAPI:
         max_age=60 * 60 * 8,
     )
 
+
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
     app.include_router(feedback_router)
     app.include_router(payment_router)
     app.include_router(admin_router)
+    app.include_router(review_reply_router)
+    app.include_router(google_business_router)
 
-    logger.info("[OK] Routers registered: feedback_router, payment_router, admin_router")
+    logger.info("[OK] Routers registered: feedback, payment, admin, review_reply, google_business")
+
 
     @app.exception_handler(AuthRedirect)
     async def auth_redirect_handler(request: Request, exc: AuthRedirect):

@@ -425,14 +425,27 @@ def ensure_feedback_routes(db: Session) -> None:
 
 
 def get_businesses_for_user(db: Session, user) -> dict:
-    """Admin sees every client; a salesman sees only the businesses assigned to them."""
-    from models.domain_models import UserRole
+    """Admin sees every client; franchise sees franchise clients; sales sees assigned clients."""
+    from models.domain_models import BusinessConfigModel, SalesExecutive, UserRole
+    from services.franchise_service import get_franchise_for_user
     from services.sales_service import get_executive_for_user
 
     if not user:
         return {}
     if user.role == UserRole.ADMIN:
         return get_all_businesses(db)
+    if user.role == UserRole.FRANCHISE:
+        org = get_franchise_for_user(db, user)
+        if not org:
+            return {}
+        salesman_names = {e.id: e.name for e in db.query(SalesExecutive).all()}
+        businesses = (
+            db.query(BusinessConfigModel)
+            .filter(BusinessConfigModel.franchise_id == org.id)
+            .order_by(BusinessConfigModel.name.asc())
+            .all()
+        )
+        return {b.key: _serialize_business(b, salesman_names) for b in businesses}
     own = get_executive_for_user(db, user)
     if not own:
         return {}

@@ -45,10 +45,10 @@ REVIEW_LANGUAGE_NAMES = {
     "ml": "Malayalam (മലയാളം)",
 }
 
-_MAX_RETRIES = 2
-_RETRY_DELAYS = [0.3, 0.5]
-_REQUEST_TIMEOUT = 25
-_TOTAL_BUDGET_SEC = 45
+_MAX_RETRIES = 1
+_RETRY_DELAYS = [0.3]
+_REQUEST_TIMEOUT = 8
+_TOTAL_BUDGET_SEC = 10
 
 
 def _gemini_api_key() -> str:
@@ -430,14 +430,14 @@ def generate_feedback_suggestions(
             continue
 
     elapsed = round(time.monotonic() - (deadline - _TOTAL_BUDGET_SEC), 2)
-    logger.error(
-        "AI feedback generation failed for rating=%d after %.2fs (budget=%.1fs). Last error: %s",
+    logger.warning(
+        "AI feedback generation failed for rating=%d after %.2fs (budget=%.1fs). Last error: %s. Gracefully returning local suggestions.",
         rating,
         elapsed,
         _TOTAL_BUDGET_SEC,
         last_error,
     )
-    raise RuntimeError("AI feedback generation failed. Please try again.") from last_error
+    return _local_suggestions(rating, business_context, language)
 
 
 def _local_star_examples(name: str, scope: str) -> dict:

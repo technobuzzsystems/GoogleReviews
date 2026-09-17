@@ -57,6 +57,10 @@
         <span class="nav-icon">🏢</span> Manage Businesses
       </a>
       {% endif %}
+      <a href="/admin/auto-reply" class="nav-item {% if active_nav == 'auto_reply' %}active{% endif %}">
+        <span class="nav-icon">🤖</span> AI Auto-Reply
+      </a>
+
       <a href="/admin/api/export?business={{ business_id|default('technobuzz') }}" class="nav-item" download>
         <span class="nav-icon">📥</span> Export CSV
       </a>
