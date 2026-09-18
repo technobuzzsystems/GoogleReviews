@@ -172,6 +172,12 @@ class ServerReplyEngine:
         is_signed_in = False
 
         try:
+            if sys.platform == "win32":
+                try:
+                    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+                except Exception:
+                    pass
+
             with sync_playwright() as p:
                 launch_args = [
                     "--no-sandbox",
@@ -471,23 +477,25 @@ def sync_business_server_side(db: Session, business_key: str) -> Dict[str, Any]:
 
 
 def sync_all_active_businesses(db: Session) -> List[Dict[str, Any]]:
-    """Helper to iterate through active and authenticated businesses in the database."""
+    """
+    Helper to iterate through authenticated businesses in the database.
+    Only launches browser for businesses that have active 1-Time Google Login sessions.
+    """
     businesses = db.query(BusinessConfigModel).all()
     results = []
     engine = ServerReplyEngine()
 
     for biz in businesses:
-        # Only process if business has active Google session or valid review URL / place ID
-        has_session = engine.is_session_authenticated(biz.key)
-        has_url = bool(biz.google_review_url or biz.place_id)
-        if not has_session and not has_url:
+        # Strictly skip businesses without 1-Time Google Login session to avoid unnecessary delays
+        if not engine.is_session_authenticated(biz.key):
             continue
 
         try:
+            logger.info("[AutoSync] Checking reviews for authenticated business '%s' (%s)...", biz.name or biz.key, biz.key)
             res = engine.process_business_reviews(db, biz.key)
             results.append(res)
         except Exception as e:
-            logger.error("[ServerEngine] Error in sync_all_active_businesses for '%s': %s", biz.key, e)
+            logger.error("[AutoSync] Error checking business '%s': %s", biz.key, e, exc_info=True)
             results.append({"business_key": biz.key, "success": False, "error": str(e)})
 
     return results

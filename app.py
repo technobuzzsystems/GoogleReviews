@@ -7,7 +7,14 @@ TechnoBuzz AI-Powered QR Code Feedback System — FastAPI Application Entry Poin
 import asyncio
 import logging
 import os
+import sys
 from contextlib import asynccontextmanager
+
+if sys.platform == "win32":
+    try:
+        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    except Exception:
+        pass
 
 import uvicorn
 from fastapi import FastAPI, Request
@@ -40,12 +47,16 @@ logger = logging.getLogger(__name__)
 
 def _run_periodic_sync_in_thread():
     """Execute synchronous database and browser operations in a clean worker thread."""
+    if sys.platform == "win32":
+        try:
+            asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+        except Exception:
+            pass
+
     db = SessionLocal()
     try:
-        # 1. Check server-side headless engine
+        # 1. Check server-side headless engine for all authenticated businesses
         sync_server_engine_businesses(db)
-        # 2. Check direct Google Cloud API if connected
-        sync_google_api_businesses(db)
     except Exception as e:
         logger.error("[ServerEngine] Error in 24/7 sync thread: %s", str(e), exc_info=True)
     finally:
@@ -54,16 +65,17 @@ def _run_periodic_sync_in_thread():
 
 async def _periodic_google_sync_worker():
     """Background worker that continuously scans and auto-replies for all businesses 24/7."""
-    logger.info("[OK] 24/7 Server-Side Auto-Replier Background Engine active (60s interval)")
+    logger.info("[OK] 24/7 Server-Side Auto-Replier Background Engine active (30s interval)")
     while True:
         try:
-            await asyncio.sleep(60)
+            await asyncio.sleep(30)
             await asyncio.to_thread(_run_periodic_sync_in_thread)
         except asyncio.CancelledError:
             logger.info("24/7 Server-Side Auto-Replier Background Engine stopped.")
             break
         except Exception as e:
             logger.error("Error in 24/7 background review engine: %s", str(e))
+
 
 
 
@@ -164,4 +176,9 @@ if __name__ == "__main__":
     )
     logger.info("   Host:Port  : %s:%s", config.HOST, config.PORT)
 
-    uvicorn.run("app:app", host=config.HOST, port=config.PORT, reload=config.DEBUG)
+    uvicorn.run(
+        app,
+        host=config.HOST,
+        port=config.PORT,
+    )
+
