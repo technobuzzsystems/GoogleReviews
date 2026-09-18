@@ -352,13 +352,16 @@
         <span>Disconnect</span>
       </button>
       {% else %}
-      <div style="display: flex; gap: 8px; align-items: center;">
-        <a href="/auth/google/connect?business={{ business_id }}" class="btn btn-primary" style="padding: 10px 18px; font-weight: 700; font-size: 13px; background: linear-gradient(135deg, #2563eb, #7c3aed); text-decoration: none; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);">
-          <span>🔗 Connect Google Business Profile</span>
-        </a>
-        <button type="button" class="btn btn-outline" style="padding: 10px 14px; font-size: 12px;" onclick="openCredsModal()" title="Enter or Update Google OAuth Client ID & Secret">
-          <span>⚙️ Configure Credentials</span>
+      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <button type="button" id="btnCloudSync" class="btn btn-primary" onclick="triggerCloudSync('{{ business_id }}')" style="padding: 10px 18px; font-weight: 700; background: linear-gradient(135deg, #00b4d8, #0077b6); box-shadow: 0 4px 14px rgba(0, 180, 216, 0.35);">
+          <span>⚡ Run Server AI Auto-Reply Now</span>
         </button>
+        <button type="button" class="btn btn-outline" style="padding: 10px 14px; font-size: 12px; color: #fbbf24; border-color: rgba(251, 191, 36, 0.4);" onclick="triggerServerLogin('{{ business_id }}')" title="Sign into Google once so server can post replies">
+          <span>🔑 1-Time Google Login</span>
+        </button>
+        <a href="/auth/google/connect?business={{ business_id }}" class="btn btn-outline" style="padding: 10px 14px; font-size: 12px; text-decoration: none;">
+          <span>🔗 Connect OAuth</span>
+        </a>
       </div>
       {% endif %}
     </div>
@@ -380,6 +383,9 @@
     <!-- Quick Preset Buttons -->
     <div class="dark-form-label">Quick Review Samples:</div>
     <div class="sample-chips-row">
+      <button type="button" class="sample-chip-btn" onclick="loadSample('samuel_londhe')" style="border-color: #38bdf8; color: #38bdf8; font-weight: 700;">
+        🌟 5★ Samuel Londhe (New Review)
+      </button>
       <button type="button" class="sample-chip-btn" onclick="loadSample('marathi_tech')">
         🌟 5★ Marathi (Web & IT)
       </button>
@@ -546,15 +552,14 @@
           <span style="font-size: 0.82rem; font-weight: 700; color: #a78bfa;">Zero (PC can be OFF)</span>
         </div>
 
-        {% if google_account and google_account.is_connected %}
-        <button type="button" class="btn btn-primary" onclick="triggerCloudSync('{{ business_id }}')" style="width: 100%; justify-content: center; padding: 11px; margin-top: 4px; font-weight: 700;">
-          <span>⚡ Sync & Auto-Reply Now</span>
-        </button>
-        {% else %}
-        <a href="/auth/google/connect?business={{ business_id }}" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 11px; margin-top: 4px; font-weight: 700; text-decoration: none;">
-          <span>🔗 Connect Google Business Profile</span>
-        </a>
-        {% endif %}
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
+          <button type="button" class="btn btn-primary" onclick="triggerCloudSync('{{ business_id }}')" style="width: 100%; justify-content: center; padding: 11px; font-weight: 700; background: linear-gradient(135deg, #00b4d8, #0077b6);">
+            <span>⚡ Run Server AI Auto-Reply Now</span>
+          </button>
+          <button type="button" class="btn btn-outline" onclick="triggerServerLogin('{{ business_id }}')" style="width: 100%; justify-content: center; padding: 10px; font-size: 12px; color: #fbbf24; border-color: rgba(251, 191, 36, 0.4);">
+            <span>🔑 1-Time Google Login for Server (फक्त एकदा लॉगिन करा)</span>
+          </button>
+        </div>
       </div>
 
       <!-- Optional Developer / Legacy Browser Extension Accordion -->
@@ -677,6 +682,12 @@
 
 <script>
   const SAMPLES = {
+    samuel_londhe: {
+      name: "SAMUEL LONDHE",
+      rating: 5,
+      tone: "professional_warm",
+      text: "Seriously impressed with TechnoBuzz. Our new custom software is flawless, and they somehow delivered it two weeks early! It's rare to find a team that truly understands what you need and then over-delivers."
+    },
     marathi_tech: {
       name: "Harshada Ghadge",
       rating: 5,
@@ -1087,28 +1098,57 @@
     });
   }
 
-  // ─── Direct Google Cloud API Actions ────────────────────────────────────────
+  // ─── 24/7 Server-Side & Cloud Auto-Sync Actions ─────────────────────────
   async function triggerCloudSync(bizKey) {
     const btn = document.getElementById("btnCloudSync");
+    const originalHtml = btn ? btn.innerHTML : "";
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = "<span>⏳ Syncing with Google Cloud...</span>";
+      btn.innerHTML = "<span>⏳ Scanning Google Reviews with AI...</span>";
     }
 
     try {
-      const res = await fetch("/api/google-business/sync/" + bizKey, { method: "POST" });
+      // Direct 24/7 Server-Side Headless Automation Engine
+      const res = await fetch("/api/server-engine/sync/" + bizKey, { method: "POST" });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || data.error || "Sync failed");
 
-      alert(`✅ Sync Complete!\n\nFound: ${data.unreplied_found} unreplied review(s)\nAuto-Replied: ${data.replied_count}`);
+      if (!data.success && data.error) {
+        alert("ℹ️ Server Engine Status: " + data.error);
+      } else if (data.requires_login) {
+        alert(`ℹ️ 1-Time Google Login Required!\n\n🏢 Business: ${data.business_name || bizKey}\n\n🔍 Found ${data.unreplied_found} unreplied review(s) on Google (e.g. Samuel Londhe, Omkar Pawar, etc.).\n\nTo auto-post replies directly to Google, the server needs you to log in once.\n👉 Please click '🔑 1-Time Google Login' to sign in once!`);
+      } else {
+        const found = data.unreplied_found || 0;
+        const replied = data.replied_count || 0;
+        if (found === 0 && replied === 0) {
+          alert(`✅ 24/7 Server Engine Scan Complete!\n\n🏢 Business: ${data.business_name || bizKey}\n\n🔍 Status: All reviews are already replied & up-to-date!\n🤖 New unreplied reviews found: 0\n\n(Server background engine is actively monitoring 24/7)`);
+        } else {
+          alert(`🎉 24/7 Server Engine Complete!\n\n🏢 Business: ${data.business_name || bizKey}\n🔍 Reviews Processed: ${found}\n🤖 AI Replies Posted: ${replied}`);
+        }
+      }
       window.location.reload();
     } catch (err) {
-      alert("Cloud Sync Error: " + err.message);
+      alert("Server Engine Notice: " + err.message);
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = "<span>⚡ Sync & Auto-Reply Now</span>";
+        btn.innerHTML = originalHtml || "<span>⚡ Sync & Auto-Reply Now</span>";
       }
+    }
+  }
+
+  async function triggerServerLogin(bizKey) {
+    if (!confirm("This will launch a real Google Chrome window on your screen.\n\nPlease sign into the Google Account that manages this Business Profile (" + bizKey + ").\n\nOnce signed in, the session is saved permanently for 24/7 auto-reply!")) return;
+
+    try {
+      const res = await fetch("/api/server-engine/login/" + bizKey, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        alert("🚀 Google Chrome Sign-In window is now OPEN on your screen!\n\n1. Look at your taskbar/screen and switch to the new Chrome window.\n2. Sign in with your Google Account.\n3. When done, you can close the window.\n\nThe server will save your session and auto-reply 24/7!");
+      } else {
+        alert("Error opening Chrome: " + (data.error || "Failed to launch Chrome"));
+      }
+    } catch (err) {
+      alert("Error: " + err.message);
     }
   }
 

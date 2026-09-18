@@ -23,8 +23,10 @@ from routes.feedback_routes import router as feedback_router
 from routes.google_business_routes import router as google_business_router
 from routes.payment_routes import router as payment_router
 from routes.review_reply_routes import router as review_reply_router
+from routes.server_engine_routes import router as server_engine_router
 from services.auth_service import AuthRedirect
-from services.google_business_service import sync_all_active_businesses
+from services.google_business_service import sync_all_active_businesses as sync_google_api_businesses
+from services.server_reply_engine import sync_all_active_businesses as sync_server_engine_businesses
 from utils.network import build_lan_url
 
 # ─── Logging Setup ────────────────────────────────────────────────────────────
@@ -36,22 +38,33 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _run_periodic_sync_in_thread():
+    """Execute synchronous database and browser operations in a clean worker thread."""
+    db = SessionLocal()
+    try:
+        # 1. Check server-side headless engine
+        sync_server_engine_businesses(db)
+        # 2. Check direct Google Cloud API if connected
+        sync_google_api_businesses(db)
+    except Exception as e:
+        logger.error("[ServerEngine] Error in 24/7 sync thread: %s", str(e), exc_info=True)
+    finally:
+        db.close()
+
+
 async def _periodic_google_sync_worker():
-    """Background worker that continuously scans and auto-replies for connected Google Business accounts."""
-    logger.info("[OK] 24/7 Google Business Review Auto-Sync Worker started (60s interval)")
+    """Background worker that continuously scans and auto-replies for all businesses 24/7."""
+    logger.info("[OK] 24/7 Server-Side Auto-Replier Background Engine active (60s interval)")
     while True:
         try:
             await asyncio.sleep(60)
-            db = SessionLocal()
-            try:
-                sync_all_active_businesses(db)
-            finally:
-                db.close()
+            await asyncio.to_thread(_run_periodic_sync_in_thread)
         except asyncio.CancelledError:
-            logger.info("24/7 Google Business Review Auto-Sync Worker stopped.")
+            logger.info("24/7 Server-Side Auto-Replier Background Engine stopped.")
             break
         except Exception as e:
-            logger.error("Error in background google review sync worker: %s", str(e))
+            logger.error("Error in 24/7 background review engine: %s", str(e))
+
 
 
 @asynccontextmanager
@@ -103,8 +116,9 @@ def create_app() -> FastAPI:
     app.include_router(admin_router)
     app.include_router(review_reply_router)
     app.include_router(google_business_router)
+    app.include_router(server_engine_router)
 
-    logger.info("[OK] Routers registered: feedback, payment, admin, review_reply, google_business")
+    logger.info("[OK] Routers registered: feedback, payment, admin, review_reply, google_business, server_engine")
 
 
     @app.exception_handler(AuthRedirect)
