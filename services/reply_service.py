@@ -148,10 +148,24 @@ def _local_fallback_reply(
     language: str = "auto",
     signature: str = "",
 ) -> Dict[str, Any]:
-    """Provide a high-quality local fallback reply if Gemini is unavailable."""
+    """Provide a tailored local fallback reply with distinct templates for 1, 2, 3, 4, and 5 stars."""
     clean_name = sanitize_reviewer_name(reviewer_name)
     sign_off = signature or f"— Team {company_name}"
-    
+
+    # Sentiment Heuristic Analysis
+    effective_rating = rating
+    if review_text:
+        neg_words = [
+            "joke", "outage", "crippled", "terrible", "worst", "bad", "loss", "poor",
+            "pathetic", "fraud", "scam", "disaster", "awful", "horrible", "waste",
+            "disappointed", "disappointing", "cheat", "frustrated", "slow", "delay",
+            "crash", "bug", "broken", "issue", "problem", "unacceptable",
+            "घटिया", "खराब", "बकवास", "फालतू", "वाईट", "नुकसान", "त्रास", "कंटाळवाणा", "चूक"
+        ]
+        low = review_text.lower()
+        if any(w in low for w in neg_words) and effective_rating > 2:
+            effective_rating = 1
+
     is_marathi = False
     is_hindi = False
     if language == "mr" or (language == "auto" and (_detect_marathi_words(review_text) or _detect_is_devanagari(review_text))):
@@ -161,32 +175,44 @@ def _local_fallback_reply(
 
     if is_marathi:
         greeting = f"{clean_name} जी, " if clean_name else "नमस्कार, "
-        if rating >= 4:
-            reply = f"{greeting}आमच्या सेवेबद्दल आपला मोलाचा अभिप्राय दिल्याबद्दल मनःपूर्वक धन्यवाद! आपला अनुभव सुखद राहिला हे वाचून आम्हाला अत्यंत आनंद झाला. आम्ही नेहमीच उत्कृष्ट सेवा देण्यासाठी कटिबद्ध आहोत. पुन्हा नक्की भेट द्या! {sign_off}"
-        elif rating == 3:
-            reply = f"{greeting}आपल्या प्रामाणिक अभिप्रायाबद्दल धन्यवाद. आपल्या अपेक्षेनुसार अजून चांगला अनुभव देण्यासाठी आम्ही सातत्याने प्रयत्न करू. काही सुधारणा हव्या असल्यास नक्की कळवा. {sign_off}"
+        if effective_rating >= 5:
+            reply = f"{greeting}आमच्या सेवेबद्दल आपला मोलाचा ५-स्टार अभिप्राय दिल्याबद्दल मनःपूर्वक धन्यवाद! आपला अनुभव सुखद राहिला हे वाचून आम्हाला अत्यंत आनंद झाला. आम्ही नेहमीच उत्कृष्ट सेवा देण्यासाठी कटिबद्ध आहोत. पुन्हा नक्की भेट द्या! {sign_off}"
+        elif effective_rating == 4:
+            reply = f"{greeting}आमच्या सेवेला ४-स्टार रेटिंग आणि पसंती दिल्याबद्दल मनःपूर्वक धन्यवाद! पुढच्या वेळी आपल्याला परिपूर्ण ५-स्टार अनुभव देण्यासाठी आम्ही सदैव तत्पर राहू. पुन्हा नक्की भेट द्या! {sign_off}"
+        elif effective_rating == 3:
+            reply = f"{greeting}आपल्या प्रामाणिक अभिप्रायाबद्दल धन्यवाद. आमची सेवा समाधानकारक असली तरी, आपल्याला ५-स्टार अनुभव देण्यासाठी आम्ही यात अजून काय सुधारणा करू शकतो हे जाणून घ्यायला आम्हाला नक्की आवडेल. {sign_off}"
+        elif effective_rating == 2:
+            reply = f"{greeting}आपला अनुभव अपेक्षेप्रमाणे न राहिल्याबद्दल आम्ही क्षमस्व आहोत. आपल्या फीडबॅकची आम्ही गंभीर दखल घेतली असून सेवेत सुधारणा करत आहोत. कृपया आपल्या अडचणीचे निवारण करण्यासाठी आमच्याशी थेट संपर्क साधा. {sign_off}"
         else:
-            reply = f"{greeting}आपल्याला झालेल्या गैरसोयीबद्दल आम्ही मनापासून क्षमस्व आहोत. आमचे ग्राहक समाधान आमच्यासाठी सर्वोच्च प्राधान्य आहे. कृपया आमच्याशी थेट संपर्क साधा जेणेकरून आम्ही या समस्येचे लवकरात लवकर निवारण करू शकू. {sign_off}"
+            reply = f"{greeting}आपल्याला आलेल्या वाईट अनुभवाबद्दल आणि गैरसोयीबद्दल आम्ही मनापासून क्षमस्व आहोत. अशी त्रुटी आमच्याकडून होणे अस्वीकार्य आहे. कृपया आपल्या समस्येचे तातडीने निवारण करण्यासाठी आमच्याशी थेट संपर्क साधा. {sign_off}"
         detected_lang = "Marathi"
         lang_code = "mr"
     elif is_hindi:
         greeting = f"नमस्ते {clean_name} जी, " if clean_name else "नमस्ते, "
-        if rating >= 4:
-            reply = f"{greeting}अपना बहुमूल्य फीडबैक देने के लिए आपका बहुत-बहुत धन्यवाद! यह जानकर बहुत खुशी हुई कि आपको हमारी सेवाएं पसंद आईं। हम सदैव आपको सर्वश्रेष्ठ अनुभव देने के लिए तत्पर हैं। {sign_off}"
-        elif rating == 3:
-            reply = f"{greeting}आपके फीडबैक के लिए धन्यवाद। हम अपनी सेवाओं को और बेहतर बनाने के लिए निरंतर प्रयासरत हैं। {sign_off}"
+        if effective_rating >= 5:
+            reply = f"{greeting}अपना बहुमूल्य 5-स्टार फीडबैक देने के लिए आपका बहुत-बहुत धन्यवाद! यह जानकर बहुत खुशी हुई कि आपको हमारी सेवाएं पसंद आईं। हम सदैव आपको सर्वश्रेष्ठ अनुभव देने के लिए तत्पर हैं। {sign_off}"
+        elif effective_rating == 4:
+            reply = f"{greeting}शानदार 4-स्टार रेटिंग और हम पर भरोसा जताने के लिए बहुत-बहुत धन्यवाद! अगली बार आपको पूर्ण 5-स्टार अनुभव देने के लिए हम पूरी तरह तत्पर हैं। {sign_off}"
+        elif effective_rating == 3:
+            reply = f"{greeting}आपके निष्पक्ष फीडबैक के लिए धन्यवाद। हम सदैव 5-स्टार अनुभव प्रदान करने का प्रयास करते हैं। अपनी सेवा को और बेहतर बनाने के लिए आपके सुझावों का स्वागत है। {sign_off}"
+        elif effective_rating == 2:
+            reply = f"{greeting}आपकी अपेक्षाओं पर खरा न उतरने के लिए हम क्षमाप्रार्थी हैं। हम आपके फीडबैक को गंभीरता से लेते हुए आवश्यक सुधार कर रहे हैं। कृपया अपनी समस्या साझा करने हेतु हमसे संपर्क करें। {sign_off}"
         else:
-            reply = f"{greeting}आपको हुई असुविधा के लिए हमें गहरा खेद है। कृपया हमसे सीधे संपर्क करें ताकि हम आपकी समस्या का तुरंत समाधान कर सकें। {sign_off}"
+            reply = f"{greeting}आपको हुई भारी असुविधा और परेशानी के लिए हमें गहरा खेद है। कृपया हमसे तुरंत संपर्क करें ताकि हम आपकी इस समस्या का तत्काल समाधान कर सकें। {sign_off}"
         detected_lang = "Hindi"
         lang_code = "hi"
     else:
         greeting = f"Dear {clean_name}, " if clean_name else "Dear Valued Customer, "
-        if rating >= 4:
+        if effective_rating >= 5:
             reply = f"{greeting}thank you so much for your wonderful 5-star review! We are thrilled to hear you had such a great experience with our team. We look forward to serving you again! {sign_off}"
-        elif rating == 3:
-            reply = f"{greeting}thank you for your honest feedback. We appreciate your insights and are constantly working to improve our services. {sign_off}"
+        elif effective_rating == 4:
+            reply = f"{greeting}thank you so much for the great 4-star rating and for trusting us! We look forward to serving you again and delivering a full 5-star experience next time! {sign_off}"
+        elif effective_rating == 3:
+            reply = f"{greeting}thank you for your honest feedback. While we are glad we could assist you, we constantly strive to deliver a 5-star experience. Please let us know how we can make your next visit even better! {sign_off}"
+        elif effective_rating == 2:
+            reply = f"{greeting}we apologize that your experience did not meet expectations. We take your feedback seriously and are actively taking steps to improve. Please get in touch with us directly so we can make things right. {sign_off}"
         else:
-            reply = f"{greeting}we sincerely apologize for not meeting your expectations. Customer satisfaction is our highest priority, and we would love the opportunity to make things right. Please reach out to our team directly. {sign_off}"
+            reply = f"{greeting}we sincerely apologize for the inconvenience and frustration caused. We take such issues very seriously and are actively investigating this. Please reach out to us directly so we can resolve this immediately. {sign_off}"
         detected_lang = "English"
         lang_code = "en"
 
@@ -194,11 +220,13 @@ def _local_fallback_reply(
         "reply": reply.strip(),
         "language": lang_code,
         "detected_language": detected_lang,
-        "rating": rating,
+        "rating": effective_rating,
         "tone": "professional_warm",
         "source": "local_fallback",
         "success": True,
     }
+
+
 
 
 def find_matching_business(db: Session, query_str: str) -> Optional[Dict[str, Any]]:

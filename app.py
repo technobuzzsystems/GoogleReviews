@@ -65,11 +65,12 @@ def _run_periodic_sync_in_thread():
 
 async def _periodic_google_sync_worker():
     """Background worker that continuously scans and auto-replies for all businesses 24/7."""
-    logger.info("[OK] 24/7 Server-Side Auto-Replier Background Engine active (30s interval)")
+    logger.info("[OK] 24/7 Server-Side Auto-Replier Background Engine active (15s interval)")
     while True:
         try:
-            await asyncio.sleep(30)
+            await asyncio.sleep(15)
             await asyncio.to_thread(_run_periodic_sync_in_thread)
+
         except asyncio.CancelledError:
             logger.info("24/7 Server-Side Auto-Replier Background Engine stopped.")
             break

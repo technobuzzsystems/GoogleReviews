@@ -76,6 +76,25 @@ def get_browser_user_data_dir() -> str:
     return base_dir
 
 
+def cleanup_stale_profile_processes(prof_dir: str):
+    """Ensure no stale headless Chromium process holds lock on user-data-dir."""
+    if not prof_dir or not os.path.exists(prof_dir):
+        return
+    try:
+        import psutil
+        p_lower = os.path.abspath(prof_dir).lower()
+        for proc in psutil.process_iter(["pid", "name", "cmdline"]):
+            try:
+                name = (proc.info.get("name") or "").lower()
+                cmdline = " ".join(proc.info.get("cmdline") or []).lower()
+                if ("chrome" in name or "chromium" in name) and (p_lower in cmdline or ".server_browser_data" in cmdline):
+                    proc.kill()
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
 class ServerReplyEngine:
     """Headless browser engine that checks and auto-replies to Google Reviews server-side."""
 
@@ -83,6 +102,7 @@ class ServerReplyEngine:
         self.user_data_dir = get_browser_user_data_dir()
         self.chrome_path = get_chrome_executable()
         self.is_running = False
+
 
     def _build_search_url_for_business(self, biz: BusinessConfigModel) -> str:
         """Construct direct Google Maps / Google Reviews URL for a business."""
@@ -190,6 +210,7 @@ class ServerReplyEngine:
 
                 prof_dir = os.path.join(self.user_data_dir, business_key)
                 os.makedirs(prof_dir, exist_ok=True)
+                cleanup_stale_profile_processes(prof_dir)
                 for lock in ["SingletonLock", "SingletonCookie", "SingletonSocket", "lockfile"]:
                     lp = os.path.join(prof_dir, lock)
                     if os.path.exists(lp):
@@ -212,11 +233,21 @@ class ServerReplyEngine:
                 # Primary target: Google Business Profile Reviews Hub (Centralized, 100% accurate for authenticated managers)
                 gbp_reviews_url = "https://business.google.com/reviews"
                 page.goto(gbp_reviews_url, wait_until="domcontentloaded", timeout=30000)
-                page.wait_for_timeout(3000)
+                page.wait_for_timeout(2500)
 
                 # Check if signed in
                 sign_in_btn = page.query_selector("a[href*='accounts.google.com/ServiceLogin'], a:has-text('Sign in'), a:has-text('साइन इन')")
                 is_signed_in = sign_in_btn is None and "signin" not in page.url.lower()
+
+                # If signed in on GBP, check for 'Unreplied' filter tab to prioritize unreplied reviews
+                if is_signed_in:
+                    try:
+                        unreplied_tab = page.query_selector("button:has-text('Unreplied'), div[role='tab']:has-text('Unreplied'), button:has-text('उत्तर दिले नाही'), [aria-label*='Unreplied']")
+                        if unreplied_tab and unreplied_tab.is_visible():
+                            unreplied_tab.click()
+                            page.wait_for_timeout(1500)
+                    except Exception:
+                        pass
 
                 # If redirected or not logged into GBP, fallback to direct search / maps url
                 if not is_signed_in or "locations" in page.url or "signin" in page.url:
@@ -244,12 +275,13 @@ class ServerReplyEngine:
                 reply_buttons = page.query_selector_all("button:has-text('Reply'), [aria-label*='Reply'], button:has-text('उत्तर द्या'), div[role='button']:has-text('Reply')")
                 logger.info("[ServerEngine] Found %d 'Reply' buttons on page for '%s' (Signed In: %s)", len(reply_buttons), company_name, is_signed_in)
 
+
                 if reply_buttons:
                     # Authenticated mode: process unreplied reviews
                     for btn in reply_buttons:
                         try:
                             # Locate the review container card
-                            parent = btn.evaluate_handle("el => el.closest('[data-review-id], div[class*=\"review\"], div[jscontroller], div.jftiEf, div[role=\"region\"]') || el.parentElement.parentElement")
+                            parent = btn.evaluate_handle("el => el.closest('div[data-review-id], div.jftiEf, div.WMH2pe, div[jsmodel], div[role=\"article\"], div[role=\"region\"], div[class*=\"review-item\"], div[class*=\"ReviewRow\"]') || el.closest('div[jscontroller][data-id]') || el.parentElement.parentElement.parentElement")
                             if not parent:
                                 continue
 
@@ -259,12 +291,59 @@ class ServerReplyEngine:
                             review_text = page.evaluate("el => { const t = el.querySelector('[class*=\"snippet\"], [class*=\"comment\"], .wiI7Mc, .Jtu6Td, .MyEned, span[jsname], p'); return t ? t.innerText : ''; }", parent)
                             review_text = (review_text or "").strip()
 
-                            rating_stars = page.evaluate("el => { const s = el.querySelector('[aria-label*=\"star\"], [aria-label*=\"Star\"], .Fam1ne'); return s ? s.getAttribute('aria-label') : ''; }", parent)
-                            rating = 5
-                            if rating_stars:
-                                m = re.search(r"(\d)", str(rating_stars))
-                                if m:
-                                    rating = int(m.group(1))
+                            rating = page.evaluate(r"""el => {
+                                // 1. Google Business Profile CSS Class Matching (Gold filled stars vs Grey unfilled stars)
+                                const filledMolvnc = el.querySelectorAll('.MOLvNc, [class*="MOLvNc"], [class*="star-filled"], .rF9y1c, .f7XEGf');
+                                const unfilledVvwmd = el.querySelectorAll('.vVwMD, [class*="vVwMD"], [class*="star-unfilled"], [class*="star-empty"]');
+                                if (filledMolvnc.length > 0 && filledMolvnc.length <= 5) {
+                                    return filledMolvnc.length;
+                                }
+                                if (unfilledVvwmd.length > 0 && unfilledVvwmd.length <= 5) {
+                                    return 5 - unfilledVvwmd.length;
+                                }
+
+                                // 2. Google Maps / Search aria-label on star icon wrapper
+                                const starEl = el.querySelector('[aria-label*="star" i], [aria-label*="star"], [aria-label*="Star"], [aria-label*="stars"], [aria-label*="तारे"], [aria-label*="तारा"], .kvMYJc, .Fam1ne, [role="img"][aria-label*="out of"]');
+                                if (starEl) {
+                                    const label = starEl.getAttribute('aria-label') || '';
+                                    const m = label.match(/(\d+(?:\.\d+)?)/);
+                                    if (m) {
+                                        return parseInt(m[1]);
+                                    }
+                                }
+
+                                // 3. Count filled svg elements if present
+                                const svgs = el.querySelectorAll('svg');
+                                if (svgs.length >= 5) {
+                                    let filledCount = 0;
+                                    svgs.forEach(s => {
+                                        const fill = (s.getAttribute('fill') || '').toLowerCase();
+                                        const path = s.querySelector('path');
+                                        const pathFill = path ? (path.getAttribute('fill') || '').toLowerCase() : '';
+                                        if (!fill.includes('none') && !pathFill.includes('none') && (fill || pathFill)) {
+                                            filledCount++;
+                                        }
+                                    });
+                                    if (filledCount >= 1 && filledCount <= 5) return filledCount;
+                                }
+
+                                return 5;
+                            }""", parent)
+
+
+                            if review_text:
+                                neg_words = [
+                                    "joke", "outage", "crippled", "terrible", "worst", "bad", "loss", "poor",
+                                    "pathetic", "fraud", "scam", "disaster", "awful", "horrible", "waste",
+                                    "disappointed", "cheat", "frustrated", "slow", "delay", "crash", "bug",
+                                    "broken", "issue", "problem", "unacceptable",
+                                    "घटिया", "खराब", "बकवास", "फालतू", "वाईट", "नुकसान", "त्रास", "कंटाळवाणा"
+                                ]
+                                low = review_text.lower()
+                                if any(w in low for w in neg_words) and rating > 2:
+                                    rating = 1
+
+
 
                             existing_log = db.query(ReviewReplyLog).filter(
                                 ReviewReplyLog.business_key == business_key,
