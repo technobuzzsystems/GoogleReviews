@@ -228,3 +228,16 @@ class Invoice(Base):
     razorpay_order_id = Column(String, default="")
     paid_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class SubscriptionPlan(Base):
+    __tablename__ = "subscription_plans"
+
+    code = Column(String, primary_key=True, index=True)
+    label = Column(String, nullable=False)
+    days = Column(Integer, default=0, nullable=False)
+    months = Column(Integer, default=0, nullable=False)
+    amount = Column(Float, default=0.0, nullable=False)
+    sort_order = Column(Integer, default=100, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

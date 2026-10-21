@@ -116,8 +116,14 @@
         {% endif %}
       </dl>
       <div class="biz-tile-actions">
+        {% if b.is_expired or b.plan_status == 'expired' %}
+        <span class="biz-tile-link ghost is-disabled" title="Plan expired — renew plan to open feedback page" aria-disabled="true">Open page (Expired)</span>
+        <span class="biz-tile-link ghost is-disabled" title="Plan expired — renew plan to enable QR scanner" aria-disabled="true">QR locked</span>
+        <a class="biz-tile-link primary" href="/admin/businesses/{{ b.key }}/edit">Renew plan</a>
+        {% else %}
         <a class="biz-tile-link ghost" href="{{ b.feedback_path or '/feedback' }}" target="_blank" rel="noopener">Open page</a>
         <a class="biz-tile-link ghost" href="/admin/businesses/{{ b.key }}/qr">QR code</a>
+        {% endif %}
         {% if b.plan_amount and b.payment_due %}
         <button
           type="button"

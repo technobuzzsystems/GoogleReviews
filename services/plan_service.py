@@ -6,17 +6,182 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from models.domain_models import Booking, BusinessConfigModel, SalesExecutive, WalletLedger
+from models.domain_models import Booking, BusinessConfigModel, SalesExecutive, SubscriptionPlan, WalletLedger
+
+DEFAULT_PLANS = {
+    "15d": {"code": "15d", "label": "15 Days", "days": 15, "months": 0, "amount": 1.0, "sort_order": 10},
+    "6m": {"code": "6m", "label": "6 Months", "days": 0, "months": 6, "amount": 1499.0, "sort_order": 20},
+    "1y": {"code": "1y", "label": "1 Year", "days": 0, "months": 12, "amount": 1999.0, "sort_order": 30},
+    "2y": {"code": "2y", "label": "2 Years", "days": 0, "months": 24, "amount": 2999.0, "sort_order": 40},
+}
 
 PLANS = {
-    "15d": {"code": "15d", "label": "15 Days", "days": 15, "amount": 1.0},
-    "6m": {"code": "6m", "label": "6 Months", "months": 6, "amount": 1499.0},
-    "1y": {"code": "1y", "label": "1 Year", "months": 12, "amount": 1999.0},
-    "2y": {"code": "2y", "label": "2 Years", "months": 24, "amount": 2999.0},
+    k: {key: val for key, val in v.items() if key != "sort_order" and (key not in ("days", "months") or val > 0)}
+    for k, v in DEFAULT_PLANS.items()
 }
 
 PLAN_COMMISSION_RATE = 25.0  # default salesman wallet %; franchise can override per salesman
 CLIENT_PLAN_NOTE = "Client plan"
+
+
+def _serialize_plan_row(row: SubscriptionPlan) -> dict:
+    item = {
+        "code": row.code,
+        "label": row.label,
+        "amount": round(float(row.amount or 0), 2),
+        "sort_order": int(row.sort_order or 100),
+        "is_active": bool(row.is_active),
+        "days": int(row.days or 0),
+        "months": int(row.months or 0),
+    }
+    return item
+
+
+def sync_plans_cache(db: Session) -> dict:
+    """Sync the in-memory PLANS dictionary from the subscription_plans table."""
+    rows = (
+        db.query(SubscriptionPlan)
+        .filter(SubscriptionPlan.is_active.is_(True))
+        .order_by(SubscriptionPlan.sort_order.asc(), SubscriptionPlan.amount.asc(), SubscriptionPlan.code.asc())
+        .all()
+    )
+    if not rows:
+        return PLANS
+    PLANS.clear()
+    for row in rows:
+        entry = {
+            "code": row.code,
+            "label": row.label,
+            "amount": round(float(row.amount or 0), 2),
+        }
+        if (row.days or 0) > 0:
+            entry["days"] = int(row.days)
+        if (row.months or 0) > 0:
+            entry["months"] = int(row.months)
+        PLANS[row.code] = entry
+    return PLANS
+
+
+def seed_default_plans(db: Session) -> None:
+    """Seed the default 4 subscription plans if subscription_plans table is empty, and sync PLANS."""
+    if db.query(SubscriptionPlan).count() == 0:
+        for code, p in DEFAULT_PLANS.items():
+            db.add(
+                SubscriptionPlan(
+                    code=code,
+                    label=p["label"],
+                    days=p.get("days", 0),
+                    months=p.get("months", 0),
+                    amount=p["amount"],
+                    sort_order=p.get("sort_order", 100),
+                    is_active=True,
+                )
+            )
+        db.commit()
+    sync_plans_cache(db)
+
+
+def list_subscription_plans(db: Session, *, active_only: bool = False) -> list[dict]:
+    """Return all subscription plans ordered by sort_order and amount."""
+    q = db.query(SubscriptionPlan)
+    if active_only:
+        q = q.filter(SubscriptionPlan.is_active.is_(True))
+    rows = q.order_by(SubscriptionPlan.sort_order.asc(), SubscriptionPlan.amount.asc(), SubscriptionPlan.code.asc()).all()
+    return [_serialize_plan_row(r) for r in rows]
+
+
+def get_subscription_plan(db: Session, code: str) -> Optional[dict]:
+    code = (code or "").strip()
+    if not code:
+        return None
+    row = db.query(SubscriptionPlan).filter(SubscriptionPlan.code == code).first()
+    return _serialize_plan_row(row) if row else None
+
+
+def save_subscription_plan(
+    db: Session,
+    *,
+    original_code: str = "",
+    code: str = "",
+    label: str = "",
+    duration_type: str = "months",
+    duration_value: int = 0,
+    amount: float = 0.0,
+) -> SubscriptionPlan:
+    """Create or update a subscription plan and refresh the PLANS cache."""
+    import re
+
+    label = (label or "").strip()[:60]
+    if not label:
+        raise ValueError("Plan name / label is required (e.g. '3 Months' or '1 Year').")
+
+    duration_type = (duration_type or "months").strip().lower()
+    if duration_type not in ("days", "months"):
+        raise ValueError("Select duration unit as Days or Months.")
+
+    try:
+        duration_val = int(duration_value or 0)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Enter a valid duration number.") from exc
+    if duration_val <= 0 or duration_val > 3650:
+        raise ValueError("Duration must be between 1 and 3650.")
+
+    try:
+        amount_val = round(float(amount or 0), 2)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Enter a valid plan amount.") from exc
+    if amount_val <= 0:
+        raise ValueError("Plan amount must be greater than ₹0.")
+
+    clean_orig = (original_code or "").strip().lower()
+    clean_code = (code or "").strip().lower()
+    if not clean_code:
+        suffix = "d" if duration_type == "days" else "m"
+        clean_code = f"{duration_val}{suffix}"
+    clean_code = re.sub(r"[^a-z0-9_-]+", "", clean_code)[:24]
+    if not clean_code:
+        raise ValueError("Enter a valid plan code (letters/numbers, e.g. '3m', '30d', '3y').")
+
+    days = duration_val if duration_type == "days" else 0
+    months = duration_val if duration_type == "months" else 0
+    approx_days = days if days > 0 else months * 30
+
+    row = None
+    if clean_orig:
+        row = db.query(SubscriptionPlan).filter(SubscriptionPlan.code == clean_orig).first()
+        if not row:
+            raise ValueError("Plan to edit was not found.")
+    else:
+        existing = db.query(SubscriptionPlan).filter(SubscriptionPlan.code == clean_code).first()
+        if existing:
+            raise ValueError(f"Plan code '{clean_code}' already exists. Edit the existing plan or use a different code.")
+        row = SubscriptionPlan(code=clean_code)
+        db.add(row)
+
+    row.label = label
+    row.days = days
+    row.months = months
+    row.amount = amount_val
+    row.sort_order = approx_days
+    row.is_active = True
+    db.commit()
+    db.refresh(row)
+    sync_plans_cache(db)
+    return row
+
+
+def delete_subscription_plan(db: Session, code: str) -> None:
+    """Delete a subscription plan (ensuring at least 1 active plan remains)."""
+    clean = (code or "").strip()
+    row = db.query(SubscriptionPlan).filter(SubscriptionPlan.code == clean).first()
+    if not row:
+        raise ValueError("Subscription plan not found.")
+    total_count = db.query(SubscriptionPlan).count()
+    if total_count <= 1:
+        raise ValueError("Cannot delete the last remaining subscription plan.")
+    db.delete(row)
+    db.commit()
+    sync_plans_cache(db)
 
 
 def add_months(start: date, months: int) -> date:

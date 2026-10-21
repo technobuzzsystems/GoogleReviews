@@ -54,6 +54,7 @@ def render_business_feedback(request: Request, business_id: str, db: Session, b_
     if not b_config:
         raise HTTPException(status_code=404, detail="This feedback page is not available.")
     logo = (b_config.get("logo_filename") or "").strip()
+    is_expired = bool(b_config.get("is_expired") or b_config.get("plan_status") == "expired")
     context = {
         "request": request,
         "business_id":       b_config.get("key") or business_id,
@@ -63,8 +64,15 @@ def render_business_feedback(request: Request, business_id: str, db: Session, b_
         "logo_filename":     logo,
         "logo_url":          b_config.get("logo_url") or public_logo_url(logo),
         "feedback_path":     b_config.get("feedback_path") or "/feedback",
+        "is_expired":        is_expired,
+        "expiry_date":       b_config.get("expiry_date") or "",
     }
-    return templates.TemplateResponse(request=request, name="feedback.html", context=context)
+    return templates.TemplateResponse(
+        request=request,
+        name="feedback.html",
+        context=context,
+        status_code=403 if is_expired else 200,
+    )
 
 @router.get("/feedback")
 def feedback_page(request: Request, db: Session = Depends(get_db)):
@@ -109,6 +117,11 @@ def generate_feedback(payload: GenerateFeedbackRequest, db: Session = Depends(ge
     b_config = get_business(db, business_id)
     if not b_config:
         raise HTTPException(status_code=400, detail="Unknown business.")
+    if b_config.get("is_expired") or b_config.get("plan_status") == "expired":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Subscription plan for this business has expired. Please renew the plan to continue.",
+        )
 
     try:
         suggestions = generate_feedback_suggestions(

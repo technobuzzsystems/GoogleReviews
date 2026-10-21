@@ -59,7 +59,15 @@ from services.dashboard_service import (
     transfer_wallet_to_bank,
     withdraw_wallet_to_bank,
 )
-from services.plan_service import PLANS, PLAN_COMMISSION_RATE
+from services.plan_service import (
+    PLANS,
+    PLAN_COMMISSION_RATE,
+    delete_subscription_plan,
+    get_subscription_plan,
+    list_subscription_plans,
+    save_subscription_plan,
+    sync_plans_cache,
+)
 from services.franchise_service import (
     ADMIN_FRANCHISE_COMMISSION_RATE,
     MAX_SALESMAN_COMMISSION_RATE,
@@ -142,6 +150,7 @@ def _render_business_form(
 ):
     own = get_executive_for_user(db, user)
     org = get_franchise_for_user(db, user)
+    sync_plans_cache(db)
     is_edit = bool(business_key and business and business.get("key"))
     if business is not None:
         business = dict(business)
@@ -420,6 +429,11 @@ def business_qr_png(
     business = get_business(db, business_key)
     if not business or not user_owns_business(db, user, business_key):
         raise HTTPException(status_code=404, detail="Business not found.")
+    if business.get("is_expired") or business.get("plan_status") == "expired":
+        raise HTTPException(
+            status_code=403,
+            detail="Plan expired. Please renew the subscription plan to generate or download the QR code.",
+        )
     path = business.get("feedback_path") or "/feedback"
     url = public_feedback_url(request, path)
     png = qr_png_bytes(
@@ -1401,4 +1415,110 @@ def users_save(
     except ValueError as exc:
         return _user_form_view(request, user, db, staff=posted if posted["id"] else None, error=str(exc), posted=posted)
     return RedirectResponse(url="/admin/users", status_code=303)
+
+
+# ─── Subscription Plans Management (Admin Only) ───────────────────────────────
+def _plans_view(
+    request: Request,
+    db: Session,
+    user: User,
+    *,
+    edit_plan: dict = None,
+    error: str = "",
+    success: str = "",
+    form: dict = None,
+):
+    sync_plans_cache(db)
+    rows = list_subscription_plans(db, active_only=False)
+    return templates.TemplateResponse(
+        request=request,
+        name="admin_plans.html",
+        context=_admin_context(
+            request,
+            user,
+            plan_rows=rows,
+            edit_plan=edit_plan,
+            form=form or {},
+            form_error=error,
+            form_success=success,
+            page_title="Subscription Plans",
+            active_nav="plans",
+        ),
+        status_code=400 if error else 200,
+    )
+
+
+@router.get("/plans")
+def plans_page(
+    request: Request,
+    edit: str = "",
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    edit_plan = get_subscription_plan(db, edit) if edit else None
+    success = ""
+    if request.query_params.get("saved"):
+        success = "Subscription plan saved."
+    elif request.query_params.get("deleted"):
+        success = "Subscription plan deleted."
+    return _plans_view(request, db, user, edit_plan=edit_plan, success=success)
+
+
+@router.post("/plans")
+def plans_save(
+    request: Request,
+    original_code: str = Form(""),
+    code: str = Form(""),
+    label: str = Form(""),
+    duration_type: str = Form("months"),
+    duration_value: str = Form(""),
+    amount: str = Form(""),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    posted = {
+        "original_code": original_code.strip(),
+        "code": code.strip(),
+        "label": label.strip(),
+        "duration_type": duration_type.strip(),
+        "duration_value": duration_value.strip(),
+        "amount": amount.strip(),
+    }
+    edit_plan = get_subscription_plan(db, original_code) if original_code.strip() else None
+    try:
+        dur_val = int(duration_value.strip()) if duration_value.strip() else 0
+    except ValueError:
+        return _plans_view(request, db, user, edit_plan=edit_plan, error="Enter a valid duration number.", form=posted)
+    try:
+        amt_val = float(amount.strip().replace(",", "")) if amount.strip() else 0.0
+    except ValueError:
+        return _plans_view(request, db, user, edit_plan=edit_plan, error="Enter a valid plan amount.", form=posted)
+
+    try:
+        save_subscription_plan(
+            db,
+            original_code=original_code,
+            code=code,
+            label=label,
+            duration_type=duration_type,
+            duration_value=dur_val,
+            amount=amt_val,
+        )
+    except ValueError as exc:
+        return _plans_view(request, db, user, edit_plan=edit_plan, error=str(exc), form=posted)
+    return RedirectResponse(url="/admin/plans?saved=1", status_code=303)
+
+
+@router.post("/plans/{plan_code}/delete")
+def plans_delete(
+    request: Request,
+    plan_code: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    try:
+        delete_subscription_plan(db, plan_code)
+    except ValueError as exc:
+        return _plans_view(request, db, user, error=str(exc))
+    return RedirectResponse(url="/admin/plans?deleted=1", status_code=303)
 

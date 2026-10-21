@@ -90,6 +90,7 @@ def init_db():
         WalletWithdrawal,
         Franchise,
         FranchiseLedger,
+        SubscriptionPlan,
     )
     from services.auth_service import seed_default_users
     from services.business_service import (
@@ -97,7 +98,7 @@ def init_db():
         ensure_feedback_routes,
         seed_initial_businesses,
     )
-    from services.plan_service import backfill_booking_wallet_credits
+    from services.plan_service import backfill_booking_wallet_credits, seed_default_plans
     from services.invoice_service import backfill_invoices_for_paid_payments
     from services.sales_service import align_sales_book_to_plans, ensure_sales_users, seed_sales_data
 
@@ -164,6 +165,7 @@ def init_db():
 
     db = SessionLocal()
     try:
+        seed_default_plans(db)
         seed_default_users(db)
         from services.franchise_service import seed_default_franchise
 

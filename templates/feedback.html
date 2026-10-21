@@ -25,6 +25,38 @@
          ═══════════════════════════════════════════════ -->
     <main class="feedback-card" role="main" aria-label="Customer Feedback Form">
 
+      {% if is_expired %}
+      <header class="brand-section" style="margin-bottom: 16px;">
+        <div class="logo-wrapper">
+          {% if logo_url %}
+          <img
+            src="{{ logo_url }}"
+            alt="{{ company_name }} Logo"
+            class="company-logo"
+            width="88"
+            height="88"
+          />
+          {% endif %}
+        </div>
+        <h1 class="company-name">{{ company_name }}</h1>
+      </header>
+
+      <div class="section-divider" role="separator"></div>
+
+      <section class="expired-plan-notice" role="alert" aria-live="polite">
+        <div class="expired-plan-icon" aria-hidden="true">⏳</div>
+        <span class="expired-plan-badge">Plan Expired</span>
+        <h2 class="expired-plan-title">This QR Feedback Link is Currently Inactive</h2>
+        <p class="expired-plan-text">
+          The subscription plan for <strong>{{ company_name }}</strong>{% if expiry_date %} expired on <strong>{{ expiry_date }}</strong>{% else %} has expired{% endif %}.
+          Scanning and AI review generation are paused until the business renews its subscription plan.
+        </p>
+        <p class="expired-plan-subtext">
+          If you are the business owner, please contact <strong>TechnoBuzz</strong> or renew your plan from the dashboard to reactivate this QR scanner immediately.
+        </p>
+      </section>
+      {% else %}
+
       <div class="lang-bar">
         <p class="lang-bar-label" data-i18n="languageLabel">Review language</p>
         <div class="lang-chips" id="langChips" role="group" aria-label="Popular languages">
@@ -289,6 +321,8 @@
         </span>
 
       </div>
+
+      {% endif %}
 
     </main><!-- /feedback-card -->
 

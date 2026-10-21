@@ -1,0 +1,172 @@
+{% extends "admin_base.html" %}
+
+{% block topbar_actions %}
+<a href="/admin/businesses/new" class="btn btn-outline">+ Add Business</a>
+{% endblock %}
+
+{% block content %}
+<p class="page-lede">
+  Add, edit, or delete subscription plans. Any plan saved here immediately appears on the <strong>Add / Edit Business</strong> form.
+</p>
+
+{% if form_error %}
+<div class="form-error">{{ form_error }}</div>
+{% endif %}
+{% if form_success %}
+<div class="breakdown-card" style="padding: 12px 16px; margin-bottom: 18px; border-color: rgba(0, 200, 150, 0.4); background: rgba(0, 200, 150, 0.1); color: var(--green); font-weight: 600;">
+  ✅ {{ form_success }}
+</div>
+{% endif %}
+
+<div class="overview-split">
+  <!-- Left: Add / Edit Plan Form -->
+  <section class="breakdown-card form-card">
+    <div class="section-header" style="margin-bottom: 16px;">
+      <div>
+        <div class="section-title">{% if edit_plan %}Edit Plan ({{ edit_plan.label }}){% else %}Add New Subscription Plan{% endif %}</div>
+        <div class="section-subtitle">{% if edit_plan %}Update duration or price for this plan{% else %}Create a new plan duration and price{% endif %}</div>
+      </div>
+      {% if edit_plan %}
+      <a href="/admin/plans" class="btn btn-outline btn-sm">+ New Plan</a>
+      {% endif %}
+    </div>
+
+    {% set cur_type = form.get('duration_type') or ('days' if (edit_plan and edit_plan.days > 0) else 'months') %}
+    {% set cur_dur = form.get('duration_value') or (edit_plan.days if (edit_plan and edit_plan.days > 0) else (edit_plan.months if edit_plan else '')) %}
+    {% set cur_label = form.get('label') or (edit_plan.label if edit_plan else '') %}
+    {% set cur_code = form.get('code') or (edit_plan.code if edit_plan else '') %}
+    {% set cur_amount = form.get('amount') or (edit_plan.amount if edit_plan else '') %}
+
+    <form action="/admin/plans" method="POST">
+      <input type="hidden" name="original_code" value="{{ edit_plan.code if edit_plan else (form.get('original_code') or '') }}">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="plan_label">Plan Name / Label</label>
+          <input
+            type="text"
+            id="plan_label"
+            name="label"
+            value="{{ cur_label }}"
+            placeholder="e.g. 3 Months, 1 Month, 3 Years"
+            required
+          >
+          <div class="form-hint">Displayed on the plan card and invoices.</div>
+        </div>
+
+        <div class="form-group">
+          <label for="plan_code">Plan Code</label>
+          <input
+            type="text"
+            id="plan_code"
+            name="code"
+            value="{{ cur_code }}"
+            placeholder="e.g. 3m, 30d, 3y (auto-filled if blank)"
+            {% if edit_plan %}readonly{% endif %}
+          >
+          <div class="form-hint">{% if edit_plan %}Plan code cannot be changed while editing.{% else %}Short unique ID (leave blank to auto-generate).{% endif %}</div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="duration_value">Duration</label>
+          <input
+            type="number"
+            id="duration_value"
+            name="duration_value"
+            min="1"
+            max="3650"
+            value="{{ cur_dur }}"
+            placeholder="e.g. 3"
+            required
+          >
+          <div class="form-hint">Number of days or months before plan expires.</div>
+        </div>
+
+        <div class="form-group">
+          <label for="duration_type">Duration Unit</label>
+          <select id="duration_type" name="duration_type">
+            <option value="months" {% if cur_type == 'months' %}selected{% endif %}>Months</option>
+            <option value="days" {% if cur_type == 'days' %}selected{% endif %}>Days</option>
+          </select>
+          <div class="form-hint">Used to auto-calculate client expiry date.</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="plan_amount">Plan Price (₹ INR)</label>
+        <input
+          type="number"
+          id="plan_amount"
+          name="amount"
+          min="1"
+          step="0.01"
+          value="{{ cur_amount }}"
+          placeholder="e.g. 999"
+          required
+        >
+        <div class="form-hint">Full subscription amount collected via Razorpay / Sales Book.</div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">{% if edit_plan %}Update Plan{% else %}Add Plan{% endif %}</button>
+        {% if edit_plan %}
+        <a href="/admin/plans" class="btn btn-muted">Cancel</a>
+        {% endif %}
+      </div>
+    </form>
+  </section>
+
+  <!-- Right: Existing Plans Table -->
+  <section class="table-card">
+    <div class="table-toolbar">
+      <div>
+        <div class="section-title">Available Subscription Plans</div>
+        <div class="section-subtitle">Shown on Add / Edit Business form</div>
+      </div>
+      <span class="stat-badge">{{ plan_rows|length }} plans</span>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Plan</th>
+            <th>Code</th>
+            <th>Duration</th>
+            <th class="td-right">Price</th>
+            <th class="td-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in plan_rows %}
+          <tr>
+            <td><strong>{{ p.label }}</strong></td>
+            <td><span class="field-value mono">{{ p.code }}</span></td>
+            <td>
+              {% if p.days and p.days > 0 %}
+                {{ p.days }} day{% if p.days != 1 %}s{% endif %}
+              {% else %}
+                {{ p.months }} month{% if p.months != 1 %}s{% endif %}
+              {% endif %}
+            </td>
+            <td class="td-right amount-green">₹{{ '{:,.0f}'.format(p.amount) }}</td>
+            <td class="td-actions">
+              <div class="row-actions">
+                <a href="/admin/plans?edit={{ p.code|urlencode }}" class="btn btn-outline btn-sm">Edit</a>
+                {% if plan_rows|length > 1 %}
+                <form action="/admin/plans/{{ p.code }}/delete" method="POST" onsubmit="return confirm('Delete plan {{ p.label }} ({{ p.code }})?');">
+                  <button type="submit" class="btn btn-outline btn-sm" style="color: var(--red); border-color: rgba(255,92,106,0.35);">Delete</button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

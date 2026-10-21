@@ -1069,6 +1069,47 @@ body.login-page {
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 .login-card .form-error { margin-bottom: 16px; }
+.password-field {
+  position: relative;
+  margin-bottom: 16px;
+}
+.password-field input {
+  margin-bottom: 0;
+  padding-right: 44px;
+}
+.password-field input::-ms-reveal,
+.password-field input::-ms-clear {
+  display: none;
+}
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color var(--transition), background var(--transition);
+}
+.password-toggle:hover,
+.password-toggle:focus-visible {
+  color: var(--accent);
+  background: rgba(0, 180, 216, 0.12);
+  outline: none;
+}
+.password-toggle svg {
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
 .login-card button[type="submit"] {
   width: 100%;
   padding: 12px;
@@ -1243,6 +1284,12 @@ body.login-page {
   filter: brightness(1.08);
   border-color: transparent;
   color: #fff;
+}
+.biz-tile-link.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+  user-select: none;
 }
 a.page-btn { text-decoration: none; }
 .page-btn[aria-disabled="true"] { opacity: 0.35; pointer-events: none; }

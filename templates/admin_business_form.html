@@ -72,7 +72,12 @@
       <div class="form-hint accent" id="google_review_url_preview"></div>
     </div>
 
-    <div class="form-section">Subscription Plan</div>
+    <div class="form-section form-section-row">
+      <span>Subscription Plan</span>
+      {% if is_admin %}
+      <a href="/admin/plans" class="btn btn-outline btn-sm">+ Manage Plans</a>
+      {% endif %}
+    </div>
 
     <div class="form-group">
       <label>Plan</label>
