@@ -107,6 +107,7 @@ def init_db():
     _ensure_column("businesses", "plan_amount", "plan_amount FLOAT DEFAULT 0")
     _ensure_column("businesses", "join_date", "join_date DATE")
     _ensure_column("businesses", "expiry_date", "expiry_date DATE")
+    _ensure_column("businesses", "is_active", "is_active BOOLEAN DEFAULT TRUE")
     _ensure_column("businesses", "sales_executive_id", "sales_executive_id INTEGER")
     _ensure_column("businesses", "mobile", "mobile VARCHAR DEFAULT ''")
     _ensure_column("businesses", "alternate_mobile", "alternate_mobile VARCHAR DEFAULT ''")

@@ -43,6 +43,7 @@ from services.business_service import (
     get_business,
     list_businesses_page,
     save_business,
+    set_business_active_status,
     user_owns_business,
 )
 from services.dashboard_service import (
@@ -429,6 +430,11 @@ def business_qr_png(
     business = get_business(db, business_key)
     if not business or not user_owns_business(db, user, business_key):
         raise HTTPException(status_code=404, detail="Business not found.")
+    if business.get("is_active") is False:
+        raise HTTPException(
+            status_code=403,
+            detail="This business has been deactivated by the administrator.",
+        )
     if business.get("is_expired") or business.get("plan_status") == "expired":
         raise HTTPException(
             status_code=403,
@@ -505,6 +511,7 @@ def save_business_route(
     address: str = Form(""),
     area: str = Form(""),
     franchise_id: str = Form(""),
+    is_active: str = Form("1"),
     db: Session = Depends(get_db),
     user: User = Depends(require_business_access),
 ):
@@ -547,6 +554,7 @@ def save_business_route(
         "address": address,
         "area": area,
         "franchise_id": int(franchise_id) if str(franchise_id).isdigit() else None,
+        "is_active": is_active in {"1", "on", "true", "yes"},
     }
 
     mobile_val, mobile_err = validate_mobile(mobile, required=True)
@@ -604,8 +612,23 @@ def save_business_route(
         "address": address_val,
         "area": org.area if org and user.role == UserRole.FRANCHISE else sanitize_string(area, 80),
         "franchise_id": org.id if org and user.role == UserRole.FRANCHISE else (int(franchise_id) if str(franchise_id).isdigit() else None),
+        "is_active": posted["is_active"],
     }
     save_business(db, business_key.strip(), business_data)
+    return RedirectResponse(url="/admin/businesses", status_code=303)
+
+
+@router.post("/businesses/{business_key}/toggle-status")
+def toggle_business_status(
+    business_key: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_business_access),
+):
+    business = get_business(db, business_key)
+    if not business or not user_owns_business(db, user, business_key):
+        raise HTTPException(status_code=404, detail="Business not found.")
+    current_status = bool(business.get("is_active", True) if business.get("is_active") is not None else True)
+    set_business_active_status(db, business_key, not current_status)
     return RedirectResponse(url="/admin/businesses", status_code=303)
 
 

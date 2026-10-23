@@ -9,7 +9,9 @@
     <div>
       <p class="qr-kicker">Feedback QR</p>
       <h2 class="qr-title">{{ business.name }}</h2>
-      {% if business.is_expired or business.plan_status == 'expired' %}
+      {% if not business.is_active %}
+      <p class="qr-lede" style="color: var(--red);">Business is deactivated by admin. QR scanner is disabled.</p>
+      {% elif business.is_expired or business.plan_status == 'expired' %}
       <p class="qr-lede" style="color: var(--red);">Subscription plan expired{% if business.expiry_date %} on {{ business.expiry_date }}{% endif %}. QR scanner is disabled until renewed.</p>
       {% else %}
       <p class="qr-lede">Print or share this poster. Scanning it opens the live review page.</p>
@@ -17,15 +19,25 @@
     </div>
   </div>
 
-  {% if business.is_expired or business.plan_status == 'expired' %}
+  {% if not business.is_active or business.is_expired or business.plan_status == 'expired' %}
   <div class="breakdown-card" style="text-align: center; padding: 32px 24px; margin-bottom: 20px; border-color: rgba(255, 92, 106, 0.35);">
-    <div style="font-size: 2.2rem; margin-bottom: 10px;">⏳</div>
+    {% if not business.is_active %}
+    <div style="font-size: 2.2rem; margin-bottom: 10px;">&#x1F6AB;</div>
+    <span class="badge expired" style="margin-left: 0; margin-bottom: 12px;">Deactivated</span>
+    <h3 style="margin-bottom: 8px; font-size: 1.15rem;">QR Code Scanner is Deactivated</h3>
+    <p style="color: var(--text-2); font-size: 0.9rem; max-width: 420px; margin: 0 auto 20px;">
+      This business has been deactivated by the administrator.
+      Customers scanning this QR code will see a deactivated notice until the status is toggled back to active.
+    </p>
+    {% else %}
+    <div style="font-size: 2.2rem; margin-bottom: 10px;">&#x23F3;</div>
     <span class="badge expired" style="margin-left: 0; margin-bottom: 12px;">Plan Expired</span>
     <h3 style="margin-bottom: 8px; font-size: 1.15rem;">QR Code Scanner is Inactive</h3>
     <p style="color: var(--text-2); font-size: 0.9rem; max-width: 420px; margin: 0 auto 20px;">
       This client's plan expired{% if business.expiry_date %} on <strong>{{ business.expiry_date }}</strong>{% endif %}.
       Customers scanning this QR code will not be redirected to the feedback generator until the plan is renewed.
     </p>
+    {% endif %}
     <div class="form-actions qr-actions">
       <a class="btn btn-primary" href="/admin/businesses/{{ business_key }}/edit">Renew / Edit Plan</a>
       <a href="/admin/businesses" class="btn btn-muted">Back to clients</a>

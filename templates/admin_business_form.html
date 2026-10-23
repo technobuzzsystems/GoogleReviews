@@ -95,6 +95,14 @@
       <div class="form-hint warn">Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env to collect this plan online, then restart the app.</div>
       {% endif %}
     </div>
+    <div class="form-group">
+      <label class="check-label tight" for="is_active">
+        <input type="checkbox" id="is_active" name="is_active" value="1" {% if not business or business.get("is_active", True) %}checked{% endif %}>
+        Active Business (Uncheck to deactivate plan and lock QR scanner)
+      </label>
+      <div class="form-hint">When unchecked, this business is deactivated immediately. Customers scanning the QR standee will see a deactivated notice.</div>
+    </div>
+
 
     <div class="form-row">
       <div class="form-group">

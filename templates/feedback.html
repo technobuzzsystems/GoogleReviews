@@ -25,7 +25,7 @@
          ═══════════════════════════════════════════════ -->
     <main class="feedback-card" role="main" aria-label="Customer Feedback Form">
 
-      {% if is_expired %}
+      {% if is_blocked %}
       <header class="brand-section" style="margin-bottom: 16px;">
         <div class="logo-wrapper">
           {% if logo_url %}
@@ -44,7 +44,19 @@
       <div class="section-divider" role="separator"></div>
 
       <section class="expired-plan-notice" role="alert" aria-live="polite">
-        <div class="expired-plan-icon" aria-hidden="true">⏳</div>
+        {% if is_deactivated %}
+        <div class="expired-plan-icon" aria-hidden="true">&#x1F6AB;</div>
+        <span class="expired-plan-badge" style="background: rgba(255, 92, 106, 0.16); color: var(--clr-error);">Deactivated</span>
+        <h2 class="expired-plan-title">This Service is Currently Deactivated</h2>
+        <p class="expired-plan-text">
+          Access for <strong>{{ company_name }}</strong> has been paused by the administrator.
+          QR scanning and AI feedback submission are temporarily disabled.
+        </p>
+        <p class="expired-plan-subtext">
+          If you are the business owner, please contact <strong>TechnoBuzz Support</strong> or your account manager to reactivate your scanner.
+        </p>
+        {% else %}
+        <div class="expired-plan-icon" aria-hidden="true">&#x23F3;</div>
         <span class="expired-plan-badge">Plan Expired</span>
         <h2 class="expired-plan-title">This QR Feedback Link is Currently Inactive</h2>
         <p class="expired-plan-text">
@@ -54,6 +66,7 @@
         <p class="expired-plan-subtext">
           If you are the business owner, please contact <strong>TechnoBuzz</strong> or renew your plan from the dashboard to reactivate this QR scanner immediately.
         </p>
+        {% endif %}
       </section>
       {% else %}
 

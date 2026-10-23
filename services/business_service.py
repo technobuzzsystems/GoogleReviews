@@ -139,6 +139,7 @@ def _serialize_business(b: BusinessConfigModel, salesman_names: dict = None) -> 
         "feedback_path": feedback_path_for(b.key, getattr(b, "route_slug", "") or ""),
         "payment_due": False,
         "invoice_no": "",
+        "is_active": bool(getattr(b, "is_active", True) if getattr(b, "is_active", None) is not None else True),
         "franchise_id": getattr(b, "franchise_id", None),
         "area": getattr(b, "area", "") or "",
     }
@@ -181,6 +182,7 @@ def _serialize_business_card(b: BusinessConfigModel, salesman_names: dict = None
         "logo_url": public_logo_url(getattr(b, "logo_filename", "") or ""),
         "payment_due": False,
         "invoice_no": "",
+        "is_active": bool(getattr(b, "is_active", True) if getattr(b, "is_active", None) is not None else True),
         "franchise_id": getattr(b, "franchise_id", None),
         "area": getattr(b, "area", "") or "",
     }
@@ -320,6 +322,7 @@ def list_businesses_page(
                 BusinessConfigModel.address,
                 BusinessConfigModel.franchise_id,
                 BusinessConfigModel.area,
+                BusinessConfigModel.is_active,
             )
         )
         .order_by(BusinessConfigModel.join_date.desc(), BusinessConfigModel.name.asc())
@@ -637,6 +640,8 @@ def save_business(db: Session, business_key: str, data: dict):
     b.expiry_date = plan["expiry_date"]
     b.sales_executive_id = exec_id
     b.area = (data.get("area") or "").strip()
+    if "is_active" in data:
+        b.is_active = bool(data["is_active"])
     raw_fr = data.get("franchise_id")
     if raw_fr not in (None, "", 0, "0"):
         b.franchise_id = int(raw_fr)
@@ -654,3 +659,11 @@ def save_business(db: Session, business_key: str, data: dict):
         from services.sales_service import upsert_plan_booking
 
         upsert_plan_booking(db, b, commit=True)
+
+def set_business_active_status(db: Session, business_key: str, is_active: bool) -> bool:
+    b = db.query(BusinessConfigModel).filter(BusinessConfigModel.key == business_key).first()
+    if not b:
+        return False
+    b.is_active = bool(is_active)
+    db.commit()
+    return True

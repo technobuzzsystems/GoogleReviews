@@ -72,7 +72,9 @@
         </a>
       </div>
       <div class="biz-tile-flags">
-        {% if b.plan_status == 'active' %}
+        {% if not b.is_active %}
+        <span class="badge expired" style="background: rgba(255, 92, 106, 0.16); color: var(--red);">Deactivated</span>
+        {% elif b.plan_status == 'active' %}
         <span class="badge active">Active</span>
         {% elif b.plan_status == 'expired' %}
         <span class="badge expired">Expired</span>
@@ -116,13 +118,22 @@
         {% endif %}
       </dl>
       <div class="biz-tile-actions">
-        {% if b.is_expired or b.plan_status == 'expired' %}
-        <span class="biz-tile-link ghost is-disabled" title="Plan expired — renew plan to open feedback page" aria-disabled="true">Open page (Expired)</span>
-        <span class="biz-tile-link ghost is-disabled" title="Plan expired — renew plan to enable QR scanner" aria-disabled="true">QR locked</span>
+        {% if not b.is_active %}
+        <span class="biz-tile-link ghost is-disabled" title="Business deactivated by admin" aria-disabled="true">Deactivated</span>
+        <span class="biz-tile-link ghost is-disabled" title="Business deactivated - QR locked" aria-disabled="true">QR locked</span>
+        <form action="/admin/businesses/{{ b.key }}/toggle-status" method="POST" style="display:inline; flex: 1 1 100%;">
+          <button type="submit" class="biz-tile-link primary" style="width: 100%;">Activate plan</button>
+        </form>
+        {% elif b.is_expired or b.plan_status == 'expired' %}
+        <span class="biz-tile-link ghost is-disabled" title="Plan expired - renew plan to open feedback page" aria-disabled="true">Open page (Expired)</span>
+        <span class="biz-tile-link ghost is-disabled" title="Plan expired - renew plan to enable QR scanner" aria-disabled="true">QR locked</span>
         <a class="biz-tile-link primary" href="/admin/businesses/{{ b.key }}/edit">Renew plan</a>
         {% else %}
         <a class="biz-tile-link ghost" href="{{ b.feedback_path or '/feedback' }}" target="_blank" rel="noopener">Open page</a>
         <a class="biz-tile-link ghost" href="/admin/businesses/{{ b.key }}/qr">QR code</a>
+        <form action="/admin/businesses/{{ b.key }}/toggle-status" method="POST" style="display:inline;" onsubmit="return confirm('Deactivate plan for {{ b.name }}? The QR scanner will be immediately locked.');">
+          <button type="submit" class="biz-tile-link ghost" style="color: var(--red); border-color: rgba(255, 92, 106, 0.35);">Deactivate</button>
+        </form>
         {% endif %}
         {% if b.plan_amount and b.payment_due %}
         <button

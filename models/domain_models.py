@@ -97,6 +97,7 @@ class BusinessConfigModel(Base):
     plan_amount = Column(Float, default=0.0)
     join_date = Column(Date, nullable=True)
     expiry_date = Column(Date, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
     sales_executive_id = Column(Integer, ForeignKey("sales_executives.id"), nullable=True, index=True)
     franchise_id = Column(Integer, ForeignKey("franchises.id"), nullable=True, index=True)
     area = Column(String, default="", index=True)

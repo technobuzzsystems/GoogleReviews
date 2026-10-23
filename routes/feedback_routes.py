@@ -54,7 +54,10 @@ def render_business_feedback(request: Request, business_id: str, db: Session, b_
     if not b_config:
         raise HTTPException(status_code=404, detail="This feedback page is not available.")
     logo = (b_config.get("logo_filename") or "").strip()
+    is_active = bool(b_config.get("is_active", True) if b_config.get("is_active") is not None else True)
     is_expired = bool(b_config.get("is_expired") or b_config.get("plan_status") == "expired")
+    is_deactivated = not is_active
+    is_blocked = is_expired or is_deactivated
     context = {
         "request": request,
         "business_id":       b_config.get("key") or business_id,
@@ -65,13 +68,15 @@ def render_business_feedback(request: Request, business_id: str, db: Session, b_
         "logo_url":          b_config.get("logo_url") or public_logo_url(logo),
         "feedback_path":     b_config.get("feedback_path") or "/feedback",
         "is_expired":        is_expired,
+        "is_deactivated":    is_deactivated,
+        "is_blocked":        is_blocked,
         "expiry_date":       b_config.get("expiry_date") or "",
     }
     return templates.TemplateResponse(
         request=request,
         name="feedback.html",
         context=context,
-        status_code=403 if is_expired else 200,
+        status_code=403 if is_blocked else 200,
     )
 
 @router.get("/feedback")
@@ -117,6 +122,11 @@ def generate_feedback(payload: GenerateFeedbackRequest, db: Session = Depends(ge
     b_config = get_business(db, business_id)
     if not b_config:
         raise HTTPException(status_code=400, detail="Unknown business.")
+    if b_config.get("is_active") is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This business has been deactivated by the administrator.",
+        )
     if b_config.get("is_expired") or b_config.get("plan_status") == "expired":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
