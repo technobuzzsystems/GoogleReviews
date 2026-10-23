@@ -129,10 +129,10 @@
         <span class="biz-tile-link ghost is-disabled" title="Plan expired - renew plan to enable QR scanner" aria-disabled="true">QR locked</span>
         <a class="biz-tile-link primary" href="/admin/businesses/{{ b.key }}/edit">Renew plan</a>
         {% else %}
-        <a class="biz-tile-link ghost" href="{{ b.feedback_path or '/feedback' }}" target="_blank" rel="noopener">Open page</a>
-        <a class="biz-tile-link ghost" href="/admin/businesses/{{ b.key }}/qr">QR code</a>
-        <form action="/admin/businesses/{{ b.key }}/toggle-status" method="POST" style="display:inline;" onsubmit="return confirm('Deactivate plan for {{ b.name }}? The QR scanner will be immediately locked.');">
-          <button type="submit" class="biz-tile-link ghost" style="color: var(--red); border-color: rgba(255, 92, 106, 0.35);">Deactivate</button>
+        <a class="biz-tile-link ghost col-3" href="{{ b.feedback_path or '/feedback' }}" target="_blank" rel="noopener">Open page</a>
+        <a class="biz-tile-link ghost col-3" href="/admin/businesses/{{ b.key }}/qr">QR code</a>
+        <form class="biz-tile-action-form col-3" action="/admin/businesses/{{ b.key }}/toggle-status" method="POST" onsubmit="return confirm('Deactivate plan for {{ b.name }}? The QR scanner will be immediately locked.');">
+          <button type="submit" class="biz-tile-link ghost col-3 danger-ghost">Deactivate</button>
         </form>
         {% endif %}
         {% if b.plan_amount and b.payment_due %}

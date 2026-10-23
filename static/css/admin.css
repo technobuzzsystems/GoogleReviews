@@ -1291,6 +1291,30 @@ body.login-page {
   pointer-events: none;
   user-select: none;
 }
+.biz-tile-link.col-3 {
+  flex: 1 1 calc(33.333% - 6px);
+  padding: 8px 6px;
+  font-size: 0.72rem;
+  letter-spacing: -0.2px;
+}
+.biz-tile-action-form.col-3 {
+  display: flex;
+  flex: 1 1 calc(33.333% - 6px);
+  min-width: 0;
+  margin: 0;
+}
+.biz-tile-action-form.col-3 .biz-tile-link {
+  width: 100%;
+}
+.biz-tile-link.danger-ghost {
+  color: var(--red);
+  border-color: rgba(255, 92, 106, 0.35);
+}
+.biz-tile-link.danger-ghost:hover {
+  background: rgba(255, 92, 106, 0.12);
+  border-color: var(--red);
+  color: #ff5c6a;
+}
 a.page-btn { text-decoration: none; }
 .page-btn[aria-disabled="true"] { opacity: 0.35; pointer-events: none; }
 .page-ellipsis { padding: 0 6px; color: var(--text-3); line-height: 36px; }
