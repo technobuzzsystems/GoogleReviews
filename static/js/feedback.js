@@ -149,32 +149,44 @@ const UIState = {
 
     if (googleUrl) {
 
-      // ── STEP 1: Copy text to clipboard NOW, before the tab opens ──────────
-      // This guarantees the text is in the clipboard the moment Google opens.
-      Clipboard.copy(
-        State.selectedFeedback,
-        () => {
-          // ── STEP 2 (copy succeeded): Open the Google review tab ───────────
+      // ── Conditional redirect: Google tab only for 4★/5★; suppressed for 1★/2★/3★ ──
+      const shouldRedirectToGoogle = State.selectedRating >= 4;
+
+      if (shouldRedirectToGoogle) {
+        // ── 4★/5★: clipboard-first, then open Google tab (existing behaviour) ───
+        Clipboard.copy(
+          State.selectedFeedback,
+          () => {
+            if (DOM.autoCopyMsg) {
+              DOM.autoCopyMsg.textContent = I18n.t('copiedClipboard');
+              DOM.autoCopyMsg.style.display = 'block';
+            }
+            UIState._openGoogleTab(googleUrl);
+          },
+          () => {
+            if (DOM.autoCopyMsg) {
+              DOM.autoCopyMsg.textContent = I18n.t('copyFailed');
+              DOM.autoCopyMsg.style.display = 'block';
+            }
+            UIState._openGoogleTab(googleUrl);
+          }
+        );
+        DOM.btnPostGoogle.href = googleUrl;
+        DOM.btnPostGoogle.classList.remove('disabled');
+        if (DOM.googleUrlMissing) DOM.googleUrlMissing.style.display = 'none';
+
+      } else {
+        // ── 1★/2★/3★: copy to clipboard only, do NOT open Google tab ────────
+        Clipboard.copy(State.selectedFeedback, () => {
           if (DOM.autoCopyMsg) {
             DOM.autoCopyMsg.textContent = I18n.t('copiedClipboard');
             DOM.autoCopyMsg.style.display = 'block';
           }
-          UIState._openGoogleTab(googleUrl);
-        },
-        () => {
-          // ── STEP 2 (copy failed): Still open tab, warn user to copy manually
-          if (DOM.autoCopyMsg) {
-            DOM.autoCopyMsg.textContent = I18n.t('copyFailed');
-            DOM.autoCopyMsg.style.display = 'block';
-          }
-          UIState._openGoogleTab(googleUrl);
-        }
-      );
-
-      // ── Configure the manual "Post on Google" fallback button ─────────────
-      DOM.btnPostGoogle.href = googleUrl;
-      DOM.btnPostGoogle.classList.remove('disabled');
-      if (DOM.googleUrlMissing) DOM.googleUrlMissing.style.display = 'none';
+        });
+        if (DOM.btnPostGoogle) DOM.btnPostGoogle.style.display = 'none';
+        if (DOM.googleInstructions) DOM.googleInstructions.style.display = 'none';
+        if (DOM.googleUrlMissing) DOM.googleUrlMissing.style.display = 'none';
+      }
 
     } else {
       // No Google Review URL configured — disable the button
