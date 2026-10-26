@@ -1683,3 +1683,30 @@ a.stat-card-link:focus-visible {
   outline-offset: 2px;
 }
 
+.biz-tile-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.biz-tile-delete {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: var(--text-2);
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  padding: 0;
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
+}
+.biz-tile-delete:hover {
+  color: #ff5c6a;
+  border-color: rgba(255, 92, 106, 0.45);
+  background: rgba(255, 92, 106, 0.12);
+}
+

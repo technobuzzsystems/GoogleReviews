@@ -43,6 +43,7 @@ from services.business_service import (
     get_business,
     list_businesses_page,
     save_business,
+    delete_business,
     set_business_active_status,
     user_owns_business,
 )
@@ -629,6 +630,19 @@ def toggle_business_status(
         raise HTTPException(status_code=404, detail="Business not found.")
     current_status = bool(business.get("is_active", True) if business.get("is_active") is not None else True)
     set_business_active_status(db, business_key, not current_status)
+    return RedirectResponse(url="/admin/businesses", status_code=303)
+
+
+@router.post("/businesses/{business_key}/delete")
+def delete_business_route(
+    business_key: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_business_access),
+):
+    business = get_business(db, business_key)
+    if not business or not user_owns_business(db, user, business_key):
+        raise HTTPException(status_code=404, detail="Business not found.")
+    delete_business(db, business_key)
     return RedirectResponse(url="/admin/businesses", status_code=303)
 
 

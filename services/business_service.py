@@ -667,3 +667,21 @@ def set_business_active_status(db: Session, business_key: str, is_active: bool) 
     b.is_active = bool(is_active)
     db.commit()
     return True
+
+def delete_business(db: Session, business_key: str) -> bool:
+    b = db.query(BusinessConfigModel).filter(BusinessConfigModel.key == business_key).first()
+    if not b:
+        return False
+
+    # Clean up related records tied to this business_key so DB remains consistent
+    from models.domain_models import Booking, Customer, Invoice, Payment, WalletLedger
+
+    db.query(Invoice).filter(Invoice.business_key == business_key).delete(synchronize_session=False)
+    db.query(Payment).filter(Payment.business_key == business_key).delete(synchronize_session=False)
+    db.query(Booking).filter(Booking.business_key == business_key).delete(synchronize_session=False)
+    db.query(Customer).filter(Customer.business_key == business_key).delete(synchronize_session=False)
+    db.query(WalletLedger).filter(WalletLedger.business_key == business_key).delete(synchronize_session=False)
+
+    db.delete(b)
+    db.commit()
+    return True
