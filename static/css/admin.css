@@ -1661,10 +1661,15 @@ button.biz-tile-link {
 .qr-actions { justify-content: center; }
 
 /* ── Stat cards as links (clickable dashboard cards) ─────────────────── */
+a.stat-card-link,
+a.stat-card-link *,
+a.stat-card-link:hover,
+a.stat-card-link:visited {
+  text-decoration: none !important;
+  color: inherit;
+}
 a.stat-card-link {
   display: block;
-  text-decoration: none;
-  color: inherit;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
