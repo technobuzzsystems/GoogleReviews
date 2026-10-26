@@ -25,25 +25,25 @@
 {% endif %}
 
 <div class="stats-grid">
-  <div class="stat-card">
+  <a href="/admin/businesses" class="stat-card stat-card-link" title="View all clients">
     <span class="stat-icon">🏢</span>
     <div class="stat-value">{{ overview_counts.clients }}</div>
     <div class="stat-label">{% if is_admin %}Total clients{% elif is_franchise %}Area clients{% else %}Your clients{% endif %}</div>
     <div class="stat-badge">Active book</div>
-  </div>
-  <div class="stat-card yellow">
+  </a>
+  <a href="#renewal-section" class="stat-card yellow stat-card-link" title="View renewal clients">
     <span class="stat-icon">🔁</span>
     <div class="stat-value">{{ renewals.total }}</div>
     <div class="stat-label">Renewal due</div>
     <div class="stat-badge">Due in 60 days</div>
-  </div>
-  <div class="stat-card red">
+  </a>
+  <a href="#payment-section" class="stat-card red stat-card-link" title="View pending payments">
     <span class="stat-icon">⏳</span>
     <div class="stat-value">{{ pending.total }}</div>
     <div class="stat-label">Payment remaining</div>
     <div class="stat-badge">₹{{ '{:,.0f}'.format(pending.amount_due or 0) }} due</div>
-  </div>
-  <div class="stat-card green">
+  </a>
+  <a href="/admin/commission" class="stat-card green stat-card-link" title="View commission details">
     <span class="stat-icon">💸</span>
     <div class="stat-value money">₹{{ '{:,.0f}'.format(commission_tile.total or 0) }}</div>
     <div class="stat-label">{{ commission_tile.title }}</div>
@@ -58,9 +58,9 @@
       <span>Your remainder ₹{{ '{:,.0f}'.format(commission_tile.franchise_cut or 0) }}</span>
     </div>
     {% endif %}
-  </div>
+  </a>
   {% if can_view_sales_book %}
-  <div class="stat-card purple">
+  <a href="/admin/wallet" class="stat-card purple stat-card-link" title="View wallet">
     <span class="stat-icon">👛</span>
     <div class="stat-value money">₹{{ '{:,.0f}'.format(overview_counts.wallet_balance or 0) }}</div>
     <div class="stat-label">{% if is_admin %}Wallet balance{% elif is_franchise %}Franchise wallet{% else %}Your wallet{% endif %}</div>
@@ -71,12 +71,12 @@
     {% else %}
     <div class="stat-badge">In wallet · request transfer</div>
     {% endif %}
-  </div>
+  </a>
   {% endif %}
 </div>
 
 <div class="overview-split">
-  <section class="table-card">
+  <section class="table-card" id="renewal-section">
     <div class="table-toolbar">
       <div>
         <div class="section-title">Renewal clients</div>
@@ -121,7 +121,7 @@
     {% endif %}
   </section>
 
-  <section class="table-card">
+  <section class="table-card" id="payment-section">
     <div class="table-toolbar">
       <div>
         <div class="section-title">Payment remaining</div>
