@@ -133,13 +133,13 @@
       <div class="biz-tile-actions">
         {% if not b.is_active %}
         <span class="biz-tile-link ghost is-disabled" title="Business deactivated by admin" aria-disabled="true">Deactivated</span>
-        <span class="biz-tile-link ghost is-disabled" title="Business deactivated - QR locked" aria-disabled="true">QR locked</span>
+        <a class="biz-tile-link ghost is-disabled" href="/admin/businesses/{{ b.key }}/qr" style="pointer-events: auto;" title="QR locked - View QR code">QR locked</a>
         <form action="/admin/businesses/{{ b.key }}/toggle-status" method="POST" style="display:inline; flex: 1 1 100%;">
           <button type="submit" class="biz-tile-link primary" style="width: 100%;">Activate plan</button>
         </form>
         {% elif b.is_expired or b.plan_status == 'expired' %}
         <span class="biz-tile-link ghost is-disabled" title="Plan expired - renew plan to open feedback page" aria-disabled="true">Open page (Expired)</span>
-        <span class="biz-tile-link ghost is-disabled" title="Plan expired - renew plan to enable QR scanner" aria-disabled="true">QR locked</span>
+        <a class="biz-tile-link ghost is-disabled" href="/admin/businesses/{{ b.key }}/qr" style="pointer-events: auto;" title="Plan expired - View QR code">QR locked</a>
         <a class="biz-tile-link primary" href="/admin/businesses/{{ b.key }}/edit">Renew plan</a>
         {% else %}
         <a class="biz-tile-link ghost col-3" href="{{ b.feedback_path or '/feedback' }}" target="_blank" rel="noopener">Open page</a>

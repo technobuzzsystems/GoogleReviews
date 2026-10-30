@@ -431,16 +431,6 @@ def business_qr_png(
     business = get_business(db, business_key)
     if not business or not user_owns_business(db, user, business_key):
         raise HTTPException(status_code=404, detail="Business not found.")
-    if business.get("is_active") is False:
-        raise HTTPException(
-            status_code=403,
-            detail="This business has been deactivated by the administrator.",
-        )
-    if business.get("is_expired") or business.get("plan_status") == "expired":
-        raise HTTPException(
-            status_code=403,
-            detail="Plan expired. Please renew the subscription plan to generate or download the QR code.",
-        )
     path = business.get("feedback_path") or "/feedback"
     url = public_feedback_url(request, path)
     png = qr_png_bytes(

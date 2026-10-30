@@ -125,12 +125,12 @@ def generate_feedback(payload: GenerateFeedbackRequest, db: Session = Depends(ge
     if b_config.get("is_active") is False:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="This business has been deactivated by the administrator.",
+            detail="This review service is temporarily unavailable because the subscription is inactive. Please contact the business for more information.",
         )
     if b_config.get("is_expired") or b_config.get("plan_status") == "expired":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Subscription plan for this business has expired. Please renew the plan to continue.",
+            detail="This review service is currently unavailable because the subscription has expired. Please renew the plan to continue using this service.",
         )
 
     try:
@@ -163,7 +163,21 @@ def generate_feedback(payload: GenerateFeedbackRequest, db: Session = Depends(ge
 
 # ─── POST /submit-feedback ────────────────────────────────────────────────────
 @router.post("/submit-feedback", status_code=status.HTTP_201_CREATED)
-def submit_feedback(payload: SubmitFeedbackRequest):
+def submit_feedback(payload: SubmitFeedbackRequest, db: Session = Depends(get_db)):
+    business_id = payload.business_id
+    if business_id:
+        b_config = get_business(db, business_id)
+        if b_config:
+            if b_config.get("is_active") is False:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="This review service is temporarily unavailable because the subscription is inactive. Please contact the business for more information.",
+                )
+            if b_config.get("is_expired") or b_config.get("plan_status") == "expired":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="This review service is currently unavailable because the subscription has expired. Please renew the plan to continue using this service.",
+                )
     """
     Validate the selected feedback but DO NOT save it to any database.
     Always returns a mock success response to keep the frontend flow working.

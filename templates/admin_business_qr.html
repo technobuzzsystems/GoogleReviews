@@ -10,9 +10,9 @@
       <p class="qr-kicker">Feedback QR</p>
       <h2 class="qr-title">{{ business.name }}</h2>
       {% if not business.is_active %}
-      <p class="qr-lede" style="color: var(--red);">Business is deactivated by admin. QR scanner is disabled.</p>
+      <p class="qr-lede" style="color: var(--red);">Business is deactivated by admin. QR scanner is disabled for customers.</p>
       {% elif business.is_expired or business.plan_status == 'expired' %}
-      <p class="qr-lede" style="color: var(--red);">Subscription plan expired{% if business.expiry_date %} on {{ business.expiry_date }}{% endif %}. QR scanner is disabled until renewed.</p>
+      <p class="qr-lede" style="color: var(--red);">Subscription plan expired{% if business.expiry_date %} on {{ business.expiry_date }}{% endif %}. QR scanner is disabled for customers until renewed.</p>
       {% else %}
       <p class="qr-lede">Print or share this poster. Scanning it opens the live review page.</p>
       {% endif %}
@@ -20,30 +20,30 @@
   </div>
 
   {% if not business.is_active or business.is_expired or business.plan_status == 'expired' %}
-  <div class="breakdown-card" style="text-align: center; padding: 32px 24px; margin-bottom: 20px; border-color: rgba(255, 92, 106, 0.35);">
+  <div class="breakdown-card" style="text-align: center; padding: 20px 24px; margin-bottom: 24px; border-color: rgba(255, 92, 106, 0.35);">
     {% if not business.is_active %}
-    <div style="font-size: 2.2rem; margin-bottom: 10px;">&#x1F6AB;</div>
-    <span class="badge expired" style="margin-left: 0; margin-bottom: 12px;">Deactivated</span>
-    <h3 style="margin-bottom: 8px; font-size: 1.15rem;">QR Code Scanner is Deactivated</h3>
-    <p style="color: var(--text-2); font-size: 0.9rem; max-width: 420px; margin: 0 auto 20px;">
+    <div style="font-size: 1.8rem; margin-bottom: 6px;">&#x1F6AB;</div>
+    <span class="badge expired" style="margin-left: 0; margin-bottom: 8px;">Subscription Inactive</span>
+    <h3 style="margin-bottom: 6px; font-size: 1.05rem;">QR Code Scanner is Inactive for Customers</h3>
+    <p style="color: var(--text-2); font-size: 0.88rem; max-width: 480px; margin: 0 auto 14px;">
       This business has been deactivated by the administrator.
-      Customers scanning this QR code will see a deactivated notice until the status is toggled back to active.
+      Anyone scanning this QR code will see a message explaining that the review service is temporarily inactive.
     </p>
     {% else %}
-    <div style="font-size: 2.2rem; margin-bottom: 10px;">&#x23F3;</div>
-    <span class="badge expired" style="margin-left: 0; margin-bottom: 12px;">Plan Expired</span>
-    <h3 style="margin-bottom: 8px; font-size: 1.15rem;">QR Code Scanner is Inactive</h3>
-    <p style="color: var(--text-2); font-size: 0.9rem; max-width: 420px; margin: 0 auto 20px;">
+    <div style="font-size: 1.8rem; margin-bottom: 6px;">&#x23F3;</div>
+    <span class="badge expired" style="margin-left: 0; margin-bottom: 8px;">Plan Expired</span>
+    <h3 style="margin-bottom: 6px; font-size: 1.05rem;">QR Code Scanner is Inactive for Customers</h3>
+    <p style="color: var(--text-2); font-size: 0.88rem; max-width: 480px; margin: 0 auto 14px;">
       This client's plan expired{% if business.expiry_date %} on <strong>{{ business.expiry_date }}</strong>{% endif %}.
-      Customers scanning this QR code will not be redirected to the feedback generator until the plan is renewed.
+      Anyone scanning this QR code will see a message explaining that the subscription has expired.
     </p>
     {% endif %}
-    <div class="form-actions qr-actions">
+    <div class="form-actions qr-actions" style="margin-top: 8px;">
       <a class="btn btn-primary" href="/admin/businesses/{{ business_key }}/edit">Renew / Edit Plan</a>
-      <a href="/admin/businesses" class="btn btn-muted">Back to clients</a>
     </div>
   </div>
-  {% else %}
+  {% endif %}
+
   <div class="qr-poster">
     <img
       class="qr-image"
@@ -64,6 +64,5 @@
     <a class="btn btn-outline" href="{{ feedback_path }}" target="_blank" rel="noopener">Open page</a>
     <a href="/admin/businesses" class="btn btn-muted">Back to clients</a>
   </div>
-  {% endif %}
 </div>
 {% endblock %}

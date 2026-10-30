@@ -46,11 +46,10 @@
       <section class="expired-plan-notice" role="alert" aria-live="polite">
         {% if is_deactivated %}
         <div class="expired-plan-icon" aria-hidden="true">&#x1F6AB;</div>
-        <span class="expired-plan-badge" style="background: rgba(255, 92, 106, 0.16); color: var(--clr-error);">Deactivated</span>
-        <h2 class="expired-plan-title">This Service is Currently Deactivated</h2>
+        <span class="expired-plan-badge" style="background: rgba(255, 92, 106, 0.16); color: var(--clr-error);">Subscription Inactive</span>
+        <h2 class="expired-plan-title">Service Temporarily Unavailable</h2>
         <p class="expired-plan-text">
-          Access for <strong>{{ company_name }}</strong> has been paused by the administrator.
-          QR scanning and AI feedback submission are temporarily disabled.
+          ⚠️ This review service is temporarily unavailable because the subscription is inactive. Please contact the business for more information.
         </p>
         <p class="expired-plan-subtext">
           If you are the business owner, please contact <strong>TechnoBuzz Support</strong> or your account manager to reactivate your scanner.
@@ -58,13 +57,12 @@
         {% else %}
         <div class="expired-plan-icon" aria-hidden="true">&#x23F3;</div>
         <span class="expired-plan-badge">Plan Expired</span>
-        <h2 class="expired-plan-title">This QR Feedback Link is Currently Inactive</h2>
+        <h2 class="expired-plan-title">Service Currently Unavailable</h2>
         <p class="expired-plan-text">
-          The subscription plan for <strong>{{ company_name }}</strong>{% if expiry_date %} expired on <strong>{{ expiry_date }}</strong>{% else %} has expired{% endif %}.
-          Scanning and AI review generation are paused until the business renews its subscription plan.
+          ⚠️ This review service is currently unavailable because the subscription has expired. Please renew the plan to continue using this service.
         </p>
         <p class="expired-plan-subtext">
-          If you are the business owner, please contact <strong>TechnoBuzz</strong> or renew your plan from the dashboard to reactivate this QR scanner immediately.
+          If you are the business owner, please contact <strong>TechnoBuzz Support</strong> or renew your plan from the dashboard to reactivate this QR scanner immediately.
         </p>
         {% endif %}
       </section>
