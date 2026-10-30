@@ -2,67 +2,172 @@
 
 {% block content %}
 <div class="qr-wrap">
-  <div class="qr-hero">
-    {% if business.logo_url %}
-    <img class="qr-hero-logo" src="{{ business.logo_url }}" alt="{{ business.name }} logo" width="72" height="72" />
-    {% endif %}
-    <div>
-      <p class="qr-kicker">Feedback QR</p>
-      <h2 class="qr-title">{{ business.name }}</h2>
-      {% if not business.is_active %}
-      <p class="qr-lede" style="color: var(--red);">Business is deactivated by admin. QR scanner is disabled for customers.</p>
-      {% elif business.is_expired or business.plan_status == 'expired' %}
-      <p class="qr-lede" style="color: var(--red);">Subscription plan expired{% if business.expiry_date %} on {{ business.expiry_date }}{% endif %}. QR scanner is disabled for customers until renewed.</p>
-      {% else %}
-      <p class="qr-lede">Print or share this poster. Scanning it opens the live review page.</p>
-      {% endif %}
+  <!-- Top Breadcrumb Navigation -->
+  <div class="qr-nav-bar">
+    <nav class="qr-breadcrumb" aria-label="Breadcrumb">
+      <a href="/admin/businesses" class="qr-breadcrumb-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Manage Businesses
+      </a>
+      <span class="qr-breadcrumb-sep" aria-hidden="true">/</span>
+      <span class="qr-breadcrumb-current">QR Code</span>
+    </nav>
+    <div class="qr-topbar-actions">
+      <a href="/admin/businesses" class="btn btn-sm btn-muted">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back to Clients
+      </a>
     </div>
   </div>
 
+  <!-- Business Information Hero Card -->
+  <div class="qr-hero-card">
+    <div class="qr-hero-main">
+      {% if business.logo_url %}
+      <img class="qr-hero-logo" src="{{ business.logo_url }}" alt="{{ business.name }} logo" width="64" height="64" />
+      {% else %}
+      <div class="qr-hero-logo-placeholder" aria-hidden="true">
+        <span>{{ (business.name or 'TB')[:2]|upper }}</span>
+      </div>
+      {% endif %}
+      <div class="qr-hero-details">
+        <div class="qr-badge-group">
+          <span class="qr-kicker-badge">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            FEEDBACK QR
+          </span>
+          {% if not business.is_active %}
+          <span class="qr-status-pill status-inactive">
+            <span class="qr-status-dot"></span> Inactive Plan
+          </span>
+          {% elif business.is_expired or business.plan_status == 'expired' %}
+          <span class="qr-status-pill status-expired">
+            <span class="qr-status-dot"></span> Plan Expired
+          </span>
+          {% else %}
+          <span class="qr-status-pill status-active">
+            <span class="qr-status-dot"></span> Active Subscription
+          </span>
+          {% endif %}
+        </div>
+        <h1 class="qr-title">{{ business.name }}</h1>
+        {% if not business.is_active %}
+        <p class="qr-lede qr-lede-warning">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+          Business is deactivated by admin. QR scanner is disabled for customers.
+        </p>
+        {% elif business.is_expired or business.plan_status == 'expired' %}
+        <p class="qr-lede qr-lede-warning">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Subscription plan expired{% if business.expiry_date %} on {{ business.expiry_date }}{% endif %}. QR scanner is disabled for customers until renewed.
+        </p>
+        {% else %}
+        <p class="qr-lede">Print or share this poster. Scanning it opens the live review page.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Subscription Inactive / Expired Alert Card -->
   {% if not business.is_active or business.is_expired or business.plan_status == 'expired' %}
-  <div class="breakdown-card" style="text-align: center; padding: 20px 24px; margin-bottom: 24px; border-color: rgba(255, 92, 106, 0.35);">
-    {% if not business.is_active %}
-    <div style="font-size: 1.8rem; margin-bottom: 6px;">&#x1F6AB;</div>
-    <span class="badge expired" style="margin-left: 0; margin-bottom: 8px;">Subscription Inactive</span>
-    <h3 style="margin-bottom: 6px; font-size: 1.05rem;">QR Code Scanner is Inactive for Customers</h3>
-    <p style="color: var(--text-2); font-size: 0.88rem; max-width: 480px; margin: 0 auto 14px;">
+  <div class="qr-alert-card">
+    <div class="qr-alert-badge-row">
+      <div class="qr-alert-icon-box" aria-hidden="true">
+        {% if not business.is_active %}
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+        {% else %}
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 22h14M5 2h14M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>
+        {% endif %}
+      </div>
+      <div class="qr-alert-header-text">
+        {% if not business.is_active %}
+        <span class="badge expired">Subscription Inactive</span>
+        {% else %}
+        <span class="badge expired">Plan Expired</span>
+        {% endif %}
+        <h3 class="qr-alert-title">QR Code Scanner is Inactive for Customers</h3>
+      </div>
+    </div>
+    <p class="qr-alert-desc">
+      {% if not business.is_active %}
       This business has been deactivated by the administrator.
       Anyone scanning this QR code will see a message explaining that the review service is temporarily inactive.
-    </p>
-    {% else %}
-    <div style="font-size: 1.8rem; margin-bottom: 6px;">&#x23F3;</div>
-    <span class="badge expired" style="margin-left: 0; margin-bottom: 8px;">Plan Expired</span>
-    <h3 style="margin-bottom: 6px; font-size: 1.05rem;">QR Code Scanner is Inactive for Customers</h3>
-    <p style="color: var(--text-2); font-size: 0.88rem; max-width: 480px; margin: 0 auto 14px;">
+      {% else %}
       This client's plan expired{% if business.expiry_date %} on <strong>{{ business.expiry_date }}</strong>{% endif %}.
       Anyone scanning this QR code will see a message explaining that the subscription has expired.
+      {% endif %}
     </p>
-    {% endif %}
-    <div class="form-actions qr-actions" style="margin-top: 8px;">
-      <a class="btn btn-primary" href="/admin/businesses/{{ business_key }}/edit">Renew / Edit Plan</a>
+    <div class="qr-alert-actions">
+      <a class="btn btn-primary qr-renew-btn" href="/admin/businesses/{{ business_key }}/edit">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Renew / Edit Plan
+      </a>
     </div>
   </div>
   {% endif %}
 
-  <div class="qr-poster">
-    <img
-      class="qr-image"
-      src="/admin/businesses/{{ business_key }}/qr.png"
-      alt="QR code for {{ business.name }}"
-    />
-  </div>
+  <!-- QR Code Showcase Card -->
+  <div class="qr-card">
+    <div class="qr-preview-header">
+      <span class="qr-preview-tag">Official QR Poster Preview</span>
+      <p class="qr-preview-hint">High-resolution printable poster for counters, table tents, and billing desks</p>
+    </div>
 
-  <p class="qr-url">{{ qr_url }}</p>
-  <div class="qr-powered">
-    <img src="{{ url_for('static', path='images/technobuzz_logo.jpg') }}" alt="TechnoBuzz" width="28" height="28" />
-    <span>Powered by <strong>TechnoBuzz</strong></span>
-  </div>
+    <!-- Centered Poster Frame -->
+    <div class="qr-poster-frame">
+      <img
+        class="qr-image"
+        src="/admin/businesses/{{ business_key }}/qr.png"
+        alt="QR code for {{ business.name }}"
+        loading="eager"
+      />
+    </div>
 
-  <div class="form-actions qr-actions">
-    <a class="btn btn-primary" href="/admin/businesses/{{ business_key }}/qr.png?download=1">Download QR</a>
-    <button type="button" class="btn btn-outline" data-copy-text="{{ qr_url }}">Copy page URL</button>
-    <a class="btn btn-outline" href="{{ feedback_path }}" target="_blank" rel="noopener">Open page</a>
-    <a href="/admin/businesses" class="btn btn-muted">Back to clients</a>
+    <!-- Feedback URL Display with Copy Box -->
+    <div class="qr-url-section">
+      <div class="qr-url-header">
+        <span class="qr-url-label">Direct Feedback URL</span>
+        <span class="qr-url-hint">Destination opened upon scan</span>
+      </div>
+      <div class="qr-url-box">
+        <span class="qr-url-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </span>
+        <code class="qr-url-value" id="qrFeedbackUrl">{{ qr_url }}</code>
+        <button type="button" class="btn btn-sm btn-outline qr-copy-trigger" data-copy-text="{{ qr_url }}" title="Copy URL to clipboard" aria-label="Copy feedback URL">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span class="copy-label">Copy</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Action Buttons Toolbar -->
+    <div class="qr-actions-toolbar">
+      <a class="btn btn-primary qr-btn-main" href="/admin/businesses/{{ business_key }}/qr.png?download=1">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>Download QR</span>
+      </a>
+      <button type="button" class="btn btn-outline" data-copy-text="{{ qr_url }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <span>Copy Page URL</span>
+      </button>
+      <a class="btn btn-outline" href="{{ feedback_path }}" target="_blank" rel="noopener">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        <span>Open Page</span>
+      </a>
+      <a href="/admin/businesses" class="btn btn-muted">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        <span>Back to Clients</span>
+      </a>
+    </div>
+
+    <!-- Verified TechnoBuzz Branding Footer -->
+    <div class="qr-card-footer">
+      <div class="qr-powered">
+        <img src="{{ url_for('static', path='images/technobuzz_logo.jpg') }}" alt="TechnoBuzz" width="22" height="22" />
+        <span>Verified by <strong>TechnoBuzz Systems</strong></span>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}

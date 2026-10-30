@@ -1583,82 +1583,463 @@ button.biz-tile-link {
   }
 }
 
+/* ═══════════════════════════════════════════════════
+   QR CODE PAGE REDESIGN (SaaS Standard)
+   ═══════════════════════════════════════════════════ */
 .qr-wrap {
-  max-width: 560px;
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 8px 0 40px;
 }
-.qr-hero {
+
+/* Breadcrumb / Top sub-navigation */
+.qr-nav-bar {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 22px;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
 }
-.qr-hero-logo {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid var(--accent);
-  box-shadow: 0 0 0 6px var(--accent-glow);
-  background: #000;
-  flex-shrink: 0;
+.qr-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-2);
 }
-.qr-kicker {
-  margin: 0 0 4px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.qr-breadcrumb-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-2);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color var(--transition);
+}
+.qr-breadcrumb-link:hover {
   color: var(--accent);
 }
+.qr-breadcrumb-sep {
+  color: var(--text-3);
+  user-select: none;
+}
+.qr-breadcrumb-current {
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+/* Business Information Section (Hero Card) */
+.qr-hero-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+.qr-hero-main {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.qr-hero-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2.5px solid var(--accent);
+  box-shadow: 0 0 16px var(--accent-glow);
+  flex-shrink: 0;
+  background: var(--bg-base);
+}
+.qr-hero-logo-placeholder {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(0, 180, 216, 0.2), rgba(0, 119, 168, 0.4));
+  border: 2px solid var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+.qr-hero-details {
+  flex: 1;
+  min-width: 0;
+}
+.qr-badge-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.qr-kicker-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(0, 180, 216, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(0, 180, 216, 0.28);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.qr-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.qr-status-pill .qr-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.qr-status-pill.status-active {
+  background: rgba(0, 200, 150, 0.12);
+  color: var(--green);
+  border: 1px solid rgba(0, 200, 150, 0.3);
+}
+.qr-status-pill.status-active .qr-status-dot {
+  background: var(--green);
+  box-shadow: 0 0 6px rgba(0, 200, 150, 0.6);
+}
+.qr-status-pill.status-inactive,
+.qr-status-pill.status-expired {
+  background: rgba(255, 92, 106, 0.12);
+  color: var(--red);
+  border: 1px solid rgba(255, 92, 106, 0.3);
+}
+.qr-status-pill.status-inactive .qr-status-dot,
+.qr-status-pill.status-expired .qr-status-dot {
+  background: var(--red);
+  box-shadow: 0 0 6px rgba(255, 92, 106, 0.6);
+}
+
 .qr-title {
   margin: 0 0 6px;
   font-size: 1.55rem;
   font-weight: 800;
   color: var(--text-1);
+  letter-spacing: -0.02em;
+  word-break: break-word;
 }
 .qr-lede {
   margin: 0;
   color: var(--text-2);
-  font-size: 0.92rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
-.qr-poster {
-  padding: 10px;
-  border-radius: 28px;
-  background: linear-gradient(180deg, rgba(0,180,216,0.28), rgba(0,119,168,0.08));
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+.qr-lede-warning {
+  color: var(--red);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+/* Subscription Inactive / Expired Status Card */
+.qr-alert-card {
+  background: rgba(255, 92, 106, 0.06);
+  border: 1px solid rgba(255, 92, 106, 0.28);
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  margin-bottom: 22px;
+  position: relative;
+  overflow: hidden;
+}
+.qr-alert-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--red);
+}
+.qr-alert-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.qr-alert-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 92, 106, 0.15);
+  color: var(--red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.qr-alert-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.qr-alert-header-text .badge {
+  align-self: flex-start;
+  margin-left: 0;
+  margin-bottom: 2px;
+  font-size: 0.72rem;
+  padding: 2px 8px;
+}
+.qr-alert-title {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.qr-alert-desc {
+  color: var(--text-2);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin: 0 0 14px 48px;
+  max-width: 620px;
+}
+.qr-alert-actions {
+  margin-left: 48px;
+}
+.qr-renew-btn {
+  font-size: 0.88rem;
+  padding: 8px 16px;
+}
+
+/* QR Code Preview Card */
+.qr-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  margin-bottom: 20px;
+}
+.qr-preview-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.qr-preview-tag {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.qr-preview-hint {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-2);
+}
+
+/* Poster Frame */
+.qr-poster-frame {
+  max-width: 350px;
+  margin: 0 auto 24px;
+  padding: 12px;
+  border-radius: 24px;
+  background: #060D1A;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+.qr-poster-frame:hover {
+  border-color: rgba(0, 180, 216, 0.4);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55), 0 0 24px rgba(0, 180, 216, 0.12);
 }
 .qr-image {
   display: block;
   width: 100%;
   height: auto;
-  border-radius: 22px;
+  border-radius: 16px;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
-.qr-url {
-  word-break: break-all;
-  color: var(--text-2);
-  font-size: 0.86rem;
-  margin: 16px 0 12px;
-  text-align: center;
+
+/* Feedback URL Section */
+.qr-url-section {
+  max-width: 580px;
+  margin: 0 auto 24px;
 }
-.qr-powered {
+.qr-url-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 18px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+.qr-url-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--text-2);
+}
+.qr-url-hint {
+  font-size: 0.76rem;
+  color: var(--text-3);
+}
+.qr-url-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #060D1A;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 8px 6px 14px;
+  transition: border-color var(--transition);
+}
+.qr-url-box:focus-within {
+  border-color: var(--accent);
+}
+.qr-url-icon {
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.qr-url-value {
+  flex: 1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.84rem;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: all;
+}
+.qr-copy-trigger {
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 7px;
+  white-space: nowrap;
+}
+
+/* QR Code Actions Toolbar */
+.qr-actions-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 0 auto 20px;
+}
+.qr-actions-toolbar .btn {
   font-size: 0.88rem;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all var(--transition);
+}
+.qr-btn-main {
+  box-shadow: 0 4px 18px rgba(0, 180, 216, 0.35);
+}
+.qr-btn-main:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 180, 216, 0.5);
+}
+
+/* Watermark / Footer */
+.qr-card-footer {
+  text-align: center;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.qr-powered {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 0.82rem;
 }
 .qr-powered img {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   object-fit: cover;
   border: 1px solid var(--border-light);
   background: #000;
 }
-.qr-powered strong { color: var(--text-1); }
-.qr-actions { justify-content: center; }
+.qr-powered strong {
+  color: var(--text-1);
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 768px) {
+  .qr-wrap {
+    padding: 4px 0 24px;
+  }
+  .qr-nav-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .qr-topbar-actions {
+    display: none;
+  }
+  .qr-hero-card {
+    padding: 18px 16px;
+  }
+  .qr-hero-main {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .qr-title {
+    font-size: 1.35rem;
+  }
+  .qr-alert-card {
+    padding: 16px;
+  }
+  .qr-alert-desc,
+  .qr-alert-actions {
+    margin-left: 0;
+  }
+  .qr-card {
+    padding: 20px 14px;
+  }
+  .qr-poster-frame {
+    max-width: 300px;
+  }
+  .qr-url-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .qr-url-box {
+    padding: 6px 8px 6px 10px;
+  }
+  .qr-url-value {
+    font-size: 0.78rem;
+  }
+  .qr-actions-toolbar {
+    flex-direction: column;
+    width: 100%;
+  }
+  .qr-actions-toolbar .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
 
 /* ── Stat cards as links (clickable dashboard cards) ─────────────────── */
 a.stat-card-link,
