@@ -13,6 +13,10 @@
       <span class="qr-breadcrumb-current">QR Code</span>
     </nav>
     <div class="qr-topbar-actions">
+      <button type="button" class="btn btn-sm btn-outline qr-print-btn" onclick="window.print()" title="Print Counter Stand">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Print Stand
+      </button>
       <a href="/admin/businesses" class="btn btn-sm btn-muted">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         Back to Clients
@@ -106,28 +110,85 @@
   </div>
   {% endif %}
 
-  <!-- QR Code Showcase Card -->
+  <!-- QR Code Showcase Card (Senior UI/UX Scanner Design) -->
   <div class="qr-card">
     <div class="qr-preview-header">
-      <span class="qr-preview-tag">Official QR Poster Preview</span>
-      <p class="qr-preview-hint">High-resolution printable poster for counters, table tents, and billing desks</p>
+      <div class="qr-stage-pill">
+        <span class="qr-pulse-dot"></span>
+        <span>IN-STORE SCANNER PREVIEW</span>
+      </div>
+      <h2 class="qr-stage-title">Official Google Review Counter Stand</h2>
+      <p class="qr-preview-hint">Place at billing counters, dining tables, or reception desks for high-conversion reviews</p>
     </div>
 
-    <!-- Centered Poster Frame -->
-    <div class="qr-poster-frame">
-      <img
-        class="qr-image"
-        src="/admin/businesses/{{ business_key }}/qr.png"
-        alt="QR code for {{ business.name }}"
-        loading="eager"
-      />
+    <!-- Realistic Acrylic Counter Stand Mockup & Optical Viewfinder -->
+    <div class="qr-scanner-stage">
+      <div class="qr-stand-mockup" id="printAreaStand">
+        <!-- Acrylic Stand Top Sheen & Live Status Bar -->
+        <div class="qr-stand-status-bar">
+          <div class="qr-stand-status-badge">
+            <span class="qr-live-dot"></span>
+            <span>Live Scan Ready</span>
+          </div>
+          <div class="qr-stand-res-tag">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span>Point Camera to Scan</span>
+          </div>
+        </div>
+
+        <!-- The Viewfinder with Optical Reticles & Laser Scan -->
+        <div class="qr-viewfinder">
+          <!-- 4 Corner Optical Reticles -->
+          <span class="qr-reticle reticle-tl" aria-hidden="true"></span>
+          <span class="qr-reticle reticle-tr" aria-hidden="true"></span>
+          <span class="qr-reticle reticle-bl" aria-hidden="true"></span>
+          <span class="qr-reticle reticle-br" aria-hidden="true"></span>
+
+          <!-- Animated Laser Scan Sweep Line -->
+          <div class="qr-scan-laser" id="qrScanLaser" aria-hidden="true">
+            <div class="qr-laser-line"></div>
+          </div>
+
+          <!-- Poster Image Body -->
+          <div class="qr-poster-inner">
+            <img
+              class="qr-image"
+              src="/admin/businesses/{{ business_key }}/qr.png"
+              alt="QR code for {{ business.name }}"
+              loading="eager"
+            />
+          </div>
+        </div>
+
+        <!-- Physical Acrylic Stand Base / Tabletop Reflection -->
+        <div class="qr-stand-base" aria-hidden="true">
+          <div class="qr-stand-base-lip"></div>
+          <div class="qr-stand-base-shadow"></div>
+        </div>
+      </div>
+
+      <!-- Scanner Utility Controls -->
+      <div class="qr-scanner-tools">
+        <button type="button" class="qr-tool-chip" id="toggleLaserBtn" aria-label="Toggle laser scan beam animation">
+          <span class="qr-tool-icon">⚡</span>
+          <span class="qr-tool-text">Scan Beam: <strong id="laserStateText">Active</strong></span>
+        </button>
+        <div class="qr-tool-chip qr-tool-info">
+          <span class="qr-tool-icon">📐</span>
+          <span>Print Size: <strong>A5 Table Tent (5×7")</strong></span>
+        </div>
+        <button type="button" class="qr-tool-chip qr-tool-action" onclick="window.print()" aria-label="Print counter stand flyer">
+          <span class="qr-tool-icon">🖨️</span>
+          <span>Print Stand Flyer</span>
+        </button>
+      </div>
     </div>
 
     <!-- Feedback URL Display with Copy Box -->
     <div class="qr-url-section">
       <div class="qr-url-header">
         <span class="qr-url-label">Direct Feedback URL</span>
-        <span class="qr-url-hint">Destination opened upon scan</span>
+        <span class="qr-url-hint">Target URL encoded inside the QR</span>
       </div>
       <div class="qr-url-box">
         <span class="qr-url-icon" aria-hidden="true">
@@ -147,6 +208,10 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         <span>Download QR</span>
       </a>
+      <button type="button" class="btn btn-outline" onclick="window.print()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        <span>Print Poster</span>
+      </button>
       <button type="button" class="btn btn-outline" data-copy-text="{{ qr_url }}">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         <span>Copy Page URL</span>
@@ -170,4 +235,18 @@
     </div>
   </div>
 </div>
+
+<script>
+  (function () {
+    var laserBtn = document.getElementById("toggleLaserBtn");
+    var laser = document.getElementById("qrScanLaser");
+    var stateText = document.getElementById("laserStateText");
+    if (laserBtn && laser && stateText) {
+      laserBtn.addEventListener("click", function () {
+        var isPaused = laser.classList.toggle("paused");
+        stateText.textContent = isPaused ? "Paused" : "Active";
+      });
+    }
+  })();
+</script>
 {% endblock %}
