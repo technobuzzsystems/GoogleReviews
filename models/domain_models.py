@@ -11,6 +11,7 @@ class UserRole:
     ACCOUNT = "account"
     MARKETING = "marketing"
     FRANCHISE = "franchise"
+    OWNER = "owner"
 
     ALL = (ADMIN, SALES, ACCOUNT, MARKETING, FRANCHISE)
     BUSINESS_MANAGERS = (ADMIN, SALES, FRANCHISE)
@@ -101,6 +102,8 @@ class BusinessConfigModel(Base):
     sales_executive_id = Column(Integer, ForeignKey("sales_executives.id"), nullable=True, index=True)
     franchise_id = Column(Integer, ForeignKey("franchises.id"), nullable=True, index=True)
     area = Column(String, default="", index=True)
+    owner_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    qr_destination_url = Column(Text, default="", nullable=False)
 
 
 class SalesExecutive(Base):
@@ -200,6 +203,10 @@ class Payment(Base):
     razorpay_payment_id = Column(String, default="", index=True)
     razorpay_signature = Column(String, default="")
     status = Column(String, default="created", nullable=False, index=True)  # created | paid | failed
+    payment_method = Column(String, default="online", nullable=False, index=True)  # online | cash
+    confirmed_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    reference_no = Column(String, default="", nullable=False)
+    admin_remarks = Column(Text, default="", nullable=False)
     payer_name = Column(String, default="")
     payer_email = Column(String, default="")
     payer_phone = Column(String, default="")
@@ -229,6 +236,21 @@ class Invoice(Base):
     razorpay_order_id = Column(String, default="")
     paid_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class PrivateFeedback(Base):
+    """A review sentence a customer selected on a business QR page."""
+
+    __tablename__ = "private_feedback"
+
+    id = Column(Integer, primary_key=True, index=True)
+    business_key = Column(String, nullable=False, index=True)
+    rating = Column(Integer, nullable=False, index=True)
+    comment = Column(Text, nullable=False)
+    source = Column(String, default="qr", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    read_at = Column(DateTime, nullable=True)
+    read_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
 
 class SubscriptionPlan(Base):

@@ -8,10 +8,16 @@
 <p class="page-lede">
   {% if is_admin %}
   Search clients, open their review page, collect plan payment, or edit details.
+  Set an owner login when that business should see only its own customer responses.
   {% else %}
   Your clients only. Search, collect payment, or add a new business.
   {% endif %}
 </p>
+{% if is_admin and owner_saved %}
+<p class="page-lede">Owner login saved. The business signs in at /owner/login.</p>
+{% elif is_admin and owner_error %}
+<p class="form-error">{{ owner_error }}</p>
+{% endif %}
 
 <div class="stats-grid biz-stats">
   <div class="stat-card">
@@ -58,7 +64,7 @@
   {% if listing.rows %}
   <div class="biz-grid">
     {% for b in listing.rows %}
-    <article class="biz-tile">
+    <article class="biz-tile" data-business-card="{{ b.key }}">
       <div class="biz-tile-top">
         <div class="biz-tile-heading">
           <h3 class="biz-tile-name" title="{{ b.name }}">{{ b.name }}</h3>
@@ -95,9 +101,9 @@
         <span class="badge none">No plan</span>
         {% endif %}
         {% if b.plan_amount and b.payment_due %}
-        <span class="badge due">Pending</span>
+        <span class="badge due" data-payment-badge>Pending</span>
         {% elif b.plan_amount %}
-        <span class="badge active">Paid</span>
+        <span class="badge active" data-payment-badge>{% if b.payment_method == 'cash' %}Paid · Cash{% elif b.payment_method == 'online' %}Paid · Online{% else %}Paid{% endif %}</span>
         {% endif %}
       </div>
       <dl class="biz-tile-meta">
@@ -123,6 +129,12 @@
           <dt>Term</dt>
           <dd>{{ b.join_date or '—' }} → {{ b.expiry_date or '—' }}</dd>
         </div>
+        {% if is_admin %}
+        <div>
+          <dt>Owner login</dt>
+          <dd>{{ b.owner_username or 'Not set' }}</dd>
+        </div>
+        {% endif %}
         {% if b.feedback_path %}
         <div>
           <dt>Page</dt>
@@ -155,8 +167,29 @@
           data-razorpay-pay
           data-business-key="{{ b.key }}"
         >Pay now</button>
+        {% if is_admin %}
+        <button
+          type="button"
+          class="biz-tile-link ghost mark-paid"
+          data-mark-paid
+          data-business-key="{{ b.key }}"
+          data-business-name="{{ b.name }}"
+          data-plan-label="{{ b.plan_label or '—' }}"
+          data-plan-amount="₹{{ '{:,.0f}'.format(b.plan_amount) }}"
+        >Mark as Paid</button>
+        {% endif %}
         {% elif b.invoice_no %}
         <a class="biz-tile-link ghost" href="/invoice/{{ b.invoice_no }}" target="_blank" rel="noopener">Invoice</a>
+        {% endif %}
+        {% if is_admin %}
+        <button
+          type="button"
+          class="biz-tile-link ghost"
+          data-owner-login
+          data-business-key="{{ b.key }}"
+          data-business-name="{{ b.name }}"
+          data-owner-username="{{ b.owner_username or '' }}"
+        >Owner login</button>
         {% endif %}
       </div>
     </article>
@@ -204,4 +237,321 @@
   </div>
   {% endif %}
 </div>
+
+{% if is_admin %}
+<div class="cash-modal" id="cashPayModal" hidden>
+  <div class="cash-modal-backdrop" data-cash-close></div>
+  <div class="cash-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="cashPayTitle" aria-describedby="cashPayLede">
+    <div class="cash-modal-head">
+      <div class="cash-modal-heading">
+        <h2 id="cashPayTitle">Confirm Cash Payment</h2>
+        <p class="cash-modal-lede" id="cashPayLede">Record an offline payment received from this business.</p>
+      </div>
+      <button type="button" class="cash-modal-x" data-cash-close aria-label="Close">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18"/>
+        </svg>
+      </button>
+    </div>
+    <form id="cashPayForm">
+      <div class="cash-modal-body">
+        <div class="cash-summary">
+          <div>
+            <div class="field-label">Business name</div>
+            <div class="field-value" id="cashPayBusiness">—</div>
+          </div>
+          <div>
+            <div class="field-label">Subscription plan</div>
+            <div class="field-value" id="cashPayPlan">—</div>
+          </div>
+          <div>
+            <div class="field-label">Subscription amount</div>
+            <div class="field-value cash-amount" id="cashPayAmount">—</div>
+          </div>
+          <div>
+            <div class="field-label">Payment status</div>
+            <div class="field-value"><span class="badge due">Pending</span></div>
+          </div>
+        </div>
+        <div class="cash-method">
+          <span class="cash-method-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2.5" y="6" width="19" height="12" rx="2"/>
+              <circle cx="12" cy="12" r="2.2"/>
+              <path d="M6 10.5h.01M18 13.5h.01"/>
+            </svg>
+          </span>
+          <div>
+            <div class="field-label">Payment method</div>
+            <div class="field-value">Cash / Offline</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="cashPayDate">Payment received date</label>
+          <input type="date" id="cashPayDate" name="received_on" required>
+        </div>
+        <div class="form-group">
+          <label for="cashPayRef">Transaction reference / receipt number <span class="cash-optional">Optional</span></label>
+          <input type="text" id="cashPayRef" name="reference_no" maxlength="80" autocomplete="off" placeholder="Enter receipt or transaction reference">
+        </div>
+        <div class="form-group">
+          <label for="cashPayRemarks">Admin remarks <span class="cash-optional">Optional</span></label>
+          <textarea id="cashPayRemarks" name="remarks" maxlength="500" rows="3" placeholder="Add any additional payment details..."></textarea>
+        </div>
+        <p class="cash-modal-error" id="cashPayError" hidden></p>
+      </div>
+      <div class="cash-modal-actions">
+        <button type="button" class="btn btn-outline" data-cash-close>Cancel</button>
+        <button type="submit" class="btn btn-primary" id="cashPaySubmit">Confirm Payment Received</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="admin-toast" id="adminToast" hidden role="status"></div>
+<div class="cash-modal" id="ownerLoginModal" hidden>
+  <div class="cash-modal-backdrop" data-owner-close></div>
+  <div class="cash-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="ownerLoginTitle">
+    <div class="cash-modal-head">
+      <div class="cash-modal-heading">
+        <h2 id="ownerLoginTitle">Owner login</h2>
+        <p class="cash-modal-lede">This login opens only this business’s customer responses. It does not change the plan or payment.</p>
+      </div>
+      <button type="button" class="cash-modal-x" data-owner-close aria-label="Close">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18"/>
+        </svg>
+      </button>
+    </div>
+    <form id="ownerLoginForm" method="post" action="">
+      <div class="cash-modal-body">
+        <div class="cash-summary">
+          <div>
+            <div class="field-label">Business name</div>
+            <div class="field-value" id="ownerLoginBusiness">—</div>
+          </div>
+          <div>
+            <div class="field-label">Sign-in page</div>
+            <div class="field-value">/owner/login</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="ownerLoginUser">Username</label>
+          <input type="text" id="ownerLoginUser" name="username" maxlength="80" autocomplete="off" required>
+        </div>
+        <div class="form-group">
+          <label for="ownerLoginPass">Password <span class="cash-optional" id="ownerPassHint">At least 6 characters</span></label>
+          <input type="password" id="ownerLoginPass" name="password" maxlength="80" autocomplete="new-password">
+        </div>
+        <p class="cash-modal-error" id="ownerLoginError" hidden></p>
+      </div>
+      <div class="cash-modal-actions">
+        <button type="button" class="btn btn-outline" data-owner-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save owner login</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if is_admin %}
+<script>
+(function () {
+  var modal = document.getElementById("cashPayModal");
+  var form = document.getElementById("cashPayForm");
+  var toast = document.getElementById("adminToast");
+  var errorEl = document.getElementById("cashPayError");
+  var submitBtn = document.getElementById("cashPaySubmit");
+  var activeButton = null;
+  var toastTimer = null;
+
+  function todayISO() {
+    var d = new Date();
+    var month = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + month + "-" + day;
+  }
+
+  function showToast(message) {
+    if (!toast) return;
+    toast.textContent = message;
+    toast.hidden = false;
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.hidden = true; }, 4200);
+  }
+
+  function showError(message) {
+    if (!errorEl) return;
+    errorEl.textContent = message;
+    errorEl.hidden = !message;
+  }
+
+  function closeModal() {
+    if (!modal || modal.hidden) return;
+    modal.hidden = true;
+    document.body.classList.remove("cash-modal-open");
+    activeButton = null;
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Confirm Payment Received";
+    }
+  }
+
+  function openModal(button) {
+    activeButton = button;
+    document.getElementById("cashPayBusiness").textContent = button.getAttribute("data-business-name") || "—";
+    document.getElementById("cashPayPlan").textContent = button.getAttribute("data-plan-label") || "—";
+    document.getElementById("cashPayAmount").textContent = button.getAttribute("data-plan-amount") || "—";
+    document.getElementById("cashPayDate").value = todayISO();
+    document.getElementById("cashPayRef").value = "";
+    document.getElementById("cashPayRemarks").value = "";
+    showError("");
+    modal.hidden = false;
+    document.body.classList.add("cash-modal-open");
+    document.getElementById("cashPayDate").focus();
+  }
+
+  function paidLabel(method) {
+    if (method === "cash") return "Paid · Cash";
+    if (method === "online") return "Paid · Online";
+    return "Paid";
+  }
+
+  function markCardPaid(businessKey, method, invoiceNo) {
+    var safeKey = window.CSS && CSS.escape ? CSS.escape(businessKey) : businessKey.replace(/"/g, "");
+    var card = document.querySelector('[data-business-card="' + safeKey + '"]');
+    if (!card) return;
+    var badge = card.querySelector("[data-payment-badge]");
+    if (badge) {
+      badge.className = "badge active";
+      badge.textContent = paidLabel(method);
+    }
+    var markBtn = card.querySelector("[data-mark-paid]");
+    var payBtn = card.querySelector("[data-razorpay-pay]");
+    if (markBtn) markBtn.remove();
+    if (invoiceNo) {
+      var link = document.createElement("a");
+      link.className = "biz-tile-link ghost";
+      link.href = "/invoice/" + encodeURIComponent(invoiceNo);
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = "Invoice";
+      if (payBtn) payBtn.replaceWith(link);
+      else card.querySelector(".biz-tile-actions").appendChild(link);
+    } else if (payBtn) {
+      payBtn.remove();
+    }
+  }
+
+  function errorMessage(data, fallback) {
+    if (!data) return fallback;
+    if (typeof data.detail === "string") return data.detail;
+    if (Array.isArray(data.detail)) return fallback;
+    if (data.detail && data.detail.message) return data.detail.message;
+    return data.message || fallback;
+  }
+
+  if (!modal || !form) return;
+
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest("[data-mark-paid]");
+    if (!button) return;
+    event.preventDefault();
+    openModal(button);
+  });
+
+  modal.addEventListener("click", function (event) {
+    if (event.target.closest("[data-cash-close]")) closeModal();
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && modal && !modal.hidden) closeModal();
+  });
+
+  form.addEventListener("submit", async function (event) {
+    event.preventDefault();
+    if (!activeButton || submitBtn.disabled) return;
+    var businessKey = activeButton.getAttribute("data-business-key");
+    if (!businessKey) return;
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Saving…";
+    showError("");
+    try {
+      var response = await fetch("/admin/businesses/" + encodeURIComponent(businessKey) + "/mark-paid", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          received_on: document.getElementById("cashPayDate").value,
+          reference_no: document.getElementById("cashPayRef").value.trim(),
+          remarks: document.getElementById("cashPayRemarks").value.trim()
+        })
+      });
+      var data = await response.json().catch(function () { return {}; });
+      if (response.status === 409) {
+        var detail = data.detail || {};
+        markCardPaid(businessKey, detail.payment_method || "", detail.invoice_no || "");
+        closeModal();
+        showToast(errorMessage(data, "This payment is already paid."));
+        return;
+      }
+      if (!response.ok) {
+        showError(errorMessage(data, "Could not confirm this payment. It is still pending."));
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Confirm Payment Received";
+        return;
+      }
+      markCardPaid(businessKey, data.payment_method || "cash", data.invoice_no || "");
+      closeModal();
+      showToast(data.message || "Cash payment confirmed.");
+    } catch (err) {
+      showError("Could not confirm this payment. It is still pending.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Confirm Payment Received";
+    }
+  });
+})();
+</script>
+<script>
+(function () {
+  var modal = document.getElementById("ownerLoginModal");
+  var form = document.getElementById("ownerLoginForm");
+  if (!modal || !form) return;
+  var nameEl = document.getElementById("ownerLoginBusiness");
+  var userEl = document.getElementById("ownerLoginUser");
+  var passEl = document.getElementById("ownerLoginPass");
+  var hint = document.getElementById("ownerPassHint");
+
+  function closeOwner() {
+    modal.hidden = true;
+    document.body.classList.remove("cash-modal-open");
+  }
+  function openOwner(button) {
+    var key = button.getAttribute("data-business-key") || "";
+    var existing = button.getAttribute("data-owner-username") || "";
+    form.action = "/admin/businesses/" + encodeURIComponent(key) + "/owner-login";
+    nameEl.textContent = button.getAttribute("data-business-name") || "—";
+    userEl.value = existing;
+    passEl.value = "";
+    passEl.required = !existing;
+    hint.textContent = existing ? "Leave blank to keep the current password" : "At least 6 characters";
+    modal.hidden = false;
+    document.body.classList.add("cash-modal-open");
+    userEl.focus();
+  }
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest("[data-owner-login]");
+    if (button) {
+      event.preventDefault();
+      openOwner(button);
+      return;
+    }
+    if (event.target.closest("[data-owner-close]")) closeOwner();
+  });
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && !modal.hidden) closeOwner();
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}

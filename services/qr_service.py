@@ -56,6 +56,26 @@ def public_feedback_url(request: Request, feedback_path: str) -> str:
     return f"{base.rstrip('/')}{path}"
 
 
+def permanent_qr_path(business_key: str) -> str:
+    """Stable path encoded in a QR. The destination behind it can change later."""
+    return f"/go/{(business_key or '').strip()}"
+
+
+def normalize_qr_destination(value: str) -> str:
+    """Blank clears a custom destination. Any other value must be http or https."""
+    from urllib.parse import urlparse
+
+    raw = (value or "").strip()
+    if not raw:
+        return ""
+    if len(raw) > 500 or any(ch.isspace() for ch in raw):
+        raise ValueError("Enter a valid link that starts with http:// or https://.")
+    parsed = urlparse(raw)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise ValueError("Enter a valid link that starts with http:// or https://.")
+    return raw
+
+
 def _load_font(candidates: tuple[str, ...], size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     for path in candidates:
         if Path(path).is_file():

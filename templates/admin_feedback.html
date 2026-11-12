@@ -1,0 +1,154 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<p class="page-lede">
+  {% if is_admin %}
+  Reviews customers selected on a business QR page. You can see every business.
+  {% elif is_franchise %}
+  Reviews for businesses in your area only.
+  {% else %}
+  Reviews for the businesses assigned to you.
+  {% endif %}
+  The customer’s name and mobile number are not collected.
+</p>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-icon">💬</span>
+    <div class="stat-value">{{ stats.total }}</div>
+    <div class="stat-label">Total feedback</div>
+    <div class="stat-badge">Avg {{ stats.average_rating }}</div>
+  </div>
+  <div class="stat-card red">
+    <span class="stat-icon">★</span>
+    <div class="stat-value">{{ stats.negative }}</div>
+    <div class="stat-label">1–3 star reviews</div>
+    <div class="stat-badge">{{ stats.unread }} unread</div>
+  </div>
+  {% for star in [1, 2, 3, 4, 5] %}
+  <div class="stat-card">
+    <span class="stat-icon">{{ star }}★</span>
+    <div class="stat-value">{{ stats.by_rating[star|string] }}</div>
+    <div class="stat-label">{{ star }} star</div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if attention %}
+<div class="table-card" style="margin-bottom: 18px;">
+  <div class="section-header" style="margin-bottom: 0;">
+    <div>
+      <div class="section-title">Needs attention</div>
+      <div class="section-subtitle">Businesses with the most 1–3 star reviews</div>
+    </div>
+  </div>
+  <div class="biz-tile-flags" style="padding: 0 4px 14px; gap: 8px;">
+    {% for row in attention %}
+    <a class="badge expired" href="/admin/feedback?business={{ row.key }}&amp;rating=0">{{ row.name }} · {{ row.count }} low</a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="table-card">
+  <form class="table-toolbar" method="get" action="/admin/feedback">
+    <select name="business" class="filter-select" aria-label="Business" onchange="this.form.submit()">
+      <option value="">All businesses</option>
+      {% for b in businesses %}
+      <option value="{{ b.key }}" {% if selected_business == b.key %}selected{% endif %}>{{ b.name }}</option>
+      {% endfor %}
+    </select>
+    <select name="rating" class="filter-select" aria-label="Star rating" onchange="this.form.submit()">
+      <option value="0" {% if not selected_rating %}selected{% endif %}>All stars</option>
+      {% for star in [1, 2, 3, 4, 5] %}
+      <option value="{{ star }}" {% if selected_rating == star %}selected{% endif %}>{{ star }} star</option>
+      {% endfor %}
+    </select>
+    <label class="filter-field">
+      From
+      <input type="date" name="date_from" value="{{ date_from }}" class="filter-select" aria-label="From date">
+    </label>
+    <label class="filter-field">
+      To
+      <input type="date" name="date_to" value="{{ date_to }}" class="filter-select" aria-label="To date">
+    </label>
+    <label class="filter-field" style="flex-direction: row; align-items: center; gap: 8px;">
+      <input type="checkbox" name="unread" value="1" {% if unread_only %}checked{% endif %}>
+      Unread only
+    </label>
+    <button type="submit" class="btn btn-outline">Filter</button>
+    <a class="btn btn-outline" href="/admin/api/export?business={{ selected_business or 'all' }}">Download CSV</a>
+  </form>
+
+  {% if listing.records %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Business</th>
+          <th>Stars</th>
+          <th>Comment</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in listing.records %}
+        <tr>
+          <td>{{ row.business_name }}</td>
+          <td>
+            {% if row.rating <= 3 %}
+            <span class="badge expired">{{ row.rating }}★</span>
+            {% else %}
+            <span class="badge active">{{ row.rating }}★</span>
+            {% endif %}
+          </td>
+          <td class="feedback-comment">{{ row.comment }}</td>
+          <td>{{ row.created_at.strftime('%d %b %Y, %I:%M %p') if row.created_at else '—' }}</td>
+          <td>
+            {% if row.is_unread %}
+            <span class="badge due">Unread</span>
+            {% else %}
+            <span class="badge none">Read</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if row.is_unread %}
+            <form method="post" action="/admin/feedback/{{ row.id }}/read" style="margin:0;">
+              <input type="hidden" name="business" value="{{ selected_business }}">
+              <input type="hidden" name="rating" value="{{ selected_rating }}">
+              <input type="hidden" name="date_from" value="{{ date_from }}">
+              <input type="hidden" name="date_to" value="{{ date_to }}">
+              <input type="hidden" name="unread" value="{{ '1' if unread_only else '' }}">
+              <input type="hidden" name="page" value="{{ listing.page }}">
+              <button type="submit" class="btn btn-outline">Mark read</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if listing.pages > 1 %}
+  <div class="pagination">
+    <div class="pagination-info">Page {{ listing.page }} of {{ listing.pages }} · {{ listing.total }} reviews</div>
+    <div class="pagination-btns">
+      {% if listing.page > 1 %}
+      <a class="page-btn" href="/admin/feedback?business={{ selected_business }}&amp;rating={{ selected_rating }}&amp;date_from={{ date_from }}&amp;date_to={{ date_to }}&amp;unread={{ '1' if unread_only else '' }}&amp;page={{ listing.page - 1 }}">‹</a>
+      {% endif %}
+      {% if listing.page < listing.pages %}
+      <a class="page-btn" href="/admin/feedback?business={{ selected_business }}&amp;rating={{ selected_rating }}&amp;date_from={{ date_from }}&amp;date_to={{ date_to }}&amp;unread={{ '1' if unread_only else '' }}&amp;page={{ listing.page + 1 }}">›</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">💬</div>
+    <p>No reviews yet. They appear here after a customer submits feedback from a QR page.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

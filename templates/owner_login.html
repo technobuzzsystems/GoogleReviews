@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Business Owner Login — TechnoBuzz</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}?v=20261102c">
+</head>
+<body class="login-page">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="sidebar-logo-mark" aria-hidden="true">TB</div>
+      <div>
+        <h1>TechnoBuzz</h1>
+        <p>Business owner</p>
+      </div>
+    </div>
+    <p class="sub">Sign in to see customer responses for your business only.</p>
+    {% if error %}
+    <div class="form-error">{{ error }}</div>
+    {% endif %}
+    <form method="POST" action="/owner/login">
+      <input type="hidden" name="next" value="{{ next }}">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" value="{{ username or '' }}" autocomplete="username" required autofocus>
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" required>
+      <button type="submit">Sign in</button>
+    </form>
+    <p class="sub"><a href="/admin/login">Staff login</a></p>
+  </div>
+</body>
+</html>

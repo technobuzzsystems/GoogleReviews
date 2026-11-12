@@ -8,15 +8,16 @@ import logging
 import urllib.error
 import urllib.request
 from base64 import b64encode
-from datetime import datetime
+from datetime import date, datetime, time
 from hashlib import sha256
 from typing import Optional
+from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
 from config import get_config
 from models.domain_models import Booking, BusinessConfigModel, Payment
-from services.plan_service import CLIENT_PLAN_NOTE, credit_booking_to_wallet, credit_plan_to_wallet
+from services.plan_service import CLIENT_PLAN_NOTE, booking_is_collected, credit_booking_to_wallet, credit_plan_to_wallet
 from services.sales_service import round_money, upsert_plan_booking
 
 logger = logging.getLogger(__name__)
@@ -320,6 +321,162 @@ def apply_paid_order(
         "already_paid": False,
         "booking_id": booking.id,
         "invoice_no": invoice.invoice_no if invoice else "",
+    }
+
+
+class CashPaymentError(ValueError):
+    """Raised when an admin cash confirmation cannot be recorded."""
+
+    def __init__(self, message: str, status_code: int = 400, *, payment_method: str = "", invoice_no: str = ""):
+        super().__init__(message)
+        self.status_code = status_code
+        self.payment_method = payment_method or ""
+        self.invoice_no = invoice_no or ""
+
+
+def latest_paid_methods(db: Session, keys: list[str]) -> dict[str, str]:
+    """Latest successful payment method per business. Blank when no payment row exists."""
+    clean = [key for key in keys if key]
+    if not clean:
+        return {}
+    rows = (
+        db.query(Payment.business_key, Payment.payment_method, Payment.id)
+        .filter(Payment.status == "paid", Payment.business_key.in_(clean))
+        .order_by(Payment.id.asc())
+        .all()
+    )
+    methods: dict[str, str] = {}
+    for key, method, _payment_id in rows:
+        label = (method or "online").strip().lower()
+        methods[key] = "cash" if label == "cash" else "online"
+    return methods
+
+
+def _already_paid_error(db: Session, business_key: str) -> CashPaymentError:
+    from services.invoice_service import latest_invoice_for_business
+
+    method = latest_paid_methods(db, [business_key]).get(business_key, "")
+    invoice = latest_invoice_for_business(db, business_key)
+    if method == "cash":
+        message = "This payment is already marked as paid in cash."
+    elif method == "online":
+        message = "This plan is already paid online."
+    else:
+        message = "This payment is already paid."
+    return CashPaymentError(
+        message,
+        409,
+        payment_method=method,
+        invoice_no=invoice.invoice_no if invoice else "",
+    )
+
+
+def confirm_cash_payment(
+    db: Session,
+    *,
+    business_key: str,
+    received_on: str,
+    reference_no: str = "",
+    remarks: str = "",
+    admin_user_id: int,
+) -> dict:
+    """
+    Record an admin cash / offline collection against the current unpaid plan booking.
+
+    Uses the same booking collection and wallet credit as a captured online payment.
+    Does not change business activation, plan dates, or plan amount.
+    """
+    from utils.validators import sanitize_string
+
+    key = (business_key or "").strip()
+    business = (
+        db.query(BusinessConfigModel)
+        .filter(BusinessConfigModel.key == key)
+        .with_for_update()
+        .first()
+    )
+    if not business:
+        raise CashPaymentError("Business not found.", 404)
+
+    if not business.plan_code or float(business.plan_amount or 0) <= 0:
+        raise CashPaymentError("This client has no subscription amount to collect.", 400)
+
+    raw_date = (received_on or "").strip()
+    try:
+        received = datetime.strptime(raw_date, "%Y-%m-%d").date()
+    except ValueError:
+        raise CashPaymentError("Enter a valid payment received date.", 400) from None
+    if received > date.today():
+        raise CashPaymentError("Payment received date cannot be in the future.", 400)
+
+    reference = sanitize_string(reference_no or "", 80)
+    note = sanitize_string(remarks or "", 500)
+
+    booking = unpaid_booking(db, business_key=business.key)
+    if booking is None:
+        existing_plan = (
+            db.query(Booking)
+            .filter(
+                Booking.business_key == business.key,
+                Booking.notes == CLIENT_PLAN_NOTE,
+                Booking.status != "cancelled",
+            )
+            .order_by(Booking.id.desc())
+            .first()
+        )
+        if existing_plan is not None and (booking_is_collected(existing_plan) or due_amount(existing_plan) <= 0):
+            raise _already_paid_error(db, business.key)
+        booking = upsert_plan_booking(db, business, commit=False)
+    if booking is None:
+        raise CashPaymentError("No unpaid plan was found for this client.", 400)
+
+    booking = db.query(Booking).filter(Booking.id == booking.id).with_for_update().one()
+    if booking_is_collected(booking) or due_amount(booking) <= 0:
+        raise _already_paid_error(db, business.key)
+
+    due = due_amount(booking)
+    payment = Payment(
+        business_key=business.key,
+        booking_id=booking.id,
+        plan_code=business.plan_code or "",
+        amount=due,
+        currency="INR",
+        razorpay_order_id=f"cash_{uuid4().hex}",
+        razorpay_payment_id="",
+        razorpay_signature="",
+        status="paid",
+        payment_method="cash",
+        confirmed_by_user_id=admin_user_id,
+        reference_no=reference,
+        admin_remarks=note,
+        payer_name=business.name or "",
+        payer_email=business.email or "",
+        payer_phone=business.mobile or "",
+        notes="Cash / offline payment confirmed by admin.",
+        paid_at=datetime.combine(received, time(12, 0)),
+    )
+    db.add(payment)
+    db.flush()
+
+    from services.invoice_service import create_invoice_for_payment
+
+    invoice = create_invoice_for_payment(db, payment, commit=False)
+    mark_booking_paid(db, booking)
+    db.commit()
+    logger.info(
+        "Cash payment confirmed business=%s booking=%s admin=%s amount=%.2f",
+        business.key,
+        booking.id,
+        admin_user_id,
+        due,
+    )
+    return {
+        "success": True,
+        "business_key": business.key,
+        "payment_status": "paid",
+        "payment_method": "cash",
+        "invoice_no": invoice.invoice_no if invoice else "",
+        "message": "Cash payment confirmed.",
     }
 
 

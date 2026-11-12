@@ -91,6 +91,7 @@ def init_db():
         Franchise,
         FranchiseLedger,
         SubscriptionPlan,
+        PrivateFeedback,
     )
     from services.auth_service import seed_default_users
     from services.business_service import (
@@ -140,6 +141,12 @@ def init_db():
     _ensure_column("sales_executives", "franchise_id", "franchise_id INTEGER")
     _ensure_column("businesses", "franchise_id", "franchise_id INTEGER")
     _ensure_column("businesses", "area", "area VARCHAR DEFAULT ''")
+    _ensure_column("businesses", "owner_user_id", "owner_user_id INTEGER")
+    _ensure_column("businesses", "qr_destination_url", "qr_destination_url TEXT DEFAULT ''")
+    _ensure_column("payments", "payment_method", "payment_method VARCHAR DEFAULT 'online'")
+    _ensure_column("payments", "confirmed_by_user_id", "confirmed_by_user_id INTEGER")
+    _ensure_column("payments", "reference_no", "reference_no VARCHAR DEFAULT ''")
+    _ensure_column("payments", "admin_remarks", "admin_remarks TEXT DEFAULT ''")
     _ensure_index(
         "businesses",
         "ix_businesses_name",
@@ -160,8 +167,19 @@ def init_db():
         "ix_businesses_collection",
         "CREATE INDEX IF NOT EXISTS ix_businesses_collection ON businesses (collection)",
     )
+    _ensure_index(
+        "private_feedback",
+        "ix_private_feedback_business_created",
+        "CREATE INDEX IF NOT EXISTS ix_private_feedback_business_created ON private_feedback (business_key, created_at)",
+    )
     with engine.begin() as conn:
         conn.execute(text("UPDATE sales_executives SET wallet_balance = 0 WHERE wallet_balance IS NULL"))
+        if "payments" in inspect(engine).get_table_names():
+            conn.execute(text("UPDATE payments SET payment_method = 'online' WHERE payment_method IS NULL OR payment_method = ''"))
+            conn.execute(text("UPDATE payments SET reference_no = '' WHERE reference_no IS NULL"))
+            conn.execute(text("UPDATE payments SET admin_remarks = '' WHERE admin_remarks IS NULL"))
+        if "businesses" in inspect(engine).get_table_names():
+            conn.execute(text("UPDATE businesses SET qr_destination_url = '' WHERE qr_destination_url IS NULL"))
     logger.info("Database tables ready (%s)", SQLALCHEMY_DATABASE_URL.split("@")[-1])
 
     db = SessionLocal()

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Customer responses — TechnoBuzz</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}?v=20261102c" />
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
+<div class="layout">
+  <aside class="sidebar" id="adminSidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-mark" aria-hidden="true">TB</div>
+        <div>
+          <div class="sidebar-logo-text">TechnoBuzz</div>
+          <div class="sidebar-logo-sub">Business owner</div>
+        </div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/owner" class="nav-item active"><span class="nav-icon">💬</span> Customer responses</a>
+      <a href="/owner/export" class="nav-item"><span class="nav-icon">📥</span> Download CSV</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">{{ user.username }}{% if business_name %} · {{ business_name }}{% endif %}</div>
+      <a href="/owner/logout"><span>⎋</span> Logout</a>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-start">
+        <button type="button" class="menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+        <div class="topbar-title">Customer responses</div>
+      </div>
+    </header>
+    <div class="page-body">
+      <p class="page-lede">
+        {% if business_name %}
+        Responses customers left for {{ business_name }}. Other businesses are not shown here.
+        {% else %}
+        No business is linked to this login yet. Ask TechnoBuzz to set your owner login.
+        {% endif %}
+      </p>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-icon">💬</span>
+          <div class="stat-value">{{ stats.total }}</div>
+          <div class="stat-label">Total feedback</div>
+          <div class="stat-badge">Avg {{ stats.average_rating }}</div>
+        </div>
+        <div class="stat-card red">
+          <span class="stat-icon">★</span>
+          <div class="stat-value">{{ stats.negative }}</div>
+          <div class="stat-label">1–3 star reviews</div>
+          <div class="stat-badge">{{ stats.unread }} unread</div>
+        </div>
+        {% for star in [1, 2, 3, 4, 5] %}
+        <div class="stat-card">
+          <span class="stat-icon">{{ star }}★</span>
+          <div class="stat-value">{{ stats.by_rating[star|string] }}</div>
+          <div class="stat-label">{{ star }} star</div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="table-card">
+        <form class="table-toolbar" method="get" action="/owner">
+          <select name="rating" class="filter-select" aria-label="Star rating" onchange="this.form.submit()">
+            <option value="0" {% if not selected_rating %}selected{% endif %}>All stars</option>
+            {% for star in [1, 2, 3, 4, 5] %}
+            <option value="{{ star }}" {% if selected_rating == star %}selected{% endif %}>{{ star }} star</option>
+            {% endfor %}
+          </select>
+          <label class="filter-field">
+            From
+            <input type="date" name="date_from" value="{{ date_from }}" class="filter-select" aria-label="From date">
+          </label>
+          <label class="filter-field">
+            To
+            <input type="date" name="date_to" value="{{ date_to }}" class="filter-select" aria-label="To date">
+          </label>
+          <label class="filter-field" style="flex-direction: row; align-items: center; gap: 8px;">
+            <input type="checkbox" name="unread" value="1" {% if unread_only %}checked{% endif %}>
+            Unread only
+          </label>
+          <button type="submit" class="btn btn-outline">Filter</button>
+        </form>
+
+        {% if listing.records %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Stars</th>
+                <th>Comment</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in listing.records %}
+              <tr>
+                <td>
+                  {% if row.rating <= 3 %}
+                  <span class="badge expired">{{ row.rating }}★</span>
+                  {% else %}
+                  <span class="badge active">{{ row.rating }}★</span>
+                  {% endif %}
+                </td>
+                <td class="feedback-comment">{{ row.comment }}</td>
+                <td>{{ row.created_at.strftime('%d %b %Y, %I:%M %p') if row.created_at else '—' }}</td>
+                <td>
+                  {% if row.is_unread %}
+                  <span class="badge due">Unread</span>
+                  {% else %}
+                  <span class="badge none">Read</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if row.is_unread %}
+                  <form method="post" action="/owner/feedback/{{ row.id }}/read" style="margin:0;">
+                    <input type="hidden" name="rating" value="{{ selected_rating }}">
+                    <input type="hidden" name="date_from" value="{{ date_from }}">
+                    <input type="hidden" name="date_to" value="{{ date_to }}">
+                    <input type="hidden" name="unread" value="{{ '1' if unread_only else '' }}">
+                    <input type="hidden" name="page" value="{{ listing.page }}">
+                    <button type="submit" class="btn btn-outline">Mark read</button>
+                  </form>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if listing.pages > 1 %}
+        <div class="pagination">
+          <div class="pagination-info">Page {{ listing.page }} of {{ listing.pages }} · {{ listing.total }} reviews</div>
+          <div class="pagination-btns">
+            {% if listing.page > 1 %}
+            <a class="page-btn" href="/owner?rating={{ selected_rating }}&amp;date_from={{ date_from }}&amp;date_to={{ date_to }}&amp;unread={{ '1' if unread_only else '' }}&amp;page={{ listing.page - 1 }}">‹</a>
+            {% endif %}
+            {% if listing.page < listing.pages %}
+            <a class="page-btn" href="/owner?rating={{ selected_rating }}&amp;date_from={{ date_from }}&amp;date_to={{ date_to }}&amp;unread={{ '1' if unread_only else '' }}&amp;page={{ listing.page + 1 }}">›</a>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+          <div class="empty-icon">💬</div>
+          <p>No customer responses yet.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var btn = document.getElementById("menuBtn");
+  var side = document.getElementById("adminSidebar");
+  var overlay = document.getElementById("sidebarOverlay");
+  function setOpen(open) {
+    if (!side) return;
+    side.classList.toggle("open", open);
+    document.body.classList.toggle("nav-open", open);
+    if (overlay) overlay.hidden = !open;
+  }
+  if (btn && side) btn.addEventListener("click", function () { setOpen(!side.classList.contains("open")); });
+  if (overlay) overlay.addEventListener("click", function () { setOpen(false); });
+})();
+</script>
+</body>
+</html>

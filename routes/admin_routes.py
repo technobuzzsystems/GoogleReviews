@@ -45,6 +45,9 @@ from services.business_service import (
     save_business,
     delete_business,
     set_business_active_status,
+    set_qr_destination,
+    business_choices,
+    qr_feedback_target,
     user_owns_business,
 )
 from services.dashboard_service import (
@@ -88,10 +91,19 @@ from services.sales_service import (
     sales_stats,
     save_booking,
 )
-from models.schemas import GenerateExamplesRequest
+from models.schemas import CashPaymentConfirmRequest, GenerateExamplesRequest
 from services.gemini_service import generate_star_example_prompts
-from services.payment_service import razorpay_configured
-from services.qr_service import public_feedback_url, qr_png_bytes
+from services.owner_service import save_owner_login
+from services.payment_service import CashPaymentError, confirm_cash_payment, razorpay_configured
+from services.feedback_service import (
+    businesses_for_filter,
+    export_rows,
+    feedback_stats,
+    list_feedback_page,
+    mark_feedback_read,
+    negative_businesses,
+)
+from services.qr_service import permanent_qr_path, public_feedback_url, qr_png_bytes
 from services.storage_service import public_logo_url, s3_configured, save_logo_upload, save_transfer_screenshot
 from utils.google_review import build_google_review_url, extract_place_id
 from utils.validators import (
@@ -204,7 +216,10 @@ def _visible_business_key(db: Session, user: User, business: str) -> tuple[str, 
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 @router.get("/login")
 def login_page(request: Request, next: str = "/admin", error: str = "", db: Session = Depends(get_db)):
-    if get_session_user(request, db):
+    existing = get_session_user(request, db)
+    if existing:
+        if existing.role == UserRole.OWNER:
+            return RedirectResponse(url="/owner", status_code=302)
         return RedirectResponse(url=safe_next_url(next), status_code=302)
     return templates.TemplateResponse(request=request, name="login.html", context=
         {"request": request, "next": safe_next_url(next), "error": error},
@@ -231,6 +246,8 @@ def login_submit(
             status_code=401,
         )
     login_user(request, user)
+    if user.role == UserRole.OWNER:
+        return RedirectResponse(url="/owner", status_code=302)
     return RedirectResponse(url=safe_next_url(next), status_code=302)
 
 
@@ -292,12 +309,13 @@ def api_stats(
     db: Session = Depends(get_db),
     user: User = Depends(require_login),
 ):
-    """Return aggregate feedback statistics as JSON (Mocked)."""
+    """Return aggregate feedback statistics as JSON."""
     business, _ = _visible_business_key(db, user, business)
+    stats = feedback_stats(db, user, business_key=business)
     return {
-        "total": 0,
-        "average_rating": 0.0,
-        "by_rating": {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0},
+        "total": stats["total"],
+        "average_rating": stats["average_rating"],
+        "by_rating": stats["by_rating"],
     }
 
 
@@ -312,14 +330,20 @@ def api_feedback(
     db: Session = Depends(get_db),
     user: User = Depends(require_login),
 ):
-    """Return paginated, filtered feedback records as JSON (Mocked)."""
+    """Return paginated, filtered feedback records as JSON."""
     business, _ = _visible_business_key(db, user, business)
-    page = max(1, page)
+    listing = list_feedback_page(
+        db,
+        user,
+        page=page,
+        business_key=business,
+        rating=int(rating or 0),
+    )
     return {
-        "records": [],
-        "total": 0,
-        "page": page,
-        "pages": 0,
+        "records": listing["records"],
+        "total": listing["total"],
+        "page": listing["page"],
+        "pages": listing["pages"],
     }
 
 
@@ -330,19 +354,134 @@ def api_export(
     db: Session = Depends(get_db),
     user: User = Depends(require_login),
 ):
-    """Export all feedback records as a downloadable CSV file (Mocked - Empty)."""
-    business, _ = _visible_business_key(db, user, business)
+    """Export feedback records as a downloadable CSV file."""
+    if (business or "").strip().lower() in {"", "all"}:
+        rows = export_rows(db, user, business_key="")
+    else:
+        business, _ = _visible_business_key(db, user, business)
+        rows = export_rows(db, user, business_key=business)
+    names = {}
+    if rows:
+        from models.domain_models import BusinessConfigModel
+
+        names = dict(
+            db.query(BusinessConfigModel.key, BusinessConfigModel.name)
+            .filter(BusinessConfigModel.key.in_({row.business_key for row in rows}))
+            .all()
+        )
     output = io.StringIO()
     writer = csv.writer(output)
-
     writer.writerow(["ID", "Company", "Company ID", "Rating", "Feedback", "Date", "Time"])
-
+    for row in rows:
+        created = row.created_at
+        writer.writerow([
+            row.id,
+            names.get(row.business_key) or row.business_key,
+            row.business_key,
+            row.rating,
+            row.comment,
+            created.strftime("%Y-%m-%d") if created else "",
+            created.strftime("%H:%M:%S") if created else "",
+        ])
     output.seek(0)
     return Response(
         content=output.getvalue(),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=technobuzz_feedback.csv"},
     )
+
+
+def _star_filter(value) -> int:
+    """All stars is 0. A blank value from the address bar is also all stars."""
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return number if number in (0, 1, 2, 3, 4, 5) else 0
+
+
+def _page_number(value) -> int:
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return 1
+    return number if number > 0 else 1
+
+
+def _feedback_filters(business: str, rating, date_from: str, date_to: str, unread: str) -> dict:
+    return {
+        "business_key": (business or "").strip(),
+        "rating": _star_filter(rating),
+        "date_from": (date_from or "").strip(),
+        "date_to": (date_to or "").strip(),
+        "unread_only": (unread or "").strip() in {"1", "true", "yes"},
+    }
+
+
+@router.get("/feedback")
+def feedback_inbox(
+    request: Request,
+    business: str = "",
+    rating: str = "",
+    date_from: str = "",
+    date_to: str = "",
+    unread: str = "",
+    page: str = "1",
+    db: Session = Depends(get_db),
+    user: User = Depends(require_business_access),
+):
+    filters = _feedback_filters(business, rating, date_from, date_to, unread)
+    if filters["business_key"] and not user_owns_business(db, user, filters["business_key"]):
+        filters["business_key"] = ""
+    listing = list_feedback_page(db, user, page=_page_number(page), **filters)
+    stats = feedback_stats(db, user, **filters)
+    return templates.TemplateResponse(
+        request=request,
+        name="admin_feedback.html",
+        context=_admin_context(
+            request,
+            user,
+            listing=listing,
+            stats=stats,
+            businesses=businesses_for_filter(db, user),
+            attention=negative_businesses(db, user),
+            selected_business=filters["business_key"],
+            selected_rating=filters["rating"],
+            date_from=filters["date_from"],
+            date_to=filters["date_to"],
+            unread_only=filters["unread_only"],
+            page_title="Customer Feedback",
+            active_nav="feedback",
+        ),
+    )
+
+
+@router.post("/feedback/{feedback_id}/read")
+def feedback_mark_read(
+    feedback_id: int,
+    business: str = Form(""),
+    rating: str = Form("0"),
+    date_from: str = Form(""),
+    date_to: str = Form(""),
+    unread: str = Form(""),
+    page: str = Form("1"),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_business_access),
+):
+    mark_feedback_read(db, user, feedback_id)
+    from urllib.parse import urlencode
+
+    query = urlencode(
+        {
+            "business": business,
+            "rating": _star_filter(rating),
+            "date_from": date_from,
+            "date_to": date_to,
+            "unread": unread,
+            "page": _page_number(page),
+        }
+    )
+    return RedirectResponse(url=f"/admin/feedback?{query}", status_code=303)
 
 
 @router.post("/api/generate-examples")
@@ -373,6 +512,8 @@ def list_businesses(
     date_to: str = "",
     page: int = 1,
     per_page: int = 100,
+    owner_saved: str = "",
+    owner_error: str = "",
     db: Session = Depends(get_db),
     user: User = Depends(require_business_access),
 ):
@@ -389,6 +530,8 @@ def list_businesses(
             feedback_path=(first or {}).get("feedback_path") or "/feedback",
             page_title="Your Clients" if user.role != UserRole.ADMIN else "Registered Businesses",
             active_nav="businesses",
+            owner_saved=owner_saved == "1",
+            owner_error=owner_error,
         ),
     )
 
@@ -431,8 +574,7 @@ def business_qr_png(
     business = get_business(db, business_key)
     if not business or not user_owns_business(db, user, business_key):
         raise HTTPException(status_code=404, detail="Business not found.")
-    path = business.get("feedback_path") or "/feedback"
-    url = public_feedback_url(request, path)
+    url = public_feedback_url(request, permanent_qr_path(business_key))
     png = qr_png_bytes(
         url,
         company_name=business.get("name") or "",
@@ -451,6 +593,8 @@ def business_qr_png(
 def business_qr_page(
     request: Request,
     business_key: str,
+    qr_saved: str = "",
+    qr_error: str = "",
     db: Session = Depends(get_db),
     user: User = Depends(require_business_access),
 ):
@@ -458,7 +602,8 @@ def business_qr_page(
     if not business or not user_owns_business(db, user, business_key):
         return RedirectResponse(url="/admin/businesses", status_code=302)
     path = business.get("feedback_path") or "/feedback"
-    url = public_feedback_url(request, path)
+    url = public_feedback_url(request, permanent_qr_path(business_key))
+    target = qr_feedback_target(db, business_key) or business
     return templates.TemplateResponse(
         request=request,
         name="admin_business_qr.html",
@@ -469,10 +614,38 @@ def business_qr_page(
             business_key=business_key,
             feedback_path=path,
             qr_url=url,
+            qr_businesses=business_choices(db),
+            selected_target=target.get("key") or business_key,
+            target_name=target.get("name") or business.get("name") or "",
+            qr_saved=qr_saved == "1",
+            qr_error=qr_error,
             page_title="QR Code",
             active_nav="businesses",
         ),
     )
+
+
+@router.post("/businesses/{business_key}/qr-destination")
+def update_qr_destination(
+    business_key: str,
+    target_business: str = Form(""),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    """Admin points this same QR at a business review page."""
+    from urllib.parse import quote
+
+    business = get_business(db, business_key)
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found.")
+    target = get_business(db, (target_business or "").strip())
+    if not target:
+        return RedirectResponse(
+            url=f"/admin/businesses/{business_key}/qr?qr_error={quote('Choose a business.')}",
+            status_code=303,
+        )
+    set_qr_destination(db, business_key, "" if target["key"] == business_key else target["key"])
+    return RedirectResponse(url=f"/admin/businesses/{business_key}/qr?qr_saved=1", status_code=303)
 
 
 @router.post("/businesses")
@@ -621,6 +794,52 @@ def toggle_business_status(
     current_status = bool(business.get("is_active", True) if business.get("is_active") is not None else True)
     set_business_active_status(db, business_key, not current_status)
     return RedirectResponse(url="/admin/businesses", status_code=303)
+
+
+@router.post("/businesses/{business_key}/mark-paid")
+def mark_business_paid_cash(
+    business_key: str,
+    payload: CashPaymentConfirmRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_login),
+):
+    """Admin-only cash / offline confirmation. Online Pay Now is unchanged."""
+    if user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only an admin can confirm a cash payment.")
+    try:
+        return confirm_cash_payment(
+            db,
+            business_key=business_key,
+            received_on=payload.received_on,
+            reference_no=payload.reference_no,
+            remarks=payload.remarks,
+            admin_user_id=user.id,
+        )
+    except CashPaymentError as exc:
+        detail = {"message": str(exc)}
+        if exc.payment_method:
+            detail["payment_method"] = exc.payment_method
+        if exc.invoice_no:
+            detail["invoice_no"] = exc.invoice_no
+        raise HTTPException(status_code=exc.status_code, detail=detail) from exc
+
+
+@router.post("/businesses/{business_key}/owner-login")
+def save_business_owner_login(
+    business_key: str,
+    username: str = Form(""),
+    password: str = Form(""),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    """Create or update the separate login for this business. Does not change the plan or payment."""
+    from urllib.parse import quote
+
+    try:
+        save_owner_login(db, business_key, username, password)
+    except ValueError as exc:
+        return RedirectResponse(url=f"/admin/businesses?owner_error={quote(str(exc))}", status_code=303)
+    return RedirectResponse(url="/admin/businesses?owner_saved=1", status_code=303)
 
 
 @router.post("/businesses/{business_key}/delete")

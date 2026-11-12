@@ -29,6 +29,7 @@ ROLE_LABELS = {
     UserRole.ACCOUNT: "Account",
     UserRole.MARKETING: "Marketing",
     UserRole.FRANCHISE: "Franchise",
+    UserRole.OWNER: "Business owner",
 }
 
 
@@ -119,6 +120,18 @@ def require_login(request: Request, db: Session = Depends(get_db)) -> User:
     if not user:
         nxt = quote(request.url.path, safe="/")
         raise AuthRedirect(f"/admin/login?next={nxt}")
+    if user.role == UserRole.OWNER:
+        raise AuthRedirect("/owner")
+    return user
+
+
+def require_owner(request: Request, db: Session = Depends(get_db)) -> User:
+    user = get_session_user(request, db)
+    if not user:
+        nxt = quote(request.url.path, safe="/")
+        raise AuthRedirect(f"/owner/login?next={nxt}")
+    if user.role != UserRole.OWNER:
+        raise AuthRedirect("/admin")
     return user
 
 

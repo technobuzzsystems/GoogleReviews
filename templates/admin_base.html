@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}?v=20261102c" />
   {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -55,6 +55,9 @@
       {% if can_manage_businesses %}
       <a href="/admin/businesses" class="nav-item {% if active_nav == 'businesses' %}active{% endif %}">
         <span class="nav-icon">🏢</span> Manage Businesses
+      </a>
+      <a href="/admin/feedback" class="nav-item {% if active_nav == 'feedback' %}active{% endif %}">
+        <span class="nav-icon">💬</span> Customer Feedback
       </a>
       {% endif %}
       {% if is_admin %}

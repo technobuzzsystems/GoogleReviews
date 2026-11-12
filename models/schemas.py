@@ -20,3 +20,11 @@ class SubmitFeedbackRequest(BaseModel):
 class GenerateExamplesRequest(BaseModel):
     name: str = Field(default="", max_length=200)
     scope: str = Field(..., min_length=8, max_length=4000)
+
+
+class CashPaymentConfirmRequest(BaseModel):
+    """Admin cash / offline confirmation. Amount is never accepted from the client."""
+
+    received_on: str = Field(..., min_length=8, max_length=10)
+    reference_no: str = Field(default="", max_length=80)
+    remarks: str = Field(default="", max_length=500)

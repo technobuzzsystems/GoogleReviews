@@ -142,6 +142,8 @@ def _serialize_business(b: BusinessConfigModel, salesman_names: dict = None) -> 
         "is_active": bool(getattr(b, "is_active", True) if getattr(b, "is_active", None) is not None else True),
         "franchise_id": getattr(b, "franchise_id", None),
         "area": getattr(b, "area", "") or "",
+        "owner_user_id": getattr(b, "owner_user_id", None),
+        "qr_destination_url": getattr(b, "qr_destination_url", "") or "",
     }
 
 
@@ -341,15 +343,27 @@ def list_businesses_page(
     start = (page - 1) * per_page + 1 if total else 0
     end = min(page * per_page, total)
     cards = [_serialize_business_card(b, salesman_names) for b in rows]
-    from services.payment_service import pending_payment_keys
+    from services.payment_service import latest_paid_methods, pending_payment_keys
 
     due_keys = pending_payment_keys(db, cards)
     from services.invoice_service import invoice_nos_for_business_keys
 
-    invoice_nos = invoice_nos_for_business_keys(db, [c["key"] for c in cards])
+    card_keys = [c["key"] for c in cards]
+    invoice_nos = invoice_nos_for_business_keys(db, card_keys)
+    paid_methods = latest_paid_methods(db, card_keys)
     for card in cards:
         card["payment_due"] = card["key"] in due_keys
         card["invoice_no"] = "" if card["payment_due"] else invoice_nos.get(card["key"], "")
+        card["payment_method"] = "" if card["payment_due"] else paid_methods.get(card["key"], "")
+    owner_ids = {b.owner_user_id for b in rows if getattr(b, "owner_user_id", None)}
+    owner_names = {}
+    if owner_ids:
+        from models.domain_models import User
+
+        owner_names = dict(db.query(User.id, User.username).filter(User.id.in_(owner_ids)).all())
+    for business, card in zip(rows, cards):
+        owner_id = getattr(business, "owner_user_id", None)
+        card["owner_username"] = owner_names.get(owner_id, "") if owner_id else ""
     return {
         "rows": cards,
         "total": total,
@@ -457,6 +471,8 @@ def user_owns_business(db: Session, user, business_key: str) -> bool:
     if user.role == UserRole.FRANCHISE:
         org = get_franchise_for_user(db, user)
         return bool(org and business.get("franchise_id") == org.id)
+    if user.role == UserRole.OWNER:
+        return business.get("owner_user_id") == user.id
     own = get_executive_for_user(db, user)
     if not own:
         return False
@@ -659,6 +675,36 @@ def save_business(db: Session, business_key: str, data: dict):
         from services.sales_service import upsert_plan_booking
 
         upsert_plan_booking(db, b, commit=True)
+
+def set_qr_destination(db: Session, business_key: str, destination: str) -> None:
+    """Save which business this QR opens. Does not change the QR image."""
+    b = db.query(BusinessConfigModel).filter(BusinessConfigModel.key == business_key).first()
+    if not b:
+        raise ValueError("Business not found.")
+    b.qr_destination_url = destination or ""
+    db.commit()
+
+
+def qr_feedback_target(db: Session, business_key: str) -> dict | None:
+    """The review page this QR should open. External links are ignored."""
+    business = get_business(db, business_key)
+    if not business:
+        return None
+    raw = (business.get("qr_destination_url") or "").strip()
+    if raw and "://" not in raw and not raw.startswith("/"):
+        target = get_business(db, raw)
+        if target:
+            return target
+    return business
+
+
+def business_choices(db: Session) -> list[dict]:
+    rows = (
+        db.query(BusinessConfigModel.key, BusinessConfigModel.name)
+        .order_by(BusinessConfigModel.name.asc())
+        .all()
+    )
+    return [{"key": key, "name": name} for key, name in rows]
 
 def set_business_active_status(db: Session, business_key: str, is_active: bool) -> bool:
     b = db.query(BusinessConfigModel).filter(BusinessConfigModel.key == business_key).first()

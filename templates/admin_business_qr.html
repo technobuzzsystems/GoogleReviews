@@ -187,8 +187,8 @@
     <!-- Feedback URL Display with Copy Box -->
     <div class="qr-url-section">
       <div class="qr-url-header">
-        <span class="qr-url-label">Direct Feedback URL</span>
-        <span class="qr-url-hint">Target URL encoded inside the QR</span>
+        <span class="qr-url-label">Permanent QR link</span>
+        <span class="qr-url-hint">This address is inside the QR. It does not change.</span>
       </div>
       <div class="qr-url-box">
         <span class="qr-url-icon" aria-hidden="true">
@@ -200,6 +200,36 @@
           <span class="copy-label">Copy</span>
         </button>
       </div>
+    </div>
+
+    <div class="qr-url-section" id="qr-redirect">
+      <div class="qr-url-header">
+        <span class="qr-url-label">Manage QR Redirect Link</span>
+        <span class="qr-url-hint">The same QR opens the review page of the business you choose.</span>
+      </div>
+      {% if qr_saved %}
+      <p class="page-lede">Saved. This QR now opens {{ target_name }}’s review page.</p>
+      {% endif %}
+      {% if qr_error %}
+      <p class="form-error">{{ qr_error }}</p>
+      {% endif %}
+      <p class="qr-preview-hint">Customers now see: {{ target_name }}</p>
+      {% if is_admin %}
+      <form method="post" action="/admin/businesses/{{ business_key }}/qr-destination">
+        <div class="form-group">
+          <label for="targetBusiness">Open this business</label>
+          <select id="targetBusiness" name="target_business" class="filter-select" required>
+            {% for item in qr_businesses %}
+            <option value="{{ item.key }}" {% if item.key == selected_target %}selected{% endif %}>{{ item.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Save destination</button>
+      </form>
+      <p class="qr-url-hint">The QR picture stays the same. Customers see that business name, star form, and Google review step.</p>
+      {% else %}
+      <p class="qr-url-hint">Only an admin can change this.</p>
+      {% endif %}
     </div>
 
     <!-- Action Buttons Toolbar -->

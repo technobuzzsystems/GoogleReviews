@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from config import get_config
 from database import get_db
-from services.business_service import find_business_by_route, get_business
+from services.business_service import find_business_by_route, get_business, qr_feedback_target
 from services.storage_service import get_logo_object, public_logo_url
 from models.schemas import GenerateFeedbackRequest, SubmitFeedbackRequest
 from utils.validators import sanitize_string
@@ -23,6 +23,17 @@ config = get_config()
 logger = logging.getLogger(__name__)
 
 templates = Jinja2Templates(directory="templates")
+
+
+@router.get("/go/{business_key}")
+def qr_go(business_key: str, db: Session = Depends(get_db)):
+    """Permanent QR address. Sends the customer to the business's latest destination."""
+    target = qr_feedback_target(db, business_key)
+    if not target:
+        raise HTTPException(status_code=404, detail="This QR code is not available.")
+    destination = target.get("feedback_path") or "/feedback"
+    return RedirectResponse(url=destination, status_code=302, headers={"Cache-Control": "no-store"})
+
 
 # ─── GET /media/logo/{key} and /media/file/{key} ───────────────────────────────
 @router.get("/media/logo/{key:path}")
@@ -165,6 +176,7 @@ def generate_feedback(payload: GenerateFeedbackRequest, db: Session = Depends(ge
 @router.post("/submit-feedback", status_code=status.HTTP_201_CREATED)
 def submit_feedback(payload: SubmitFeedbackRequest, db: Session = Depends(get_db)):
     business_id = payload.business_id
+    b_config = None
     if business_id:
         b_config = get_business(db, business_id)
         if b_config:
@@ -178,25 +190,35 @@ def submit_feedback(payload: SubmitFeedbackRequest, db: Session = Depends(get_db
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="This review service is currently unavailable because the subscription has expired. Please renew the plan to continue using this service.",
                 )
-    """
-    Validate the selected feedback but DO NOT save it to any database.
-    Always returns a mock success response to keep the frontend flow working.
-    """
-    # ── Sanitize inputs ────────────────────────────────────────────────────────
     company       = sanitize_string(payload.company, max_length=200)
     company_id    = sanitize_string(payload.company_id, max_length=100)
     rating        = payload.rating
     feedback_text = sanitize_string(payload.feedback, max_length=1000)
     business_id   = payload.business_id
-    
-    # Normally we would save to a DB here, but database connectivity is removed.
+    saved_id = "no-db-submission"
+
+    if b_config and feedback_text:
+        try:
+            from services.feedback_service import save_private_feedback
+
+            row = save_private_feedback(
+                db,
+                business_key=b_config.get("key") or business_id,
+                rating=rating,
+                comment=feedback_text,
+            )
+            saved_id = str(row.id)
+        except Exception:
+            logger.exception("submit_feedback: could not store review for %s", business_id)
+            db.rollback()
+
     logger.info(
-        "submit_feedback (MOCK SUCCESS) — company=%s rating=%d feedback='%s'",
+        "submit_feedback — company=%s rating=%d feedback='%s'",
         company_id, rating, feedback_text[:50]
     )
 
     return {
         "success": True,
         "message": "Thank you! Your feedback has been recorded.",
-        "id":      "no-db-submission",
+        "id":      saved_id,
     }
