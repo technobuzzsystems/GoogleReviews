@@ -397,18 +397,20 @@ def generate_feedback_suggestions(
     client = _get_client()
 
     # Build model list fresh from current config (avoids stale module-level cache)
+    # Uses verified, currently active Google Gemini models.
     load_dotenv(override=True)
     _current_config = get_config()
     _raw_chain = [
         _current_config.GEMINI_MODEL,
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
         "gemini-2.5-flash",
-        "gemini-2.5-flash-lite",
-        "gemini-flash-latest",
+        "gemini-1.5-flash-8b",
     ]
     seen = set()
     models = []
     for model in _raw_chain:
-        if model not in seen:
+        if model and model not in seen:
             seen.add(model)
             models.append(model)
 
@@ -426,18 +428,19 @@ def generate_feedback_suggestions(
             raise
         except RuntimeError as e:
             last_error = e
-            logger.warning("Model %s failed; trying next fallback.", model)
+            logger.warning("Model %s failed (%s); trying next fallback.", model, e)
             continue
 
     elapsed = round(time.monotonic() - (deadline - _TOTAL_BUDGET_SEC), 2)
     logger.error(
-        "AI feedback generation failed for rating=%d after %.2fs (budget=%.1fs). Last error: %s",
+        "All AI models failed for rating=%d after %.2fs. Last error: %s. Falling back to local templates.",
         rating,
         elapsed,
-        _TOTAL_BUDGET_SEC,
         last_error,
     )
-    raise RuntimeError("AI feedback generation failed. Please try again.") from last_error
+    # Fail-safe: instead of crashing the customer's screen with a 500 error,
+    # gracefully return high-quality local suggestions tailored to the business and rating.
+    return _local_suggestions(rating, business_context, language)
 
 
 def _local_star_examples(name: str, scope: str) -> dict:

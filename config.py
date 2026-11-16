@@ -31,7 +31,7 @@ class Config:
 
     # ─── Google Gemini ────────────────────────────────────────────────────────
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_MODEL: str   = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    GEMINI_MODEL: str   = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
     # ─── Company (single-company setup — extend for multi-company later) ──────
     COMPANY_NAME: str = os.getenv("COMPANY_NAME", "TechnoBuzz")
