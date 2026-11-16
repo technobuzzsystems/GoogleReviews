@@ -1,0 +1,1759 @@
+2026-09-02 07:53:35  [INFO]  app - [OK] Routers registered: feedback_router, admin_router
+2026-09-02 07:53:35  [INFO]  app - [OK] Global error handlers registered.
+INFO:     Started server process [3355898]
+INFO:     Waiting for application startup.
+ERROR:    Traceback (most recent call last):
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 144, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3319, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 1272, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 178, in _do_get
+    with util.safe_reraise():
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 176, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 389, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+    with util.safe_reraise():
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/routing.py", line 732, in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+  File "/usr/lib/python3.12/contextlib.py", line 210, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/app.py", line 34, in lifespan
+    init_db()
+  File "/root/GoogleReviews/database/__init__.py", line 85, in init_db
+    Base.metadata.create_all(bind=engine)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/sql/schema.py", line 5929, in create_all
+    bind._run_ddl_visitor(
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3269, in _run_ddl_visitor
+    with self.begin() as conn:
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3259, in begin
+    with self.connect() as conn:
+         ^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3295, in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2450, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 144, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3319, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 1272, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 178, in _do_get
+    with util.safe_reraise():
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 176, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 389, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+    with util.safe_reraise():
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+ERROR:    Application startup failed. Exiting.
+2026-09-02 07:54:03  [INFO]  app - [OK] Routers registered: feedback_router, admin_router
+2026-09-02 07:54:03  [INFO]  app - [OK] Global error handlers registered.
+INFO:     Started server process [3355914]
+INFO:     Waiting for application startup.
+ERROR:    Traceback (most recent call last):
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 144, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3319, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 1272, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 178, in _do_get
+    with util.safe_reraise():
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 176, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 389, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+    with util.safe_reraise():
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/routing.py", line 732, in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+  File "/usr/lib/python3.12/contextlib.py", line 210, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/app.py", line 34, in lifespan
+    init_db()
+  File "/root/GoogleReviews/database/__init__.py", line 85, in init_db
+    Base.metadata.create_all(bind=engine)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/sql/schema.py", line 5929, in create_all
+    bind._run_ddl_visitor(
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3269, in _run_ddl_visitor
+    with self.begin() as conn:
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3259, in begin
+    with self.connect() as conn:
+         ^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3295, in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2450, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 144, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3319, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 1272, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 178, in _do_get
+    with util.safe_reraise():
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 176, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 389, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+    with util.safe_reraise():
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+ERROR:    Application startup failed. Exiting.
+2026-09-02 07:56:34  [INFO]  app - [OK] Routers registered: feedback_router, admin_router
+2026-09-02 07:56:34  [INFO]  app - [OK] Global error handlers registered.
+INFO:     Started server process [3356006]
+INFO:     Waiting for application startup.
+ERROR:    Traceback (most recent call last):
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 144, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3319, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 1272, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 178, in _do_get
+    with util.safe_reraise():
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 176, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 389, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+    with util.safe_reraise():
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/routing.py", line 732, in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+  File "/usr/lib/python3.12/contextlib.py", line 210, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/app.py", line 34, in lifespan
+    init_db()
+  File "/root/GoogleReviews/database/__init__.py", line 85, in init_db
+    Base.metadata.create_all(bind=engine)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/sql/schema.py", line 5929, in create_all
+    bind._run_ddl_visitor(
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3269, in _run_ddl_visitor
+    with self.begin() as conn:
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3259, in begin
+    with self.connect() as conn:
+         ^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3295, in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2450, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 144, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3319, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 1272, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 178, in _do_get
+    with util.safe_reraise():
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 176, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 389, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+    with util.safe_reraise():
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+ERROR:    Application startup failed. Exiting.
+2026-09-02 08:07:56  [INFO]  app - [OK] Routers registered: feedback_router, admin_router
+2026-09-02 08:07:56  [INFO]  app - [OK] Global error handlers registered.
+INFO:     Started server process [3356836]
+INFO:     Waiting for application startup.
+ERROR:    Traceback (most recent call last):
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 144, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3319, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 1272, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 178, in _do_get
+    with util.safe_reraise():
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 176, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 389, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+    with util.safe_reraise():
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: could not translate host name "123@localhost" to address: Name or service not known
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/routing.py", line 732, in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+  File "/usr/lib/python3.12/contextlib.py", line 210, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/app.py", line 34, in lifespan
+    init_db()
+  File "/root/GoogleReviews/database/__init__.py", line 85, in init_db
+    Base.metadata.create_all(bind=engine)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/sql/schema.py", line 5929, in create_all
+    bind._run_ddl_visitor(
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3269, in _run_ddl_visitor
+    with self.begin() as conn:
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3259, in begin
+    with self.connect() as conn:
+         ^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3295, in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2450, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 144, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3319, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 1272, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 178, in _do_get
+    with util.safe_reraise():
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 176, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 389, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+    with util.safe_reraise():
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) could not translate host name "123@localhost" to address: Name or service not known
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+ERROR:    Application startup failed. Exiting.
+2026-09-02 08:12:58  [INFO]  app - [OK] Routers registered: feedback_router, admin_router
+2026-09-02 08:12:58  [INFO]  app - [OK] Global error handlers registered.
+INFO:     Started server process [3357087]
+INFO:     Waiting for application startup.
+2026-09-02 08:12:59  [INFO]  database - Database tables ready (localhost:5432/googlereviews)
+2026-09-02 08:12:59  [INFO]  app - [OK] Database initialized
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/feedback HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/stats HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/feedback HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/stats HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/feedback HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/stats HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/feedback HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/stats HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/feedback HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/stats HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/feedback HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/stats HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/feedback HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/stats HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/feedback HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/stats HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/feedback HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/stats HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/feedback HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/stats HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/feedback HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin/api/stats HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "POST /admin/login HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /admin/businesses/new HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "POST /admin/login HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/logout HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "POST /admin/login HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/logout HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "POST /admin/login HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/stats?business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/api/feedback?page=1&limit=10&business=technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/logout HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/login HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/login HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "POST /admin/login HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses/new HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     154.28.229.238:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     104.164.126.53:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     154.28.229.238:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     104.164.126.53:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     107.172.124.18:0 - "HEAD /admin HTTP/1.0" 405 Method Not Allowed
+INFO:     104.164.126.53:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     104.164.126.53:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/login HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/login HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/login HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "POST /admin/login HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/login HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses/new HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses/MYTOYTROLLY/edit HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     150.107.25.64:0 - "GET /admin/login HTTP/1.0" 200 OK
+INFO:     150.107.25.64:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     152.58.32.183:0 - "GET /admin/login HTTP/1.0" 200 OK
+INFO:     152.58.32.183:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     152.58.32.183:0 - "GET /favicon.ico HTTP/1.0" 404 Not Found
+INFO:     43.243.81.107:0 - "POST /admin/businesses HTTP/1.0" 400 Bad Request
+INFO:     43.243.81.107:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "POST /admin/businesses HTTP/1.0" 303 See Other
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+2026-09-02 09:42:54  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-02 09:42:54  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-02 09:42:54  [WARNING]  google_genai.models - Direct use of automatic function calling (AFC) in Models.generate_content is not recommended. Instead, we recommend to use AFC in Chat.send_message. Similarly, direct use of AFC in Models.generate_content_stream is not recommended. Instead, we recommend to use AFC in Chat.send_message_stream.
+2026-09-02 09:43:06  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-02 09:43:06  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-02 09:43:06  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     43.243.81.107:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-02 09:43:10  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=GRP007 rating=5 feedback='Honestly, My Toy Trolly is a lifesaver for birthda'
+INFO:     43.243.81.107:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     152.58.32.50:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     152.58.32.50:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+INFO:     152.58.32.50:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     152.58.32.50:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+2026-09-02 09:46:44  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-02 09:46:44  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-02 09:46:54  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-02 09:46:54  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-02 09:46:54  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=1
+INFO:     152.58.32.50:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-02 09:47:09  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-02 09:47:09  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-02 09:47:19  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-02 09:47:19  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-02 09:47:19  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     152.58.32.50:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses/new HTTP/1.0" 200 OK
+INFO:     152.58.32.50:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     152.58.32.50:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+2026-09-02 09:47:40  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-02 09:47:40  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-02 09:47:52  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-02 09:47:52  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-02 09:47:52  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=4
+INFO:     43.243.81.107:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /favicon.ico HTTP/1.0" 404 Not Found
+INFO:     43.243.81.107:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+2026-09-02 09:48:28  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-02 09:48:28  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-02 09:48:38  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-02 09:48:38  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-02 09:48:38  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     43.243.81.107:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-02 09:48:41  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=GRP007 rating=5 feedback='We've been using their toy rental service for mont'
+INFO:     43.243.81.107:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     74.7.175.179:0 - "GET /robots.txt HTTP/1.0" 404 Not Found
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+2026-09-02 10:20:10  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-02 10:20:16  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-02 10:20:16  [INFO]  services.gemini_service - Generated star example prompts with gemini-2.5-flash
+INFO:     43.243.81.107:0 - "POST /admin/api/generate-examples HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "POST /admin/businesses HTTP/1.0" 303 See Other
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /feedback/grp020920260322 HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /feedback/grp020920260322 HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /favicon.ico HTTP/1.0" 404 Not Found
+INFO:     103.150.138.213:0 - "GET /feedback/grp020920260322 HTTP/1.0" 200 OK
+INFO:     103.150.138.213:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     103.150.138.213:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     106.192.119.188:0 - "GET /feedback/grp020920260322 HTTP/1.0" 200 OK
+INFO:     106.192.119.188:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     106.192.119.188:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+2026-09-02 10:23:17  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-02 10:23:17  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-02 10:23:25  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-02 10:23:25  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-02 10:23:25  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     106.192.119.188:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-02 10:24:07  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=techcareservices rating=5 feedback='My laptop was completely dead, thought I'd lost ev'
+INFO:     106.192.119.188:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     43.243.81.107:0 - "GET /feedback/grp020920260322 HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+2026-09-02 10:24:49  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-02 10:24:49  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-02 10:24:59  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-02 10:24:59  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-02 10:24:59  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=4
+INFO:     43.243.81.107:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-02 10:25:02  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=techcareservices rating=4 feedback='The IT support we got for our network issues was s'
+INFO:     43.243.81.107:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     103.150.138.213:0 - "GET /feedback/grp020920260322 HTTP/1.0" 200 OK
+INFO:     103.150.138.213:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     103.150.138.213:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     103.150.138.213:0 - "GET /feedback/grp020920260322 HTTP/1.0" 200 OK
+INFO:     34.91.100.6:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     34.91.100.6:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     152.58.32.162:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     152.58.32.162:0 - "GET /favicon.ico HTTP/1.0" 404 Not Found
+INFO:     152.58.32.126:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     152.58.32.126:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+INFO:     152.58.32.126:0 - "GET /static/css/style.css HTTP/1.0" 304 Not Modified
+INFO:     152.58.32.126:0 - "GET /static/js/feedback.js HTTP/1.0" 304 Not Modified
+2026-09-02 10:54:52  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-02 10:54:52  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+INFO:     152.58.31.123:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     152.58.31.123:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     152.58.31.123:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+INFO:     152.58.31.123:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+2026-09-02 10:54:58  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-02 10:54:58  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-02 10:54:58  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     152.58.32.126:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-02 10:54:59  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-02 10:54:59  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-02 10:55:07  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-02 10:55:07  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-02 10:55:07  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     152.58.31.123:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-02 10:55:36  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=GRP007 rating=5 feedback='Honestly, the customer service here is outstanding'
+INFO:     152.58.31.123:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     152.58.32.126:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     152.58.32.126:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+2026-09-02 10:58:12  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-02 10:58:12  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-02 10:58:20  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-02 10:58:20  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-02 10:58:20  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     152.58.32.126:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-02 10:59:02  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=GRP007 rating=5 feedback='We've been using them for all our children's activ'
+INFO:     152.58.32.126:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     42.104.218.15:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     42.104.218.15:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     42.104.218.15:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+INFO:     42.104.218.15:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+2026-09-02 11:07:20  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-02 11:07:20  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-02 11:07:29  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-02 11:07:29  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-02 11:07:29  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     42.104.218.15:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+INFO:     152.58.33.187:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     152.58.33.187:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     152.58.33.187:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+INFO:     152.58.33.187:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+2026-09-02 11:19:55  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-02 11:19:55  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-02 11:20:03  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-02 11:20:03  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-02 11:20:03  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=4
+INFO:     152.58.33.187:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     152.58.33.187:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+INFO:     103.24.234.13:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     103.24.234.13:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     106.221.219.233:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     106.221.219.233:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     106.221.219.233:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+INFO:     106.221.219.233:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+2026-09-02 12:54:27  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-02 12:54:27  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-02 12:54:37  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-02 12:54:37  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-02 12:54:37  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     106.221.219.233:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+INFO:     152.59.63.176:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     152.59.63.176:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     152.59.63.176:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+INFO:     152.59.63.176:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     152.59.63.176:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     152.59.63.176:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+2026-09-02 12:55:15  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-02 12:55:15  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-02 12:55:26  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-02 12:55:26  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-02 12:55:26  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     152.59.63.176:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-02 12:55:51  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=GRP007 rating=5 feedback='Their DIY kits are unique and incredibly engaging.'
+INFO:     106.221.219.233:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+2026-09-02 12:56:03  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=GRP007 rating=5 feedback='This place is now my absolute go-to for all festiv'
+INFO:     152.59.63.176:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     58.84.61.176:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     58.84.61.176:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     58.84.61.176:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+INFO:     58.84.61.176:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+2026-09-02 13:10:34  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-02 13:10:34  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-02 13:10:42  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-02 13:10:42  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-02 13:10:42  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     58.84.61.176:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-02 13:12:14  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=GRP007 rating=5 feedback='Finding the perfect birthday gifts used to be a he'
+INFO:     58.84.61.176:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     23.27.145.123:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     23.27.145.123:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     23.27.145.123:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     103.24.234.7:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     103.24.234.7:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     42.104.227.24:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     42.104.227.24:0 - "GET /static/css/style.css HTTP/1.0" 304 Not Modified
+INFO:     42.104.227.24:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+INFO:     42.104.227.24:0 - "GET /static/js/feedback.js HTTP/1.0" 304 Not Modified
+2026-09-02 15:00:23  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-02 15:00:23  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-02 15:00:31  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-02 15:00:31  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-02 15:00:31  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     42.104.227.24:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-02 15:00:57  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=GRP007 rating=5 feedback='Finding the perfect birthday gift used to be a nig'
+INFO:     42.104.227.24:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     74.7.175.179:0 - "GET /robots.txt HTTP/1.0" 404 Not Found
+INFO:     136.85.12.182:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     136.85.12.182:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     68.166.168.26:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     68.166.168.26:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     106.213.83.32:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     106.213.83.32:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     106.213.83.32:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+INFO:     106.213.83.32:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+2026-09-02 18:50:21  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-02 18:50:21  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-02 18:50:30  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-02 18:50:30  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-02 18:50:30  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     106.213.83.32:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-02 18:50:33  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=GRP007 rating=4 feedback='My Toy Trolly is absolutely fantastic! Their range'
+INFO:     106.213.83.32:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     34.38.90.3:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     34.38.90.3:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     169.40.142.177:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     169.40.142.177:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     34.30.187.176:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     34.30.187.176:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     20.65.79.49:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     20.65.79.49:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/images/technobuzz_logo.jpg HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 304 Not Modified
+INFO:     64.144.8.103:0 - "GET /feedback HTTP/1.0" 200 OK
+INFO:     152.163.50.187:0 - "GET /feedback HTTP/1.0" 200 OK
+INFO:     64.144.2.140:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     44.214.5.36:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     69.3.157.175:0 - "GET /feedback HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/images/technobuzz_logo.jpg HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     157.254.151.13:0 - "GET /static/css/feedback.css HTTP/1.0" 404 Not Found
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+2026-09-03 07:26:56  [ERROR]  app - Internal server error
+Traceback (most recent call last):
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.OperationalError: SSL connection has been closed unexpectedly
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/middleware/sessions.py", line 85, in __call__
+    await self.app(scope, receive, send_wrapper)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 65, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/routing.py", line 756, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/routing.py", line 776, in app
+    await route.handle(scope, receive, send)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/fastapi/routing.py", line 278, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/concurrency.py", line 42, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/anyio/to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 2641, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 1033, in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/routes/admin_routes.py", line 177, in login_submit
+    user = authenticate_user(db, username, password)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/services/auth_service.py", line 74, in authenticate_user
+    user = db.query(User).filter(User.username == username).first()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/orm/query.py", line 2766, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/orm/query.py", line 2864, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2373, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2271, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1421, in execute
+    return meth(
+           ^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1643, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2365, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) SSL connection has been closed unexpectedly
+
+[SQL: SELECT users.id AS users_id, users.username AS users_username, users.password_hash AS users_password_hash, users.role AS users_role, users.full_name AS users_full_name, users.phone AS users_phone, users.alternate_mobile AS users_alternate_mobile, users.email AS users_email, users.address AS users_address, users.aadhaar AS users_aadhaar, users.bank_name AS users_bank_name, users.account_name AS users_account_name, users.account_number AS users_account_number, users.ifsc AS users_ifsc, users.is_active AS users_is_active, users.created_at AS users_created_at 
+FROM users 
+WHERE users.username = %(username_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'username_1': 'admin', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     43.243.81.107:0 - "POST /admin/login HTTP/1.0" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.OperationalError: SSL connection has been closed unexpectedly
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 411, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 69, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/middleware/sessions.py", line 85, in __call__
+    await self.app(scope, receive, send_wrapper)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 65, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/routing.py", line 756, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/routing.py", line 776, in app
+    await route.handle(scope, receive, send)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/fastapi/routing.py", line 278, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/starlette/concurrency.py", line 42, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/anyio/to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 2641, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 1033, in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/routes/admin_routes.py", line 177, in login_submit
+    user = authenticate_user(db, username, password)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/services/auth_service.py", line 74, in authenticate_user
+    user = db.query(User).filter(User.username == username).first()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/orm/query.py", line 2766, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/orm/query.py", line 2864, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2373, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2271, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1421, in execute
+    return meth(
+           ^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1643, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2365, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/root/GoogleReviews/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) SSL connection has been closed unexpectedly
+
+[SQL: SELECT users.id AS users_id, users.username AS users_username, users.password_hash AS users_password_hash, users.role AS users_role, users.full_name AS users_full_name, users.phone AS users_phone, users.alternate_mobile AS users_alternate_mobile, users.email AS users_email, users.address AS users_address, users.aadhaar AS users_aadhaar, users.bank_name AS users_bank_name, users.account_name AS users_account_name, users.account_number AS users_account_number, users.ifsc AS users_ifsc, users.is_active AS users_is_active, users.created_at AS users_created_at 
+FROM users 
+WHERE users.username = %(username_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'username_1': 'admin', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     43.243.81.107:0 - "GET /favicon.ico HTTP/1.0" 404 Not Found
+INFO:     43.243.81.107:0 - "GET /admin/login HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "POST /admin/login HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/wallet HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses/new HTTP/1.0" 200 OK
+INFO:     193.203.184.213:0 - "GET /.well-known/hostinger-challenge/gxDEi0wNtJ HTTP/1.0" 404 Not Found
+INFO:     152.58.33.24:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     152.58.33.24:0 - "GET /static/css/style.css HTTP/1.0" 304 Not Modified
+INFO:     152.58.33.24:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+INFO:     152.58.33.24:0 - "GET /static/js/feedback.js HTTP/1.0" 304 Not Modified
+2026-09-03 07:49:22  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-03 07:49:22  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-03 07:49:32  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-03 07:49:32  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-03 07:49:32  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     152.58.33.24:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-03 07:51:15  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=GRP007 rating=5 feedback='MY TOY TROLLY is an absolute lifesaver for birthda'
+INFO:     152.58.33.24:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3357087]
+2026-09-03 08:30:03  [INFO]  app - [OK] Routers registered: feedback_router, admin_router
+2026-09-03 08:30:03  [INFO]  app - [OK] Global error handlers registered.
+INFO:     Started server process [3400873]
+INFO:     Waiting for application startup.
+2026-09-03 08:30:04  [INFO]  database - Database tables ready (localhost:5432/googlereviews)
+2026-09-03 08:30:04  [INFO]  app - [OK] Database initialized
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "POST /admin/login HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /admin/businesses/wada_misal/edit HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/images/wada_misal_logo.jpg HTTP/1.0" 404 Not Found
+INFO:     43.243.81.107:0 - "POST /admin/businesses HTTP/1.0" 400 Bad Request
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /static/images/wada_misal_logo.jpg HTTP/1.0" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3400873]
+2026-09-03 08:33:58  [INFO]  app - [OK] Routers registered: feedback_router, admin_router
+2026-09-03 08:33:58  [INFO]  app - [OK] Global error handlers registered.
+INFO:     Started server process [3401047]
+INFO:     Waiting for application startup.
+2026-09-03 08:33:58  [INFO]  database - Database tables ready (localhost:5432/googlereviews)
+2026-09-03 08:33:58  [INFO]  app - [OK] Database initialized
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     43.243.81.107:0 - "POST /admin/businesses HTTP/1.0" 303 See Other
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /admin/businesses/wada_misal/edit HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses/wada_misal/edit HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "POST /admin/businesses HTTP/1.0" 303 See Other
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback/wada_misal HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses/sunrise_cafe_autogen/edit HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "POST /admin/businesses HTTP/1.0" 303 See Other
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /feedback/sunrise_cafe HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "POST /admin/login HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback/sunrise_cafe HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/users HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/users/new HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "POST /admin/users HTTP/1.0" 303 See Other
+INFO:     43.243.81.107:0 - "GET /admin/users HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses/MYTOYTROLLY/edit HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/images/mytoytrolly.png HTTP/1.0" 404 Not Found
+INFO:     43.243.81.107:0 - "POST /admin/businesses HTTP/1.0" 303 See Other
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+2026-09-03 08:40:33  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-03 08:40:33  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-03 08:40:33  [WARNING]  google_genai.models - Direct use of automatic function calling (AFC) in Models.generate_content is not recommended. Instead, we recommend to use AFC in Chat.send_message. Similarly, direct use of AFC in Models.generate_content_stream is not recommended. Instead, we recommend to use AFC in Chat.send_message_stream.
+INFO:     43.243.81.107:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+2026-09-03 08:40:41  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-03 08:40:41  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-03 08:40:41  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=3
+INFO:     43.243.81.107:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback/board_001 HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /static/images/boardwale_logo.png HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "POST /admin/login HTTP/1.0" 401 Unauthorized
+INFO:     43.243.81.107:0 - "POST /admin/login HTTP/1.0" 401 Unauthorized
+INFO:     43.243.81.107:0 - "POST /admin/login HTTP/1.0" 401 Unauthorized
+INFO:     43.243.81.107:0 - "POST /admin/login HTTP/1.0" 401 Unauthorized
+INFO:     43.243.81.107:0 - "POST /admin/login HTTP/1.0" 401 Unauthorized
+INFO:     43.243.81.107:0 - "POST /admin/login HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /admin/businesses/new HTTP/1.0" 200 OK
+INFO:     152.58.17.5:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     152.58.17.5:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     152.58.17.5:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     152.58.17.5:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     152.58.17.5:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     152.58.17.5:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     123.176.33.69:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     123.176.33.69:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     123.176.33.69:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     152.58.17.5:0 - "POST /admin/login HTTP/1.0" 302 Found
+INFO:     152.58.17.5:0 - "GET /admin HTTP/1.0" 200 OK
+2026-09-03 09:22:09  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-03 09:22:16  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-03 09:22:16  [INFO]  services.gemini_service - Generated star example prompts with gemini-2.5-flash
+INFO:     43.243.81.107:0 - "POST /admin/api/generate-examples HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /admin/wallet HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 304 Not Modified
+INFO:     165.245.236.98:0 - "GET /wp-login.php HTTP/1.0" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3401047]
+2026-09-03 10:23:03  [INFO]  app - [OK] Routers registered: feedback_router, admin_router
+2026-09-03 10:23:03  [INFO]  app - [OK] Global error handlers registered.
+INFO:     Started server process [3406195]
+INFO:     Waiting for application startup.
+2026-09-03 10:23:03  [INFO]  database - Database tables ready (localhost:5432/googlereviews)
+2026-09-03 10:23:03  [INFO]  app - [OK] Database initialized
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "POST /admin/login HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback/technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/images/technobuzz_logo.jpg HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/i18n.js HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback/technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/i18n.js HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /media/logo/logos/MYTOYTROLLY/ffb50db9ad1d43b49a97d6ac0170c51b.jpg HTTP/1.0" 200 OK
+2026-09-03 10:26:37  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-03 10:26:37  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-03 10:26:37  [WARNING]  google_genai.models - Direct use of automatic function calling (AFC) in Models.generate_content is not recommended. Instead, we recommend to use AFC in Chat.send_message. Similarly, direct use of AFC in Models.generate_content_stream is not recommended. Instead, we recommend to use AFC in Chat.send_message_stream.
+2026-09-03 10:26:47  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-03 10:26:47  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-03 10:26:47  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     43.243.81.107:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-03 10:26:52  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=GRP007 rating=5 feedback='We needed birthday gifts for a whole class, and th'
+INFO:     43.243.81.107:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     43.243.81.107:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /favicon.ico HTTP/1.0" 404 Not Found
+INFO:     43.243.81.107:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/i18n.js HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /media/logo/logos/MYTOYTROLLY/ffb50db9ad1d43b49a97d6ac0170c51b.jpg HTTP/1.0" 200 OK
+2026-09-03 10:28:05  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-03 10:28:05  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-03 10:28:13  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-03 10:28:13  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-03 10:28:13  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     43.243.81.107:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-03 10:28:51  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=GRP007 rating=5 feedback='Their toy rental service is a game-changer for us.'
+INFO:     43.243.81.107:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     43.243.81.107:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /static/js/i18n.js HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 304 Not Modified
+2026-09-03 10:29:44  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-03 10:29:44  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-03 10:29:54  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-03 10:29:54  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-03 10:29:54  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     43.243.81.107:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-03 10:30:06  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=GRP007 rating=5 feedback='Finding birthday gifts used to be such a chore, bu'
+INFO:     43.243.81.107:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     43.243.81.107:0 - "GET /feedback/technobuzz HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /static/js/i18n.js HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /static/images/technobuzz_logo.jpg HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     152.58.33.207:0 - "GET /admin/sales-book HTTP/1.0" 200 OK
+INFO:     152.58.33.207:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     152.58.33.207:0 - "GET /admin/commission HTTP/1.0" 200 OK
+INFO:     152.58.33.207:0 - "GET /admin/wallet HTTP/1.0" 200 OK
+INFO:     152.58.33.207:0 - "GET /feedback HTTP/1.0" 200 OK
+INFO:     152.58.33.207:0 - "GET /static/images/technobuzz_logo.jpg HTTP/1.0" 200 OK
+INFO:     152.58.33.207:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     152.58.33.207:0 - "GET /static/js/i18n.js HTTP/1.0" 200 OK
+INFO:     152.58.33.207:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/sales-book HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/wallet HTTP/1.0" 200 OK
+2026-09-03 10:38:16  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-03 10:38:16  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-03 10:38:26  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-03 10:38:26  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-03 10:38:26  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     152.58.33.207:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-03 10:38:52  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=TECHNOBUZZ-001 rating=5 feedback='आम्ही TechnoBuzz च्या सायबर सुरक्षा उपायांमुळे पूर'
+INFO:     152.58.33.207:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /admin/sales-book HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/commission HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/wallet HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /admin/wallet HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses/new HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback/vinamra_signs HTTP/1.0" 404 Not Found
+INFO:     43.243.81.107:0 - "GET /favicon.ico HTTP/1.0" 404 Not Found
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses/new HTTP/1.0" 200 OK
+2026-09-03 12:08:24  [INFO]  services.storage_service - Uploaded logo to s3://aireviewtechnobuzz/logos/vinamra_signs/8d39dfd732674e32a8fb2d61247a8417.jpg
+INFO:     43.243.81.107:0 - "POST /admin/businesses HTTP/1.0" 303 See Other
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback/vinamra_signs HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/i18n.js HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /media/logo/logos/vinamra_signs/8d39dfd732674e32a8fb2d61247a8417.jpg HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback/vinamra_signs HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /static/js/i18n.js HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /media/logo/logos/vinamra_signs/8d39dfd732674e32a8fb2d61247a8417.jpg HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback/vinamra_signs HTTP/1.0" 200 OK
+INFO:     163.53.203.184:0 - "GET /feedback/vinamra_signs HTTP/1.0" 200 OK
+INFO:     163.53.203.184:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     163.53.203.184:0 - "GET /static/js/i18n.js HTTP/1.0" 200 OK
+INFO:     163.53.203.184:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     163.53.203.184:0 - "GET /media/logo/logos/vinamra_signs/8d39dfd732674e32a8fb2d61247a8417.jpg HTTP/1.0" 200 OK
+2026-09-03 12:19:17  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-03 12:19:17  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-03 12:19:25  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-03 12:19:25  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-03 12:19:25  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     163.53.203.184:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-03 12:19:56  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-03 12:19:56  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-03 12:20:10  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-03 12:20:10  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-03 12:20:10  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     163.53.203.184:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback/vinamra_signs HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/i18n.js HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /feedback/vinamra_signs HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/i18n.js HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /feedback/vinamra_signs HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /static/js/i18n.js HTTP/1.0" 304 Not Modified
+INFO:     43.243.81.107:0 - "GET /feedback/vinamra_signs HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/i18n.js HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /media/logo/logos/vinamra_signs/8d39dfd732674e32a8fb2d61247a8417.jpg HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+2026-09-03 12:53:56  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-03 12:53:56  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-03 12:54:04  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-03 12:54:04  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-03 12:54:04  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+2026-09-03 12:54:31  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-03 12:54:31  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+INFO:     43.243.81.107:0 - "GET /feedback/vinamra_signs HTTP/1.0" 200 OK
+2026-09-03 12:54:37  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-03 12:54:37  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-03 12:54:39  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-03 12:54:39  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-03 12:54:39  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+2026-09-03 12:54:45  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-03 12:54:45  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-03 12:54:45  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     43.243.81.107:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-03 12:54:48  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-03 12:54:48  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-03 12:54:57  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-03 12:54:57  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-03 12:54:57  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     43.243.81.107:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+INFO:     142.147.248.16:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     142.147.248.44:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     42.108.238.65:0 - "GET /feedback/vinamra_signs HTTP/1.0" 200 OK
+INFO:     42.108.238.65:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     42.108.238.65:0 - "GET /media/logo/logos/vinamra_signs/8d39dfd732674e32a8fb2d61247a8417.jpg HTTP/1.0" 200 OK
+INFO:     42.108.238.65:0 - "GET /static/js/i18n.js HTTP/1.0" 200 OK
+INFO:     42.108.238.65:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+2026-09-03 13:02:03  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-03 13:02:03  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-03 13:02:10  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-03 13:02:10  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-03 13:02:10  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     42.108.238.65:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/images/technobuzz_logo.jpg HTTP/1.0" 200 OK
+INFO:     152.163.14.62:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     152.163.14.90:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     217.21.86.45:0 - "HEAD /admin HTTP/1.0" 405 Method Not Allowed
+INFO:     158.222.119.162:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     158.222.119.162:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     74.7.175.179:0 - "GET /robots.txt HTTP/1.0" 404 Not Found
+INFO:     147.182.179.113:0 - "GET /favicon.ico HTTP/1.0" 404 Not Found
+INFO:     152.58.31.223:0 - "GET /feedback/vinamra_signs HTTP/1.0" 200 OK
+INFO:     152.58.31.223:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     152.58.31.223:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     152.58.31.223:0 - "GET /static/js/i18n.js HTTP/1.0" 200 OK
+INFO:     152.58.31.223:0 - "GET /media/logo/logos/vinamra_signs/8d39dfd732674e32a8fb2d61247a8417.jpg HTTP/1.0" 200 OK
+2026-09-04 04:39:45  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-04 04:39:45  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-04 04:39:51  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-04 04:39:51  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-04 04:39:51  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     152.58.31.237:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-04 04:40:23  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=VS-001 rating=5 feedback='What a fantastic experience! The team at Vinamra S'
+INFO:     152.58.31.88:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     49.15.93.36:0 - "GET /feedback/vinamra_signs HTTP/1.0" 200 OK
+INFO:     49.15.93.36:0 - "GET /static/js/i18n.js HTTP/1.0" 304 Not Modified
+INFO:     49.15.93.36:0 - "GET /static/css/style.css HTTP/1.0" 304 Not Modified
+INFO:     49.15.93.36:0 - "GET /static/js/feedback.js HTTP/1.0" 304 Not Modified
+2026-09-04 04:47:44  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-04 04:47:44  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-04 04:47:44  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-09-04 04:47:44  [WARNING]  services.gemini_service - Gemini [gemini-2.5-flash] 429; retrying in 0.3s.
+2026-09-04 04:47:45  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=2
+2026-09-04 04:47:45  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-04 04:47:45  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-09-04 04:47:45  [WARNING]  services.gemini_service - Gemini [gemini-2.5-flash] failed: 429.
+2026-09-04 04:47:45  [WARNING]  services.gemini_service - Model gemini-2.5-flash failed; trying next fallback.
+2026-09-04 04:47:45  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash-lite attempt=1
+2026-09-04 04:47:45  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-04 04:47:45  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 404 Not Found"
+2026-09-04 04:47:45  [WARNING]  services.gemini_service - Gemini [gemini-2.5-flash-lite] failed: 404.
+2026-09-04 04:47:45  [WARNING]  services.gemini_service - Model gemini-2.5-flash-lite failed; trying next fallback.
+2026-09-04 04:47:45  [INFO]  services.gemini_service - Gemini call: model=gemini-flash-latest attempt=1
+2026-09-04 04:47:45  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-04 04:47:50  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent "HTTP/1.1 503 Service Unavailable"
+2026-09-04 04:47:50  [WARNING]  services.gemini_service - Gemini [gemini-flash-latest] 503; retrying in 0.3s.
+2026-09-04 04:47:50  [INFO]  services.gemini_service - Gemini call: model=gemini-flash-latest attempt=2
+2026-09-04 04:47:50  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-04 04:47:56  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent "HTTP/1.1 200 OK"
+2026-09-04 04:47:56  [INFO]  services.gemini_service - Gemini [gemini-flash-latest] returned 10 suggestions.
+2026-09-04 04:47:56  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     49.15.93.36:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-04 04:48:05  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=VS-001 rating=5 feedback='Ordered 3D acrylic LED signage for our new cafe in'
+INFO:     49.15.93.36:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     136.112.141.23:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     136.112.141.23:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/i18n.js HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /media/logo/logos/MYTOYTROLLY/ffb50db9ad1d43b49a97d6ac0170c51b.jpg HTTP/1.0" 200 OK
+2026-09-04 07:18:44  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-04 07:18:44  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-04 07:19:03  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-04 07:19:03  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-04 07:19:03  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=4
+INFO:     43.243.81.107:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-04 07:19:13  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=GRP007 rating=4 feedback='The STEM toy selection here is really good, our ki'
+INFO:     43.243.81.107:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     106.195.13.45:0 - "GET /feedback/vinamra_signs HTTP/1.0" 200 OK
+INFO:     106.195.13.45:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     106.195.13.45:0 - "GET /static/js/i18n.js HTTP/1.0" 200 OK
+INFO:     106.195.13.45:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     106.195.13.45:0 - "GET /media/logo/logos/vinamra_signs/8d39dfd732674e32a8fb2d61247a8417.jpg HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin/login?next=/admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "POST /admin/login HTTP/1.0" 302 Found
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses/boardwale/edit HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/images/boardwale_logo.png HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/sales-book HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/commission HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses/new HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/sales-book HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/commission HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     152.58.17.170:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     152.58.17.170:0 - "GET /favicon.ico HTTP/1.0" 404 Not Found
+INFO:     122.167.116.163:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     122.167.116.163:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     122.167.116.163:0 - "GET /static/js/i18n.js HTTP/1.0" 200 OK
+INFO:     122.167.116.163:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     122.167.116.163:0 - "GET /media/logo/logos/MYTOYTROLLY/ffb50db9ad1d43b49a97d6ac0170c51b.jpg HTTP/1.0" 200 OK
+2026-09-04 09:34:00  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-04 09:34:00  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-04 09:34:15  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-04 09:34:15  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-04 09:34:15  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=1
+INFO:     122.167.116.163:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-04 09:34:52  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-04 09:34:52  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-04 09:35:05  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-04 09:35:05  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-04 09:35:05  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     122.167.116.163:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-04 09:35:26  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-04 09:35:26  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-04 09:35:38  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-04 09:35:38  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-04 09:35:38  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=4
+INFO:     122.167.116.163:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-04 09:36:03  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-04 09:36:03  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-04 09:36:11  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-04 09:36:11  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-04 09:36:11  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     122.167.116.163:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-04 09:36:28  [INFO]  routes.feedback_routes - submit_feedback (MOCK SUCCESS) — company=GRP007 rating=5 feedback='We've gotten all our return gifts from here for ye'
+INFO:     122.167.116.163:0 - "POST /submit-feedback HTTP/1.0" 201 Created
+INFO:     43.243.81.107:0 - "GET /feedback/board_001 HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/i18n.js HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/js/feedback.js HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     152.58.17.170:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     152.58.17.170:0 - "GET /static/css/style.css HTTP/1.0" 200 OK
+INFO:     152.58.17.170:0 - "GET /static/js/i18n.js HTTP/1.0" 304 Not Modified
+INFO:     152.58.17.170:0 - "GET /static/js/feedback.js HTTP/1.0" 304 Not Modified
+INFO:     152.58.17.170:0 - "GET /media/logo/logos/MYTOYTROLLY/ffb50db9ad1d43b49a97d6ac0170c51b.jpg HTTP/1.0" 200 OK
+INFO:     152.58.17.170:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+INFO:     152.58.17.170:0 - "GET /feedback/grp007 HTTP/1.0" 200 OK
+2026-09-04 09:43:19  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-04 09:43:19  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-04 09:43:31  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-04 09:43:31  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-04 09:43:31  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     152.58.17.170:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-04 09:43:41  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-04 09:43:41  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+INFO:     42.108.236.149:0 - "GET /webhooks/razorpay HTTP/1.0" 404 Not Found
+2026-09-04 09:43:49  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-04 09:43:49  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-04 09:43:49  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     152.58.17.170:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-04 09:43:54  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-04 09:43:54  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-04 09:44:05  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-04 09:44:05  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-04 09:44:05  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=3
+INFO:     152.58.17.170:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+2026-09-04 09:44:20  [INFO]  services.gemini_service - Gemini call: model=gemini-2.5-flash attempt=1
+2026-09-04 09:44:20  [INFO]  google_genai.models - AFC is enabled with max remote calls: 10.
+2026-09-04 09:44:29  [INFO]  httpx - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-04 09:44:29  [INFO]  services.gemini_service - Gemini [gemini-2.5-flash] returned 10 suggestions.
+2026-09-04 09:44:29  [INFO]  routes.feedback_routes - generate_feedback: 10 suggestions for rating=5
+INFO:     152.58.17.170:0 - "POST /generate-feedback HTTP/1.0" 200 OK
+INFO:     217.21.86.45:0 - "HEAD /admin HTTP/1.0" 405 Method Not Allowed
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /feedback/board_001 HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /static/css/admin.css HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/users HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses HTTP/1.0" 200 OK
+INFO:     43.243.81.107:0 - "GET /admin/businesses/new HTTP/1.0" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3406195]
