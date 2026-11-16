@@ -176,6 +176,44 @@ The customer chose this language for their Google review.
 - Do not mix English sentences. A few common loanwords are OK if locals actually use them.
 """
 
+    # Build only the tone block for the selected rating — do NOT send all star
+    # examples to Gemini. Sending all 5 tiers at once confuses the model at
+    # high temperature and can produce wrong-polarity suggestions.
+    tone_map = {
+        1: (
+            "TONE: 1 STAR — Very negative. The client is clearly frustrated.\n"
+            "Generate detailed, specific negative feedback.\n"
+            f"Focus on issues like: {business_context.get('examples_1star', 'missed deadlines, poor communication, unresolved problems, unprofessional conduct')}\n"
+            "Length: 2–4 natural sentences per suggestion."
+        ),
+        2: (
+            "TONE: 2 STAR — Mostly negative. The client felt let down.\n"
+            "Generate disappointed feedback that mentions specific problems.\n"
+            f"Focus on issues like: {business_context.get('examples_2star', 'slow response times, below-average quality, unmet expectations')}\n"
+            "Length: 2–3 sentences per suggestion."
+        ),
+        3: (
+            "TONE: 3 STAR — Mixed / neutral. Balanced pros and cons.\n"
+            "Generate feedback that acknowledges both good and bad aspects.\n"
+            f"Focus on: {business_context.get('examples_3star', 'some things went well but others could be better, average overall experience')}\n"
+            "Length: 2–3 sentences per suggestion."
+        ),
+        4: (
+            "TONE: 4 STAR — Mostly positive. The client is satisfied.\n"
+            "Generate happy feedback with one small constructive note.\n"
+            f"Highlight positives and mention one minor improvement like: {business_context.get('examples_4star', 'could improve communication speed, minor delays')}\n"
+            "Length: 2–3 sentences per suggestion."
+        ),
+        5: (
+            "TONE: 5 STAR — Enthusiastic and genuinely positive. The client is delighted.\n"
+            "Generate warm, specific praise. Sound happy and grateful.\n"
+            f"Highlight things like: {business_context.get('examples_5star', 'excellent quality, great service, exceeded expectations, highly recommend')}\n"
+            "CRITICAL: Every single suggestion MUST be positive. No complaints. No negatives.\n"
+            "Length: 2–4 natural sentences per suggestion."
+        ),
+    }
+    tone_block = tone_map.get(rating, tone_map[5])
+
     return f"""
 You are an expert at writing realistic customer feedback for a service provider.
 
@@ -207,45 +245,7 @@ IMPORTANT REQUIREMENTS
 13. No headings.
 14. Each suggestion should feel original.
 
-TONE BASED ON STAR RATING
-
-1 STAR
-
-Generate detailed negative feedback.
-The client is clearly frustrated. Mention specific grievances like:
-- {business_context.get("examples_1star", "buggy deployments or broken code, critical downtime due to poor infrastructure planning, missed project deadlines, lack of communication from the support team, security vulnerabilities left unpatched, unprofessional conduct or incompetence")}
-Length: 2-4 natural sentences.
-
-2 STAR
-
-Mostly negative.
-The client had high expectations for their project, but felt let down. 
-Mention specific issues like:
-- {business_context.get("examples_2star", "slow response to support tickets, complex UI/UX in web design")}
-Length: 2-3 sentences.
-
-3 STAR
-
-Mixed opinion.
-Balanced feedback. Perhaps the team is skilled, but project management is disorganized, or vice-versa.
-Mention both pros and cons like:
-- {business_context.get("examples_3star", "technical team is skilled but the project management is disorganized, billing confusion or slow response")}
-Length: 2-3 sentences.
-
-4 STAR
-
-Mostly positive.
-The client is satisfied with the service or support provided.
-Mention one small area for improvement like:
-- {business_context.get("examples_4star", "better documentation, more frequent status updates")}
-Length: 2-3 sentences.
-
-5 STAR
-
-Generate enthusiastic and genuine positive reviews.
-The client should sound happy with the partnership. Mention things like:
-- {business_context.get("examples_5star", "seamless cloud migration, reliable network uptime, intuitive design interface, proactive security measures, knowledgeable engineering team, project delivered ahead of schedule")}
-Length: 2-4 natural sentences.
+{tone_block}
 
 WRITING STYLE
 
@@ -330,7 +330,7 @@ def _call_model(client: genai.Client, model: str, prompt: str) -> List[str]:
                 model=model,
                 contents=prompt,
                 config=types.GenerateContentConfig(
-                    temperature=0.95,
+                    temperature=0.7,
                     max_output_tokens=4096,
                     response_mime_type="application/json",
                 ),
