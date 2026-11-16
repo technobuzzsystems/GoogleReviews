@@ -88,6 +88,7 @@ const State = {
   isSubmitting:      false,   // prevent double-submit
   isLoadingAI:       false,   // prevent concurrent AI calls
   language:          'en',
+  _fetchController:  null,    // AbortController for in-flight AI request
 };
 
 /* ============================================================
@@ -486,10 +487,15 @@ const API = {
    * @param {number} rating — Star rating 1–5.
    */
   async fetchSuggestions(rating) {
-    // Prevent concurrent calls
-    if (State.isLoadingAI) return;
-    State.isLoadingAI = true;
+    // Cancel any previous in-flight request before starting a new one.
+    // This fixes the race condition where a slow 1-star response could
+    // overwrite a 5-star request that was ignored by the old isLoadingAI guard.
+    if (State._fetchController) {
+      State._fetchController.abort();
+    }
+    State._fetchController = new AbortController();
 
+    State.isLoadingAI = true;
     UIState.clearErrorBanner();
     UIState.showLoading();
 
@@ -498,6 +504,7 @@ const API = {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ rating, business_id: BUSINESS_ID, language: State.language }),
+        signal:  State._fetchController.signal,
       });
 
       const data = await response.json();
@@ -516,6 +523,9 @@ const API = {
       SuggestionCards.render(data.suggestions);
 
     } catch (error) {
+      // If the request was deliberately cancelled (user changed rating), ignore silently.
+      if (error.name === 'AbortError') return;
+
       console.error('[API] fetchSuggestions error:', error);
       DOM.loadingSection.classList.remove('active');
 
