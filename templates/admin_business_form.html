@@ -219,6 +219,84 @@
       <textarea id="examples_5star" name="examples_5star">{{ business.examples_5star if business else '' }}</textarea>
     </div>
 
+    {% if business and business_key %}
+    <div class="form-section">Predefined Feedback Response Pool</div>
+    <div class="pool-dashboard-card" style="background: rgba(14, 25, 45, 0.75); border: 1.5px solid rgba(0, 229, 255, 0.22); border-radius: 14px; padding: 22px; margin-bottom: 26px; box-shadow: 0 4px 20px rgba(0,0,0,0.25);">
+      
+      <!-- Header with Status Badge -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+        <div>
+          <h3 style="margin: 0 0 4px; font-size: 1.05rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+            <span>⚡</span> Fast Instant Feedback Pool
+          </h3>
+          <p style="margin: 0; font-size: 0.84rem; color: #8fa0b5; line-height: 1.45;">
+            Loads in &lt; 1 sec for customers. Submissions are marked as used so reviews do not repeat.
+          </p>
+        </div>
+        <div id="pool_header_badge">
+          {% set stats = static_pool_stats or {} %}
+          {% set total_pool = stats.get('total', 0) %}
+          {% if total_pool > 0 %}
+          <span class="badge active" style="font-size: 0.78rem; padding: 5px 12px; display: inline-flex; align-items: center; gap: 5px;">
+            ● {{ total_pool }} Responses Active
+          </span>
+          {% else %}
+          <span class="badge none" style="font-size: 0.78rem; padding: 5px 12px;">
+            ○ Pool Empty
+          </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- 5-Star Metric Cards Grid -->
+      <div id="pool_stats_grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin: 18px 0 20px;">
+        {% for star in [1, 2, 3, 4, 5] %}
+        {% set s_str = star|string %}
+        {% set star_stat = stats.get(s_str, {'total': 0, 'used': 0, 'available': 0}) %}
+        {% set pct = ((star_stat.available / star_stat.total) * 100) if star_stat.total > 0 else 0 %}
+        <div class="pool-star-card" style="background: #0f1c30; border: 1px solid #1c3150; border-radius: 10px; padding: 12px 10px; text-align: center; transition: all 0.2s ease;">
+          <div style="font-weight: 700; color: #f59e0b; font-size: 0.95rem; margin-bottom: 4px;">{{ star }} ★</div>
+          
+          <div style="font-size: 1.25rem; font-weight: 700; color: {% if star_stat.available > 10 %}#10b981{% elif star_stat.available > 0 %}#f59e0b{% else %}#ef4444{% endif %};" id="stat_star_{{ star }}_avail">
+            {{ star_stat.available }}
+          </div>
+          
+          <div style="font-size: 0.73rem; color: #64748b; margin-bottom: 8px;" id="stat_star_{{ star }}_meta">
+            {{ star_stat.used }} used / {{ star_stat.total }} total
+          </div>
+
+          <!-- Mini Progress Bar -->
+          <div style="background: rgba(255,255,255,0.08); height: 4px; border-radius: 2px; overflow: hidden;">
+            <div id="stat_star_{{ star }}_bar" style="height: 100%; width: {{ pct }}%; background: {% if star_stat.available > 10 %}#10b981{% elif star_stat.available > 0 %}#f59e0b{% else %}#ef4444{% endif %}; border-radius: 2px; transition: width 0.4s ease;"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Action Buttons Bar -->
+      <div id="pool_actions_bar" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06);">
+        {% if total_pool == 0 %}
+        <button type="button" id="btn_generate_pool" class="btn btn-primary" style="padding: 9px 20px;">
+          ✨ Generate 250 Responses (50 per Star)
+        </button>
+        {% else %}
+        <button type="button" id="btn_replenish_pool" class="btn btn-primary" style="padding: 9px 20px;">
+          ➕ Add 50 More Responses
+        </button>
+        <button type="button" id="btn_reset_pool" class="btn btn-outline" style="padding: 9px 18px;">
+          🔄 Reset Used History
+        </button>
+        <button type="button" id="btn_generate_pool" class="btn btn-muted" style="padding: 9px 16px; font-size: 0.8rem; margin-left: auto;">
+          ♻️ Regenerate All
+        </button>
+        {% endif %}
+      </div>
+
+      <!-- Live Status Message -->
+      <div id="pool_status_box" style="display: none; margin-top: 14px; padding: 10px 14px; border-radius: 8px; font-size: 0.84rem; font-weight: 500;"></div>
+    </div>
+    {% endif %}
+
     <div class="form-actions">
       <button type="submit" class="btn btn-primary">Save Business</button>
       {% if business and business.payment_due %}
@@ -453,6 +531,136 @@
         btnAi.disabled = false;
       });
   });
+
+  // ── Predefined Static Feedback Pool Management ────────────────────────
+  var btnGenPool = document.getElementById("btn_generate_pool");
+  var btnReplenish = document.getElementById("btn_replenish_pool");
+  var btnResetPool = document.getElementById("btn_reset_pool");
+  var poolStatus = document.getElementById("pool_status_box") || document.getElementById("pool_action_status");
+  var currentBizKey = (keyEl && keyEl.value ? keyEl.value.trim() : "") || "{{ business_key }}";
+
+  function setPoolStatus(text, kind) {
+    if (!poolStatus) poolStatus = document.getElementById("pool_status_box") || document.getElementById("pool_action_status");
+    if (!poolStatus) return;
+    poolStatus.style.display = text ? "block" : "none";
+    poolStatus.textContent = text;
+    if (kind === "green") {
+      poolStatus.style.background = "rgba(16, 185, 129, 0.15)";
+      poolStatus.style.color = "#10b981";
+      poolStatus.style.border = "1px solid rgba(16, 185, 129, 0.3)";
+    } else if (kind === "warn") {
+      poolStatus.style.background = "rgba(239, 68, 68, 0.15)";
+      poolStatus.style.color = "#ef4444";
+      poolStatus.style.border = "1px solid rgba(239, 68, 68, 0.3)";
+    } else {
+      poolStatus.style.background = "rgba(0, 229, 255, 0.12)";
+      poolStatus.style.color = "#00e5ff";
+      poolStatus.style.border = "1px solid rgba(0, 229, 255, 0.25)";
+    }
+  }
+
+  function refreshPoolStats() {
+    if (!currentBizKey) return;
+    fetch("/admin/businesses/" + encodeURIComponent(currentBizKey) + "/static-pool-stats")
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res.success && res.stats) {
+          var totalPool = res.stats.total || 0;
+          var headerBadge = document.getElementById("pool_header_badge");
+          if (headerBadge) {
+            if (totalPool > 0) {
+              headerBadge.innerHTML = '<span class="badge active" style="font-size: 0.78rem; padding: 5px 12px; display: inline-flex; align-items: center; gap: 5px;">● ' + totalPool + ' Responses Active</span>';
+            } else {
+              headerBadge.innerHTML = '<span class="badge none" style="font-size: 0.78rem; padding: 5px 12px;">○ Pool Empty</span>';
+            }
+          }
+          for (var star = 1; star <= 5; star++) {
+            var st = res.stats[star] || { available: 0, used: 0, total: 0 };
+            var availEl = document.getElementById("stat_star_" + star + "_avail");
+            var metaEl = document.getElementById("stat_star_" + star + "_meta");
+            var barEl = document.getElementById("stat_star_" + star + "_bar");
+            var clr = st.available > 10 ? "#10b981" : (st.available > 0 ? "#f59e0b" : "#ef4444");
+            if (availEl) {
+              availEl.textContent = st.available;
+              availEl.style.color = clr;
+            }
+            if (metaEl) {
+              metaEl.textContent = st.used + " used / " + st.total + " total";
+            }
+            if (barEl) {
+              var pct = st.total > 0 ? ((st.available / st.total) * 100) : 0;
+              barEl.style.width = pct + "%";
+              barEl.style.background = clr;
+            }
+          }
+        }
+      })
+      .catch(function () {});
+  }
+
+  function handlePoolGeneration(countPerStar, successMsg) {
+    if (!currentBizKey) return;
+    if (btnGenPool) btnGenPool.disabled = true;
+    if (btnReplenish) btnReplenish.disabled = true;
+    setPoolStatus("Generating responses in background... please wait...", "accent");
+
+    fetch("/admin/businesses/" + encodeURIComponent(currentBizKey) + "/generate-static-pool?count_per_star=" + countPerStar, {
+      method: "POST"
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (!res.success) {
+          throw new Error(res.detail || "Generation failed.");
+        }
+        var total = res.report ? res.report.total_added : 0;
+        setPoolStatus("Success! " + successMsg + " (" + total + " added).", "green");
+        refreshPoolStats();
+      })
+      .catch(function (err) {
+        setPoolStatus("Error: " + (err.message || "Could not generate responses."), "warn");
+      })
+      .finally(function () {
+        if (btnGenPool) btnGenPool.disabled = false;
+        if (btnReplenish) btnReplenish.disabled = false;
+      });
+  }
+
+  if (btnGenPool) {
+    btnGenPool.addEventListener("click", function () {
+      if (!window.confirm("Generate 50 predefined responses for EACH star rating (total 250)?")) return;
+      handlePoolGeneration(50, "Generated 250 predefined responses");
+    });
+  }
+
+  if (btnReplenish) {
+    btnReplenish.addEventListener("click", function () {
+      if (!window.confirm("Add 50 MORE responses for each star rating to replenish the pool?")) return;
+      handlePoolGeneration(50, "Replenished pool with additional responses");
+    });
+  }
+
+  if (btnResetPool) {
+    btnResetPool.addEventListener("click", function () {
+      if (!window.confirm("Reset response usage history? All responses will become available again.")) return;
+      btnResetPool.disabled = true;
+      setPoolStatus("Resetting usage history...", "accent");
+
+      fetch("/admin/businesses/" + encodeURIComponent(currentBizKey) + "/reset-static-pool", {
+        method: "POST"
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          setPoolStatus("Reset complete! All responses are available again.", "green");
+          refreshPoolStats();
+        })
+        .catch(function (err) {
+          setPoolStatus("Could not reset usage.", "warn");
+        })
+        .finally(function () {
+          btnResetPool.disabled = false;
+        });
+    });
+  }
 })();
 </script>
 {% endblock %}

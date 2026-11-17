@@ -264,3 +264,32 @@ class SubscriptionPlan(Base):
     sort_order = Column(Integer, default=100, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class StaticFeedbackResponse(Base):
+    """Predefined feedback response pool for a business and star rating."""
+
+    __tablename__ = "static_feedback_responses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    business_key = Column(String, nullable=False, index=True)
+    rating = Column(Integer, nullable=False, index=True)
+    language = Column(String(10), default="en", nullable=False, index=True)
+    response_text = Column(Text, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    sort_order = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class StaticFeedbackUsage(Base):
+    """Tracks which static feedback response was submitted to avoid repetition."""
+
+    __tablename__ = "static_feedback_usage"
+
+    id = Column(Integer, primary_key=True, index=True)
+    response_id = Column(Integer, ForeignKey("static_feedback_responses.id", ondelete="CASCADE"), nullable=False, index=True)
+    business_key = Column(String, nullable=False, index=True)
+    rating = Column(Integer, nullable=False, index=True)
+    private_feedback_id = Column(Integer, ForeignKey("private_feedback.id", ondelete="SET NULL"), nullable=True, index=True)
+    used_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+

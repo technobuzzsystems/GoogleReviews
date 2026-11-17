@@ -104,7 +104,12 @@
             <span class="badge active">{{ row.rating }}★</span>
             {% endif %}
           </td>
-          <td class="feedback-comment">{{ row.comment }}</td>
+          <td class="feedback-comment">
+            {{ row.comment }}
+            {% if row.source == 'manual' %}
+            <span class="badge" style="font-size: 0.68rem; padding: 2px 7px; background: rgba(0, 229, 255, 0.12); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.35); margin-left: 6px; vertical-align: middle; border-radius: 4px;">Manual</span>
+            {% endif %}
+          </td>
           <td>{{ row.created_at.strftime('%d %b %Y, %I:%M %p') if row.created_at else '—' }}</td>
           <td>
             {% if row.is_unread %}

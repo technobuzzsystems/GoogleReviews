@@ -17,6 +17,7 @@ from services.storage_service import get_logo_object, public_logo_url
 from models.schemas import GenerateFeedbackRequest, SubmitFeedbackRequest
 from utils.validators import sanitize_string
 from services.gemini_service import generate_feedback_suggestions
+from services.static_feedback_service import get_available_feedback_suggestions, record_response_usage
 
 router = APIRouter()
 config = get_config()
@@ -144,6 +145,27 @@ def generate_feedback(payload: GenerateFeedbackRequest, db: Session = Depends(ge
             detail="This review service is currently unavailable because the subscription has expired. Please renew the plan to continue using this service.",
         )
 
+    # 1. Try predefined static responses first (Instant < 5ms, non-repeating, no Gemini delay)
+    biz_key = b_config.get("key") or business_id
+    static_items = get_available_feedback_suggestions(
+        db,
+        business_key=biz_key,
+        rating=rating,
+        language=payload.language,
+        limit=10,
+    )
+    if static_items:
+        suggestions = [item["text"] for item in static_items]
+        response_ids = [item["id"] for item in static_items]
+        logger.info(
+            "generate_feedback: returned %d static suggestions for business=%s rating=%d",
+            len(suggestions),
+            biz_key,
+            rating,
+        )
+        return {"suggestions": suggestions, "response_ids": response_ids}
+
+    # 2. Fallback to Gemini AI if static pool not generated yet
     try:
         suggestions = generate_feedback_suggestions(
             rating,
@@ -154,7 +176,7 @@ def generate_feedback(payload: GenerateFeedbackRequest, db: Session = Depends(ge
             raise HTTPException(status_code=500, detail="AI returned no suggestions. Please try again.")
 
         logger.info("generate_feedback: %d suggestions for rating=%d", len(suggestions), rating)
-        return {"suggestions": suggestions}
+        return {"suggestions": suggestions, "response_ids": []}
 
     except ValueError as e:
         logger.warning("generate_feedback: ValueError — %s", str(e))
@@ -201,13 +223,24 @@ def submit_feedback(payload: SubmitFeedbackRequest, db: Session = Depends(get_db
         try:
             from services.feedback_service import save_private_feedback
 
+            is_manual = bool(getattr(payload, "is_manual", False))
+            source = "manual" if is_manual else "qr"
             row = save_private_feedback(
                 db,
                 business_key=b_config.get("key") or business_id,
                 rating=rating,
                 comment=feedback_text,
+                source=source,
             )
             saved_id = str(row.id)
+            if payload.response_id and not is_manual:
+                record_response_usage(
+                    db,
+                    response_id=payload.response_id,
+                    business_key=b_config.get("key") or business_id,
+                    rating=rating,
+                    private_feedback_id=row.id,
+                )
         except Exception:
             logger.exception("submit_feedback: could not store review for %s", business_id)
             db.rollback()

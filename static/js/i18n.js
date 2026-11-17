@@ -75,6 +75,19 @@ const I18N_STRINGS = {
     pasteHintPaste: 'When the Google page opens, only paste it in the box.',
     pasteHintStars: 'Choose the stars you want, then tap Post.',
     selectStars: '👉 Select the stars',
+    orDivider: 'OR',
+    writeOwnFeedback: 'Write Your Own Feedback',
+    writeOwnSubtitle: 'Share your experience in your own words',
+    manualPlaceholder: 'Share your experience in your own words...',
+    manualMinHint: 'Minimum 5 characters',
+    manualEmptyError: 'Please enter your feedback before submitting.',
+    manualShortError: 'Please write at least 5 characters before submitting.',
+    tabSuggestions: 'Quick Suggestions',
+    tabManual: 'Write My Own',
+    submitFeedback: 'Submit Feedback',
+    submittingFeedback: 'Submitting…',
+    privateFeedbackHint: 'Your feedback will be sent directly to management to improve our service.',
+    bottomSwitchToManual: 'Want to write your own review instead? Click here',
   },
   mr: {
     languageLabel: 'रिव्ह्यू भाषा',
@@ -135,6 +148,19 @@ const I18N_STRINGS = {
     pasteHintPaste: 'Google पेज उघडले की फक्त बॉक्समध्ये पेस्ट करा.',
     pasteHintStars: 'तुम्हाला हवे तितके स्टार निवडा, मग Post दाबा.',
     selectStars: '👉 स्टार निवडा',
+    orDivider: 'किंवा',
+    writeOwnFeedback: 'तुमचा स्वतःचा अभिप्राय लिहा',
+    writeOwnSubtitle: 'तुमच्या स्वतःच्या शब्दात अनुभव सांगा',
+    manualPlaceholder: 'तुमच्या स्वतःच्या शब्दात अनुभव सांगा...',
+    manualMinHint: 'किमान ५ अक्षरे आवश्यक',
+    manualEmptyError: 'कृपया सबमिट करण्यापूर्वी अभिप्राय प्रविष्ट करा.',
+    manualShortError: 'कृपया किमान ५ अक्षरे लिहा.',
+    tabSuggestions: 'तयार सूचना',
+    tabManual: 'स्वतःचा अभिप्राय लिहा',
+    submitFeedback: 'अभिप्राय सबमिट करा',
+    submittingFeedback: 'सबमिट होत आहे…',
+    privateFeedbackHint: 'तुमचा अभिप्राय थेट व्यवस्थापनाकडे पाठवला जाईल.',
+    bottomSwitchToManual: 'स्वतःचा अभिप्राय लिहायचा आहे का? येथे क्लिक करा',
   },
   hi: {
     languageLabel: 'रिव्यू भाषा',
@@ -195,6 +221,19 @@ const I18N_STRINGS = {
     pasteHintPaste: 'Google पेज खुलने पर सिर्फ बॉक्स में पेस्ट करें।',
     pasteHintStars: 'जितने स्टार चाहें चुनें, फिर Post दबाएँ।',
     selectStars: '👉 स्टार चुनें',
+    orDivider: 'या',
+    writeOwnFeedback: 'अपना खुद का फीडबैक लिखें',
+    writeOwnSubtitle: 'अपने शब्दों में अपना अनुभव साझा करें',
+    manualPlaceholder: 'अपने शब्दों में अपना अनुभव साझा करें...',
+    manualMinHint: 'कम से कम ५ अक्षर आवश्यक',
+    manualEmptyError: 'कृपया सबमिट करने से पहले फीडबैक दर्ज करें।',
+    manualShortError: 'कृपया कम से कम ५ अक्षर लिखें।',
+    tabSuggestions: 'तैयार सुझाव',
+    tabManual: 'अपना खुद का लिखें',
+    submitFeedback: 'फीडबैक भेजें',
+    submittingFeedback: 'भेजा जा रहा है…',
+    privateFeedbackHint: 'आपका फीडबैक सीधे प्रबंधन को भेजा जाएगा।',
+    bottomSwitchToManual: 'अपना खुद का रिव्यू लिखना चाहते हैं? यहाँ क्लिक करें',
   },
   gu: {
     languageLabel: 'રિવ્યૂ ભાષા',
@@ -254,6 +293,19 @@ const I18N_STRINGS = {
     pasteHintPaste: 'Googleના રિવ્યૂ બોક્સમાં પેસ્ટ કરો.',
     pasteHintStars: 'સ્ટાર પસંદ કરો અને Post દબાવો.',
     selectStars: '👉 સ્ટાર પસંદ કરો',
+    orDivider: 'અથવા',
+    writeOwnFeedback: 'તમારો પોતાનો પ્રતિસાદ લખો',
+    writeOwnSubtitle: 'તમારા પોતાના શબ્દોમાં અનુભવ શેર કરો',
+    manualPlaceholder: 'તમારા પોતાના શબ્દોમાં અનુભવ શેર કરો...',
+    manualMinHint: 'ઓછામાં ઓછા ૫ અક્ષરો જરૂરી',
+    manualEmptyError: 'કૃપા કરીને સબમિટ કરતા પહેલાં પ્રતિસાદ દાખલ કરો.',
+    manualShortError: 'કૃપા કરીને ઓછામાં ઓછા ૫ અક્ષરો લખો.',
+    tabSuggestions: 'તૈયાર સૂચનો',
+    tabManual: 'તમારો પોતાનો લખો',
+    submitFeedback: 'પ્રતિસાદ સબમિટ કરો',
+    submittingFeedback: 'સબમિટ થઈ રહ્યું છે…',
+    privateFeedbackHint: 'તમારો પ્રતિસાદ સીધો વ્યવસ્થાપન સુધી પહોંચાડવામાં આવશે.',
+    bottomSwitchToManual: 'તમારો પોતાનો રિવ્યૂ લખવા માંગો છો? અહીં ક્લિક કરો',
   },
   ta: {
     "languageLabel": "மதிப்பாய்வு மொழி",
@@ -638,6 +690,10 @@ const I18n = {
     document.querySelectorAll('[data-i18n-title]').forEach((el) => {
       const key = el.getAttribute('data-i18n-title');
       if (key) el.setAttribute('title', I18n.t(key));
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+      const key = el.getAttribute('data-i18n-placeholder');
+      if (key) el.setAttribute('placeholder', I18n.t(key));
     });
     const popular = document.getElementById('langGroupPopular');
     const more = document.getElementById('langGroupMore');

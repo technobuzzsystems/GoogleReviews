@@ -1568,3 +1568,155 @@ body.theme-rutuja_battery .suggestions-title { color: var(--clr-accent); }
 @media (hover: none) {
   .btn-submit:hover { transform: none; }
 }
+
+/* ── Feedback Mode Switch Tabs (1–3 Stars Only) ─────────────────────────── */
+.feedback-mode-switch {
+  display: flex;
+  background: rgba(14, 25, 45, 0.9);
+  border: 1.5px solid var(--clr-border);
+  border-radius: var(--r-full);
+  padding: 4px;
+  gap: 6px;
+  margin-bottom: var(--sp-md);
+  animation: fadeIn var(--t-base) both;
+}
+
+.mode-tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-full);
+  color: var(--clr-text-muted);
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--t-base);
+}
+.mode-tab-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+.mode-tab-btn.active {
+  background: var(--clr-primary);
+  color: #081024;
+  font-weight: 700;
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.35);
+}
+.mode-tab-icon {
+  font-size: 0.98rem;
+}
+
+/* ── Manual Feedback Pane (Top Placed, Zero Scrolling) ─────────────────── */
+.manual-feedback-pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+  background: rgba(255, 255, 255, 0.025);
+  border: 1.5px solid var(--clr-border-active);
+  border-radius: var(--r-md);
+  padding: var(--sp-md);
+  margin-bottom: var(--sp-md);
+  animation: fadeIn 0.28s ease both;
+}
+
+.manual-pane-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+.manual-pane-icon {
+  font-size: 1.3rem;
+}
+.manual-pane-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+.manual-pane-subtitle {
+  font-size: 0.8rem;
+  color: var(--clr-text-muted);
+  margin: 0;
+}
+
+.manual-textarea-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.manual-feedback-textarea {
+  width: 100%;
+  background: rgba(14, 25, 45, 0.9);
+  border: 1.5px solid var(--clr-border-active);
+  border-radius: var(--r-md);
+  padding: var(--sp-md);
+  font-family: inherit;
+  font-size: 0.94rem;
+  line-height: 1.6;
+  color: #fff;
+  resize: vertical;
+  min-height: 110px;
+  max-height: 250px;
+  outline: none;
+  transition: border-color var(--t-base), box-shadow var(--t-base);
+  box-sizing: border-box;
+}
+.manual-feedback-textarea:focus {
+  border-color: var(--clr-primary);
+  box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.2);
+}
+.manual-feedback-textarea::placeholder {
+  color: var(--clr-text-subtle);
+  opacity: 0.8;
+}
+
+.manual-textarea-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--clr-text-muted);
+  padding: 0 4px;
+}
+.manual-min-hint.valid {
+  color: #10b981;
+}
+.manual-min-hint.invalid {
+  color: var(--clr-error);
+}
+.manual-char-counter {
+  font-variant-numeric: tabular-nums;
+  color: var(--clr-text-subtle);
+}
+
+/* ── Bottom switch link (if user scrolled down through suggestions) ─────── */
+.bottom-manual-link-wrap {
+  text-align: center;
+  margin-top: var(--sp-md);
+  padding-top: var(--sp-xs);
+}
+.bottom-manual-link {
+  background: transparent;
+  border: 1px dashed rgba(0, 229, 255, 0.38);
+  color: var(--clr-primary);
+  padding: 9px 18px;
+  border-radius: var(--r-full);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--t-base);
+}
+.bottom-manual-link:hover {
+  background: rgba(0, 229, 255, 0.1);
+  border-color: var(--clr-primary);
+  transform: translateY(-1px);
+}

@@ -95,6 +95,11 @@ from models.schemas import CashPaymentConfirmRequest, GenerateExamplesRequest
 from services.gemini_service import generate_star_example_prompts
 from services.owner_service import save_owner_login
 from services.payment_service import CashPaymentError, confirm_cash_payment, razorpay_configured
+from services.static_feedback_service import (
+    generate_and_store_business_pool,
+    get_static_pool_stats,
+    reset_response_usage,
+)
 from services.feedback_service import (
     businesses_for_filter,
     export_rows,
@@ -176,6 +181,7 @@ def _render_business_form(
     base = (get_config().APP_BASE_URL or "").rstrip("/")
     pay_url = f"{base}/pay/{business_key}" if is_edit and business_key else ""
     execs = list_executives(db, franchise_id=org.id if org and user.role == UserRole.FRANCHISE else None)
+    pool_stats = get_static_pool_stats(db, business_key) if is_edit and business_key else None
     return templates.TemplateResponse(request=request, name="admin_business_form.html", context=
         _admin_context(
             request,
@@ -191,6 +197,7 @@ def _render_business_form(
             feedback_path=(business or {}).get("feedback_path") or "/feedback",
             s3_ready=s3_configured(),
             pay_url=pay_url,
+            static_pool_stats=pool_stats,
             max_file_size_mb=config.MAX_FILE_SIZE_MB,
             page_title="Edit Business" if is_edit else "Add Business",
             active_nav="businesses",
@@ -371,7 +378,7 @@ def api_export(
         )
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["ID", "Company", "Company ID", "Rating", "Feedback", "Date", "Time"])
+    writer.writerow(["ID", "Company", "Company ID", "Rating", "Feedback", "Source", "Date", "Time"])
     for row in rows:
         created = row.created_at
         writer.writerow([
@@ -380,6 +387,7 @@ def api_export(
             row.business_key,
             row.rating,
             row.comment,
+            getattr(row, "source", "qr") or "qr",
             created.strftime("%Y-%m-%d") if created else "",
             created.strftime("%H:%M:%S") if created else "",
         ])
@@ -840,6 +848,66 @@ def save_business_owner_login(
     except ValueError as exc:
         return RedirectResponse(url=f"/admin/businesses?owner_error={quote(str(exc))}", status_code=303)
     return RedirectResponse(url="/admin/businesses?owner_saved=1", status_code=303)
+
+
+# ─── Static Feedback Response Pool Management ───────────────────────────────
+@router.get("/businesses/{business_key}/static-pool-stats")
+def business_static_pool_stats(
+    business_key: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_login),
+):
+    """Return JSON counts of available, used, and total responses per star rating."""
+    business = get_business(db, business_key)
+    if not business or not user_owns_business(db, user, business_key):
+        raise HTTPException(status_code=404, detail="Business not found.")
+    stats = get_static_pool_stats(db, business_key)
+    return {"success": True, "business_key": business_key, "stats": stats}
+
+
+@router.post("/businesses/{business_key}/generate-static-pool")
+def business_generate_static_pool(
+    business_key: str,
+    count_per_star: int = 50,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_business_access),
+):
+    """
+    Generate predefined responses (Option 2) in background via Gemini / local seeds.
+    Creates 50 responses per star rating (250 total) for this business.
+    """
+    business = get_business(db, business_key)
+    if not business or not user_owns_business(db, user, business_key):
+        raise HTTPException(status_code=404, detail="Business not found.")
+    count_per_star = max(10, min(100, int(count_per_star or 50)))
+    try:
+        report = generate_and_store_business_pool(
+            db=db,
+            business_key=business_key,
+            responses_per_star=count_per_star,
+        )
+        return {"success": True, "report": report}
+    except Exception as exc:
+        logger.exception("Failed to generate static pool for %s", business_key)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/businesses/{business_key}/reset-static-pool")
+def business_reset_static_pool(
+    business_key: str,
+    star: int = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_business_access),
+):
+    """
+    Reset usage history for this business so all responses become available again.
+    """
+    business = get_business(db, business_key)
+    if not business or not user_owns_business(db, user, business_key):
+        raise HTTPException(status_code=404, detail="Business not found.")
+    cleared = reset_response_usage(db, business_key, rating=star)
+    return {"success": True, "cleared_count": cleared}
+
 
 
 @router.post("/businesses/{business_key}/delete")

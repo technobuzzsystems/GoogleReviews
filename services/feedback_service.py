@@ -12,12 +12,12 @@ from services.franchise_service import scope_for_user
 PAGE_SIZE = 20
 
 
-def save_private_feedback(db: Session, *, business_key: str, rating: int, comment: str) -> PrivateFeedback:
+def save_private_feedback(db: Session, *, business_key: str, rating: int, comment: str, source: str = "qr") -> PrivateFeedback:
     row = PrivateFeedback(
         business_key=(business_key or "").strip(),
         rating=int(rating),
         comment=(comment or "").strip(),
-        source="qr",
+        source=(source or "qr").strip(),
     )
     db.add(row)
     db.commit()
@@ -157,6 +157,7 @@ def list_feedback_page(db: Session, user, *, page: int = 1, **filters) -> dict:
                 "business_name": names.get(row.business_key) or row.business_key,
                 "rating": row.rating,
                 "comment": row.comment,
+                "source": getattr(row, "source", "qr") or "qr",
                 "created_at": row.created_at,
                 "is_unread": row.read_at is None,
             }

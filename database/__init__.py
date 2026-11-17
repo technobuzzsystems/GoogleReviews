@@ -92,6 +92,8 @@ def init_db():
         FranchiseLedger,
         SubscriptionPlan,
         PrivateFeedback,
+        StaticFeedbackResponse,
+        StaticFeedbackUsage,
     )
     from services.auth_service import seed_default_users
     from services.business_service import (
@@ -171,6 +173,21 @@ def init_db():
         "private_feedback",
         "ix_private_feedback_business_created",
         "CREATE INDEX IF NOT EXISTS ix_private_feedback_business_created ON private_feedback (business_key, created_at)",
+    )
+    _ensure_index(
+        "static_feedback_responses",
+        "ix_sfr_biz_rating_lang",
+        "CREATE INDEX IF NOT EXISTS ix_sfr_biz_rating_lang ON static_feedback_responses (business_key, rating, language)",
+    )
+    _ensure_index(
+        "static_feedback_usage",
+        "ix_sfu_biz_rating",
+        "CREATE INDEX IF NOT EXISTS ix_sfu_biz_rating ON static_feedback_usage (business_key, rating)",
+    )
+    _ensure_index(
+        "static_feedback_usage",
+        "ix_sfu_response_id",
+        "CREATE INDEX IF NOT EXISTS ix_sfu_response_id ON static_feedback_usage (response_id)",
     )
     with engine.begin() as conn:
         conn.execute(text("UPDATE sales_executives SET wallet_balance = 0 WHERE wallet_balance IS NULL"))

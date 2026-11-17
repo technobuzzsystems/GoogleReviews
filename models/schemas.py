@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -15,6 +15,9 @@ class SubmitFeedbackRequest(BaseModel):
     rating: int = Field(..., ge=1, le=5)
     feedback: str = Field(..., min_length=1, max_length=1000)
     business_id: str = Field(default="technobuzz")
+    response_id: Optional[int] = Field(default=None, description="Optional ID of predefined static response")
+    is_manual: Optional[bool] = Field(default=False, description="Whether feedback was entered manually")
+
 
 
 class GenerateExamplesRequest(BaseModel):

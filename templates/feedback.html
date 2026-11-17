@@ -14,7 +14,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v=20260905d" />
+  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v=20261117_v8" />
 </head>
 
 <body class="theme-{{ business_id }}">
@@ -195,25 +195,84 @@
           <p class="loading-text" data-i18n="loadingText">✨ AI is crafting your suggestions…</p>
         </section>
 
-        <!-- ── AI Suggestions ──────────────────────────── -->
+        <!-- ── AI Suggestions & Manual Feedback ─────────────────────── -->
         <section
           class="suggestions-section"
           id="suggestionsSection"
           aria-labelledby="suggestionsTitle"
         >
-          <div class="suggestions-header">
-            <p class="suggestions-title" id="suggestionsTitle" data-i18n="suggestionsTitle">Choose Your Feedback</p>
-            <p class="suggestions-subtitle" data-i18n="suggestionsSubtitle">Select the one that best matches your experience.</p>
+          <!-- ── Feedback Mode Switch (1–3 Stars Only, Zero Scrolling) ──── -->
+          <div class="feedback-mode-switch" id="feedbackModeSwitch" style="display: none;">
+            <button
+              type="button"
+              class="mode-tab-btn active"
+              id="tabSuggestionsBtn"
+              data-mode="suggestions"
+            >
+              <span class="mode-tab-icon">💡</span>
+              <span class="mode-tab-text" data-i18n="tabSuggestions">Quick Suggestions</span>
+            </button>
+            <button
+              type="button"
+              class="mode-tab-btn"
+              id="tabManualBtn"
+              data-mode="manual"
+            >
+              <span class="mode-tab-icon">✍️</span>
+              <span class="mode-tab-text" data-i18n="tabManual">Write My Own</span>
+            </button>
           </div>
 
-          <!-- Cards are injected here by feedback.js -->
-          <div
-            class="suggestions-grid"
-            id="suggestionsGrid"
-            role="listbox"
-            aria-label="Feedback suggestions"
-            aria-multiselectable="false"
-          ></div>
+          <!-- ── Manual Feedback Pane (Top Placed, Direct Access) ──── -->
+          <div class="manual-feedback-pane" id="manualFeedbackPane" style="display: none;">
+            <div class="manual-pane-header">
+              <span class="manual-pane-icon">✍️</span>
+              <div>
+                <p class="manual-pane-title" data-i18n="writeOwnFeedback">Write Your Own Feedback</p>
+                <p class="manual-pane-subtitle" data-i18n="writeOwnSubtitle">Share your experience in your own words</p>
+              </div>
+            </div>
+
+            <div class="manual-textarea-wrap">
+              <textarea
+                id="manualFeedbackText"
+                class="manual-feedback-textarea"
+                rows="4"
+                maxlength="1000"
+                placeholder="Share your experience in your own words..."
+                data-i18n-placeholder="manualPlaceholder"
+                aria-label="Write your feedback"
+              ></textarea>
+              <div class="manual-textarea-footer">
+                <span class="manual-min-hint" id="manualMinHint" data-i18n="manualMinHint">Minimum 5 characters</span>
+                <span class="manual-char-counter" id="manualCharCounter">0 / 1000</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Suggestions Wrapper (Header + Cards) ──── -->
+          <div id="suggestionsWrapper">
+            <div class="suggestions-header">
+              <p class="suggestions-title" id="suggestionsTitle" data-i18n="suggestionsTitle">Choose Your Feedback</p>
+              <p class="suggestions-subtitle" data-i18n="suggestionsSubtitle">Select the one that best matches your experience.</p>
+            </div>
+
+            <!-- Cards are injected here by feedback.js -->
+            <div
+              class="suggestions-grid"
+              id="suggestionsGrid"
+              role="listbox"
+              aria-label="Feedback suggestions"
+              aria-multiselectable="false"
+            ></div>
+
+            <!-- Bottom shortcut for 1–3 stars: if user scrolled down, switch to manual with one tap -->
+            <div class="bottom-manual-link-wrap" id="bottomManualLinkWrap" style="display: none;">
+              <button type="button" class="bottom-manual-link" id="btnBottomSwitchManual">
+                ✍️ <span data-i18n="bottomSwitchToManual">Want to write your own review instead? Click here</span>
+              </button>
+            </div>
+          </div>
 
           <!-- Inline validation / info message -->
           <div class="validation-message" id="validationMsg" role="alert" aria-live="polite">
@@ -346,7 +405,7 @@
   </div>
 
   <!-- JavaScript -->
-  <script src="{{ url_for('static', path='js/i18n.js') }}?v=20260905d"></script>
-  <script src="{{ url_for('static', path='js/feedback.js') }}?v=20261116_v4" defer></script>
+  <script src="{{ url_for('static', path='js/i18n.js') }}?v=20261117_v8"></script>
+  <script src="{{ url_for('static', path='js/feedback.js') }}?v=20261117_v8" defer></script>
 </body>
 </html>
