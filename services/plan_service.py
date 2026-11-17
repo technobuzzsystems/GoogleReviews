@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from models.domain_models import Booking, BusinessConfigModel, SalesExecutive, SubscriptionPlan, WalletLedger
 
 DEFAULT_PLANS = {
-    "15d": {"code": "15d", "label": "15 Days", "days": 15, "months": 0, "amount": 1.0, "sort_order": 10},
     "6m": {"code": "6m", "label": "6 Months", "days": 0, "months": 6, "amount": 1499.0, "sort_order": 20},
     "1y": {"code": "1y", "label": "1 Year", "days": 0, "months": 12, "amount": 1999.0, "sort_order": 30},
     "2y": {"code": "2y", "label": "2 Years", "days": 0, "months": 24, "amount": 2999.0, "sort_order": 40},
@@ -63,7 +62,11 @@ def sync_plans_cache(db: Session) -> dict:
 
 
 def seed_default_plans(db: Session) -> None:
-    """Seed the default 4 subscription plans if subscription_plans table is empty, and sync PLANS."""
+    """Seed the default subscription plans if subscription_plans table is empty, and sync PLANS."""
+    # Ensure obsolete 15-day trial plan is purged
+    db.query(SubscriptionPlan).filter(SubscriptionPlan.code == "15d").delete()
+    db.commit()
+
     if db.query(SubscriptionPlan).count() == 0:
         for code, p in DEFAULT_PLANS.items():
             db.add(

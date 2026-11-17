@@ -180,6 +180,8 @@ def init_db():
             conn.execute(text("UPDATE payments SET admin_remarks = '' WHERE admin_remarks IS NULL"))
         if "businesses" in inspect(engine).get_table_names():
             conn.execute(text("UPDATE businesses SET qr_destination_url = '' WHERE qr_destination_url IS NULL"))
+        if "subscription_plans" in inspect(engine).get_table_names():
+            conn.execute(text("DELETE FROM subscription_plans WHERE code = '15d'"))
     logger.info("Database tables ready (%s)", SQLALCHEMY_DATABASE_URL.split("@")[-1])
 
     db = SessionLocal()
