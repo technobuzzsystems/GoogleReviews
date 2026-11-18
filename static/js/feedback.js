@@ -78,17 +78,12 @@ const DOM = {
   copyToast:         document.getElementById('copyToast'),
   toastMsg:          document.getElementById('toastMsg'),
 
-  // Mode Switch & Manual Feedback (1–3 Stars)
-  modeSwitch:         document.getElementById('feedbackModeSwitch'),
-  tabSuggestionsBtn:  document.getElementById('tabSuggestionsBtn'),
-  tabManualBtn:       document.getElementById('tabManualBtn'),
+  // Manual Feedback & Suggestions Sections
   manualPane:         document.getElementById('manualFeedbackPane'),
   suggestionsWrapper: document.getElementById('suggestionsWrapper'),
   manualTextarea:     document.getElementById('manualFeedbackText'),
   manualCharCounter:  document.getElementById('manualCharCounter'),
   manualMinHint:      document.getElementById('manualMinHint'),
-  bottomManualWrap:   document.getElementById('bottomManualLinkWrap'),
-  btnBottomSwitchManual: document.getElementById('btnBottomSwitchManual'),
   submitHint:         document.querySelector('.submit-hint'),
 };
 
@@ -127,6 +122,7 @@ const UIState = {
   showSuggestions() {
     DOM.loadingSection.classList.remove('active');
     DOM.suggestionsSection.classList.add('active');
+    UIState.showSubmit();
   },
 
   /** Show the submit button. */
@@ -146,35 +142,21 @@ const UIState = {
     UIState.clearErrorBanner();
   },
 
-  /** Manage visibility of manual feedback option (1–3 stars only). */
-  syncManualVisibility(rating) {
-    const isLowRating = rating && rating >= 1 && rating <= 3;
-    if (DOM.modeSwitch) {
-      DOM.modeSwitch.style.display = isLowRating ? 'flex' : 'none';
-    }
-    if (DOM.bottomManualWrap) {
-      DOM.bottomManualWrap.style.display = isLowRating ? 'block' : 'none';
-    }
-    if (!isLowRating) {
-      // 4 or 5 stars: force suggestions mode, hide manual completely
-      if (DOM.manualPane) DOM.manualPane.style.display = 'none';
-      if (DOM.suggestionsWrapper) DOM.suggestionsWrapper.style.display = 'block';
-      State.mode = 'suggestions';
-      State.isManual = false;
-    }
-    UIState.updateSubmitTexts();
-  },
-
   /** Update submit button label and hint text based on mode and rating. */
   updateSubmitTexts() {
     if (!DOM.btnText || !DOM.submitHint) return;
     const isLowRating = State.selectedRating && State.selectedRating <= 3;
-    if (State.isManual || isLowRating) {
-      DOM.btnText.textContent = I18n.t('submitFeedback');
-      DOM.submitHint.textContent = I18n.t('privateFeedbackHint');
+    if (isLowRating) {
+      DOM.btnText.textContent = I18n.t('submitFeedback') || 'Submit Feedback';
+      DOM.submitHint.textContent = I18n.t('privateFeedbackHint') || '';
     } else {
-      DOM.btnText.textContent = I18n.t('submitBtn');
-      DOM.submitHint.textContent = I18n.t('submitHint');
+      if (State.isManual) {
+        DOM.btnText.textContent = I18n.t('submitFeedback') || 'Submit Feedback';
+        DOM.submitHint.textContent = I18n.t('submitHint');
+      } else {
+        DOM.btnText.textContent = I18n.t('submitBtn');
+        DOM.submitHint.textContent = I18n.t('submitHint');
+      }
     }
   },
 
@@ -184,10 +166,6 @@ const UIState = {
     State.mode = 'suggestions';
     State.manualText = '';
     if (DOM.manualTextarea) DOM.manualTextarea.value = '';
-    if (DOM.manualPane) DOM.manualPane.style.display = 'none';
-    if (DOM.suggestionsWrapper) DOM.suggestionsWrapper.style.display = 'block';
-    if (DOM.tabSuggestionsBtn) DOM.tabSuggestionsBtn.classList.add('active');
-    if (DOM.tabManualBtn) DOM.tabManualBtn.classList.remove('active');
     if (DOM.manualCharCounter) DOM.manualCharCounter.textContent = '0 / 1000';
     if (DOM.manualMinHint) DOM.manualMinHint.classList.remove('valid', 'invalid');
   },
@@ -414,7 +392,6 @@ const StarRating = {
       State.responseIds = [];
       SuggestionCards.clear();
       UIState.resetManual();
-      UIState.syncManualVisibility(rating);
       UIState.hideSuggestionsAndSubmit();
     }
 
@@ -446,13 +423,9 @@ const StarRating = {
 const SuggestionCards = {
   /** Clear the suggestions grid and reset selection. */
   clear() {
-    if (DOM.submitSection.closest('#suggestionsGrid') || (DOM.manualTextWrap && DOM.submitSection.closest('#manualFeedbackWrapper'))) {
-      DOM.feedbackForm.appendChild(DOM.submitSection);
-      UIState.hideSuggestionsAndSubmit();
-    }
     DOM.suggestionsGrid.innerHTML = '';
     State.selectedFeedback = null;
-    UIState.resetManual();
+    State.selectedResponseId = null;
   },
 
   /**
@@ -477,7 +450,6 @@ const SuggestionCards = {
     });
 
     UIState.showSuggestions();
-    UIState.syncManualVisibility(State.selectedRating);
   },
 
   /**
@@ -518,8 +490,8 @@ const SuggestionCards = {
    * @param {string} text — The feedback text.
    */
   select(selectedCard, text) {
-    // Deselect all
-    document.querySelectorAll('.suggestion-card').forEach(c => {
+    // Deselect all cards
+    document.querySelectorAll('#suggestionsGrid .suggestion-card').forEach(c => {
       c.classList.remove('selected');
       c.setAttribute('aria-pressed', 'false');
     });
@@ -527,44 +499,28 @@ const SuggestionCards = {
     // Switch off manual mode if it was active
     State.mode = 'suggestions';
     State.isManual = false;
-    if (DOM.tabSuggestionsBtn) DOM.tabSuggestionsBtn.classList.add('active');
-    if (DOM.tabManualBtn) DOM.tabManualBtn.classList.remove('active');
-    if (DOM.manualPane) DOM.manualPane.style.display = 'none';
-    if (DOM.suggestionsWrapper) DOM.suggestionsWrapper.style.display = 'block';
+
+    // Reset manual textarea so card selection is unambiguous
+    if (DOM.manualTextarea) DOM.manualTextarea.value = '';
+    if (DOM.manualCharCounter) DOM.manualCharCounter.textContent = '0 / 1000';
+    if (DOM.manualMinHint) DOM.manualMinHint.classList.remove('valid', 'invalid');
 
     // Select the clicked one
     selectedCard.classList.add('selected');
     selectedCard.setAttribute('aria-pressed', 'true');
     State.selectedFeedback = text;
 
-    // Get all suggestion cards to determine row placement
+    // Get response ID for static pool tracking
     const cards = Array.from(DOM.suggestionsGrid.querySelectorAll('.suggestion-card'));
     const selectedIndex = cards.indexOf(selectedCard);
     State.selectedResponseId = (State.responseIds && State.responseIds[selectedIndex] !== undefined)
       ? State.responseIds[selectedIndex]
       : null;
 
-    // Determine if we are in the 2-column desktop layout
-    const isDesktop = window.matchMedia('(min-width: 480px)').matches;
-
-    // Find the last card in the current row
-    let targetIndex = selectedIndex;
-    if (isDesktop) {
-      // For 2-column grid: index 0 and 1 -> row ends at index 1
-      targetIndex = Math.floor(selectedIndex / 2) * 2 + 1;
-    }
-
-    // Cap the target index in case the last row has only one card
-    if (targetIndex >= cards.length) {
-      targetIndex = cards.length - 1;
-    }
-
-    // Move the single submit button into the grid immediately after the target row
-    cards[targetIndex].after(DOM.submitSection);
-
-    // Show submit button and clear any validation errors
+    // Submit button stays at sequence 9 below cards; show and update texts
     UIState.showSubmit();
     UIState.clearValidation();
+    UIState.updateSubmitTexts();
   },
 };
 
@@ -723,98 +679,13 @@ const API = {
 };
 
 /* ============================================================
-   MANUAL FEEDBACK & MODE SWITCHER (1–3 Stars)
+   MANUAL FEEDBACK HANDLER
    ============================================================ */
 const ManualFeedback = {
   init() {
-    if (DOM.tabSuggestionsBtn) {
-      DOM.tabSuggestionsBtn.addEventListener('click', () => ManualFeedback.setMode('suggestions'));
-    }
-    if (DOM.tabManualBtn) {
-      DOM.tabManualBtn.addEventListener('click', () => ManualFeedback.setMode('manual'));
-    }
-    if (DOM.btnBottomSwitchManual) {
-      DOM.btnBottomSwitchManual.addEventListener('click', () => {
-        ManualFeedback.setMode('manual');
-        if (DOM.modeSwitch) {
-          DOM.modeSwitch.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      });
-    }
     if (DOM.manualTextarea) {
       DOM.manualTextarea.addEventListener('input', ManualFeedback.onInput);
-    }
-  },
-
-  setMode(mode, { silent = false } = {}) {
-    State.mode = mode;
-
-    if (mode === 'manual') {
-      State.isManual = true;
-      State.selectedResponseId = null;
-
-      // Update tab styles
-      if (DOM.tabManualBtn) DOM.tabManualBtn.classList.add('active');
-      if (DOM.tabSuggestionsBtn) DOM.tabSuggestionsBtn.classList.remove('active');
-
-      // Hide suggestions, show manual pane at TOP (zero scrolling required!)
-      if (DOM.suggestionsWrapper) DOM.suggestionsWrapper.style.display = 'none';
-      if (DOM.manualPane) DOM.manualPane.style.display = 'flex';
-
-      // Move submit section directly under manual pane
-      if (DOM.manualPane && DOM.submitSection) {
-        DOM.manualPane.after(DOM.submitSection);
-      }
-
-      // Update submit button text and hint
-      UIState.updateSubmitTexts();
-      UIState.showSubmit();
-      UIState.clearValidation();
-
-      // Deselect all suggestion cards
-      document.querySelectorAll('#suggestionsGrid .suggestion-card').forEach(c => {
-        c.classList.remove('selected');
-        c.setAttribute('aria-pressed', 'false');
-      });
-
-      const currentText = (DOM.manualTextarea ? DOM.manualTextarea.value : '').trim();
-      State.selectedFeedback = currentText;
-
-      if (!silent && DOM.manualTextarea) {
-        DOM.manualTextarea.focus();
-      }
-
-      ManualFeedback.updateHint(currentText);
-
-    } else {
-      // mode === 'suggestions'
-      State.isManual = false;
-
-      // Update tab styles
-      if (DOM.tabSuggestionsBtn) DOM.tabSuggestionsBtn.classList.add('active');
-      if (DOM.tabManualBtn) DOM.tabManualBtn.classList.remove('active');
-
-      // Show suggestions, hide manual pane
-      if (DOM.suggestionsWrapper) DOM.suggestionsWrapper.style.display = 'block';
-      if (DOM.manualPane) DOM.manualPane.style.display = 'none';
-
-      UIState.updateSubmitTexts();
-
-      // Check if a suggestion card was selected
-      const selectedCard = DOM.suggestionsGrid ? DOM.suggestionsGrid.querySelector('.suggestion-card.selected') : null;
-      if (selectedCard) {
-        const cards = Array.from(DOM.suggestionsGrid.querySelectorAll('.suggestion-card'));
-        const selectedIndex = cards.indexOf(selectedCard);
-        const isDesktop = window.matchMedia('(min-width: 480px)').matches;
-        let targetIndex = isDesktop ? Math.floor(selectedIndex / 2) * 2 + 1 : selectedIndex;
-        if (targetIndex >= cards.length) targetIndex = cards.length - 1;
-        cards[targetIndex].after(DOM.submitSection);
-        UIState.showSubmit();
-        State.selectedFeedback = selectedCard.querySelector('.card-text')?.textContent || null;
-      } else {
-        DOM.submitSection.classList.remove('active');
-        State.selectedFeedback = null;
-      }
+      DOM.manualTextarea.addEventListener('focus', ManualFeedback.onFocus);
     }
   },
 
@@ -826,10 +697,42 @@ const ManualFeedback = {
       DOM.manualCharCounter.textContent = `${raw.length} / 1000`;
     }
 
-    if (State.isManual) {
+    if (trimmed.length > 0) {
+      // User is writing manual feedback — deselect any selected suggestion card
+      document.querySelectorAll('#suggestionsGrid .suggestion-card').forEach(c => {
+        c.classList.remove('selected');
+        c.setAttribute('aria-pressed', 'false');
+      });
+      State.mode = 'manual';
+      State.isManual = true;
       State.selectedFeedback = trimmed;
-      State.manualText = raw;
+      State.selectedResponseId = null;
       ManualFeedback.updateHint(trimmed);
+    } else {
+      State.isManual = false;
+      State.selectedFeedback = null;
+      if (DOM.manualMinHint) {
+        DOM.manualMinHint.classList.remove('valid', 'invalid');
+      }
+    }
+
+    UIState.showSubmit();
+    UIState.updateSubmitTexts();
+  },
+
+  onFocus() {
+    const raw = DOM.manualTextarea ? DOM.manualTextarea.value : '';
+    const trimmed = raw.trim();
+    if (trimmed.length > 0) {
+      document.querySelectorAll('#suggestionsGrid .suggestion-card').forEach(c => {
+        c.classList.remove('selected');
+        c.setAttribute('aria-pressed', 'false');
+      });
+      State.mode = 'manual';
+      State.isManual = true;
+      State.selectedFeedback = trimmed;
+      State.selectedResponseId = null;
+      UIState.updateSubmitTexts();
     }
   },
 
@@ -855,25 +758,34 @@ function onSubmitClick() {
     return;
   }
 
-  // If in manual mode, validate manual textarea input
-  if (State.isManual) {
-    const text = (DOM.manualTextarea ? DOM.manualTextarea.value : '').trim();
-    if (!text) {
+  const manualVal = (DOM.manualTextarea ? DOM.manualTextarea.value : '').trim();
+
+  // If manual feedback has text, validate and use it
+  if (State.isManual || (manualVal.length > 0 && !State.selectedFeedback)) {
+    if (!manualVal) {
       UIState.showValidation('error', '⚠️', I18n.t('manualEmptyError'));
       if (DOM.manualMinHint) DOM.manualMinHint.classList.add('invalid');
       if (DOM.manualTextarea) DOM.manualTextarea.focus();
       return;
     }
-    if (text.length < 5) {
+    if (manualVal.length < 5) {
       UIState.showValidation('error', '⚠️', I18n.t('manualShortError'));
       if (DOM.manualMinHint) DOM.manualMinHint.classList.add('invalid');
       if (DOM.manualTextarea) DOM.manualTextarea.focus();
       return;
     }
-    State.selectedFeedback = text;
+    State.isManual = true;
+    State.selectedFeedback = manualVal;
+    State.selectedResponseId = null;
   } else {
     // Validate: a suggestion card must be selected
     if (!State.selectedFeedback) {
+      if (manualVal.length > 0 && manualVal.length < 5) {
+        UIState.showValidation('error', '⚠️', I18n.t('manualShortError'));
+        if (DOM.manualMinHint) DOM.manualMinHint.classList.add('invalid');
+        if (DOM.manualTextarea) DOM.manualTextarea.focus();
+        return;
+      }
       UIState.showValidation('error', '⚠️', I18n.t('selectSuggestion'));
       return;
     }
