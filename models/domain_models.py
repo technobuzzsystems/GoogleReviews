@@ -104,6 +104,12 @@ class BusinessConfigModel(Base):
     area = Column(String, default="", index=True)
     owner_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     qr_destination_url = Column(Text, default="", nullable=False)
+    instagram_url = Column(String, default="")
+    instagram_enabled = Column(Boolean, default=False, nullable=False)
+    facebook_url = Column(String, default="")
+    facebook_enabled = Column(Boolean, default=False, nullable=False)
+    whatsapp_number = Column(String, default="")
+    whatsapp_enabled = Column(Boolean, default=False, nullable=False)
 
 
 class SalesExecutive(Base):

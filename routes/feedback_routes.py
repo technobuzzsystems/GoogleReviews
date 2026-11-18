@@ -5,6 +5,7 @@ All customer-facing feedback routes (FastAPI).
 """
 
 import logging
+import re
 from fastapi import APIRouter, Request, HTTPException, status, Depends
 from fastapi.responses import RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
@@ -70,6 +71,31 @@ def render_business_feedback(request: Request, business_id: str, db: Session, b_
     is_expired = bool(b_config.get("is_expired") or b_config.get("plan_status") == "expired")
     is_deactivated = not is_active
     is_blocked = is_expired or is_deactivated
+
+    raw_wa = (b_config.get("whatsapp_number") or "").strip()
+    wa_digits = re.sub(r"\D", "", raw_wa)
+    if wa_digits:
+        if len(wa_digits) == 10:
+            wa_digits = f"91{wa_digits}"
+        elif len(wa_digits) == 11 and wa_digits.startswith("0"):
+            wa_digits = f"91{wa_digits[1:]}"
+        whatsapp_link = f"https://wa.me/{wa_digits}"
+    else:
+        whatsapp_link = ""
+
+    instagram_url = (b_config.get("instagram_url") or "").strip()
+    if instagram_url and not (instagram_url.startswith("http://") or instagram_url.startswith("https://")):
+        instagram_url = f"https://{instagram_url}"
+
+    facebook_url = (b_config.get("facebook_url") or "").strip()
+    if facebook_url and not (facebook_url.startswith("http://") or facebook_url.startswith("https://")):
+        facebook_url = f"https://{facebook_url}"
+
+    instagram_enabled = bool(b_config.get("instagram_enabled", False)) and bool(instagram_url)
+    facebook_enabled = bool(b_config.get("facebook_enabled", False)) and bool(facebook_url)
+    whatsapp_enabled = bool(b_config.get("whatsapp_enabled", False)) and bool(whatsapp_link)
+    has_social_links = bool(instagram_enabled or facebook_enabled or whatsapp_enabled)
+
     context = {
         "request": request,
         "business_id":       b_config.get("key") or business_id,
@@ -83,6 +109,13 @@ def render_business_feedback(request: Request, business_id: str, db: Session, b_
         "is_deactivated":    is_deactivated,
         "is_blocked":        is_blocked,
         "expiry_date":       b_config.get("expiry_date") or "",
+        "instagram_url":     instagram_url,
+        "instagram_enabled": instagram_enabled,
+        "facebook_url":      facebook_url,
+        "facebook_enabled":  facebook_enabled,
+        "whatsapp_link":     whatsapp_link,
+        "whatsapp_enabled":  whatsapp_enabled,
+        "has_social_links":  has_social_links,
     }
     return templates.TemplateResponse(
         request=request,

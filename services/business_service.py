@@ -144,6 +144,12 @@ def _serialize_business(b: BusinessConfigModel, salesman_names: dict = None) -> 
         "area": getattr(b, "area", "") or "",
         "owner_user_id": getattr(b, "owner_user_id", None),
         "qr_destination_url": getattr(b, "qr_destination_url", "") or "",
+        "instagram_url": getattr(b, "instagram_url", "") or "",
+        "instagram_enabled": bool(getattr(b, "instagram_enabled", False)),
+        "facebook_url": getattr(b, "facebook_url", "") or "",
+        "facebook_enabled": bool(getattr(b, "facebook_enabled", False)),
+        "whatsapp_number": getattr(b, "whatsapp_number", "") or "",
+        "whatsapp_enabled": bool(getattr(b, "whatsapp_enabled", False)),
     }
 
 
@@ -658,6 +664,18 @@ def save_business(db: Session, business_key: str, data: dict):
     b.area = (data.get("area") or "").strip()
     if "is_active" in data:
         b.is_active = bool(data["is_active"])
+    if "instagram_url" in data:
+        b.instagram_url = (data.get("instagram_url") or "").strip()
+    if "instagram_enabled" in data:
+        b.instagram_enabled = bool(data["instagram_enabled"])
+    if "facebook_url" in data:
+        b.facebook_url = (data.get("facebook_url") or "").strip()
+    if "facebook_enabled" in data:
+        b.facebook_enabled = bool(data["facebook_enabled"])
+    if "whatsapp_number" in data:
+        b.whatsapp_number = (data.get("whatsapp_number") or "").strip()
+    if "whatsapp_enabled" in data:
+        b.whatsapp_enabled = bool(data["whatsapp_enabled"])
     raw_fr = data.get("franchise_id")
     if raw_fr not in (None, "", 0, "0"):
         b.franchise_id = int(raw_fr)

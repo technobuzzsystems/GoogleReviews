@@ -684,6 +684,12 @@ def save_business_route(
     area: str = Form(""),
     franchise_id: str = Form(""),
     is_active: str = Form("1"),
+    instagram_url: str = Form(""),
+    instagram_enabled: str = Form(""),
+    facebook_url: str = Form(""),
+    facebook_enabled: str = Form(""),
+    whatsapp_number: str = Form(""),
+    whatsapp_enabled: str = Form(""),
     db: Session = Depends(get_db),
     user: User = Depends(require_business_access),
 ):
@@ -727,6 +733,12 @@ def save_business_route(
         "area": area,
         "franchise_id": int(franchise_id) if str(franchise_id).isdigit() else None,
         "is_active": is_active in {"1", "on", "true", "yes"},
+        "instagram_url": (instagram_url or "").strip(),
+        "instagram_enabled": instagram_enabled in {"1", "on", "true", "yes"},
+        "facebook_url": (facebook_url or "").strip(),
+        "facebook_enabled": facebook_enabled in {"1", "on", "true", "yes"},
+        "whatsapp_number": (whatsapp_number or "").strip(),
+        "whatsapp_enabled": whatsapp_enabled in {"1", "on", "true", "yes"},
     }
 
     mobile_val, mobile_err = validate_mobile(mobile, required=True)
@@ -785,6 +797,12 @@ def save_business_route(
         "area": org.area if org and user.role == UserRole.FRANCHISE else sanitize_string(area, 80),
         "franchise_id": org.id if org and user.role == UserRole.FRANCHISE else (int(franchise_id) if str(franchise_id).isdigit() else None),
         "is_active": posted["is_active"],
+        "instagram_url": posted["instagram_url"],
+        "instagram_enabled": posted["instagram_enabled"],
+        "facebook_url": posted["facebook_url"],
+        "facebook_enabled": posted["facebook_enabled"],
+        "whatsapp_number": posted["whatsapp_number"],
+        "whatsapp_enabled": posted["whatsapp_enabled"],
     }
     save_business(db, business_key.strip(), business_data)
     return RedirectResponse(url="/admin/businesses", status_code=303)

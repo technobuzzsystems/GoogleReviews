@@ -316,6 +316,109 @@ html:not([lang="en"]) .lang-bar-label {
   border: 1px solid var(--clr-border);
 }
 
+/* ── Connect With Us Section ─────────────────────────────────────────────── */
+.connect-with-us-section {
+  width: 100%;
+  max-width: 400px;
+  margin-top: 4px;
+  margin-bottom: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.connect-with-us-title {
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--clr-primary);
+  text-align: center;
+}
+
+.social-links-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.social-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--r-md);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--clr-text);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--clr-border);
+  transition: all var(--t-fast) ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.social-link-btn .social-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  transition: transform var(--t-fast) ease;
+}
+
+.social-link-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.social-link-btn:hover .social-icon {
+  transform: scale(1.1);
+}
+
+/* Platform-specific accents */
+.social-link-btn.social-instagram {
+  border-color: rgba(225, 48, 108, 0.3);
+}
+.social-link-btn.social-instagram .social-icon {
+  color: #E1306C;
+}
+.social-link-btn.social-instagram:hover {
+  background: rgba(225, 48, 108, 0.12);
+  border-color: #E1306C;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(225, 48, 108, 0.25);
+}
+
+.social-link-btn.social-facebook {
+  border-color: rgba(24, 119, 242, 0.3);
+}
+.social-link-btn.social-facebook .social-icon {
+  color: #1877F2;
+}
+.social-link-btn.social-facebook:hover {
+  background: rgba(24, 119, 242, 0.12);
+  border-color: #1877F2;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(24, 119, 242, 0.25);
+}
+
+.social-link-btn.social-whatsapp {
+  border-color: rgba(37, 211, 102, 0.3);
+}
+.social-link-btn.social-whatsapp .social-icon {
+  color: #25D366;
+}
+.social-link-btn.social-whatsapp:hover {
+  background: rgba(37, 211, 102, 0.12);
+  border-color: #25D366;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.25);
+}
+
 .paste-hint {
   width: 100%;
   max-width: 400px;
