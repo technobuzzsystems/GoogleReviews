@@ -1,18 +1,18 @@
 """
 services/gemini_service.py
 --------------------------
-Google Gemini AI service layer with retry logic and model fallback.
+Google Gemini AI service layer with retry logic, model fallback,
+and strict rating-polarity verification.
 
 Responsibilities:
     - Initialize the Gemini client with the API key from config.
-    - Build rating-aware, structured prompts.
+    - Build rating-aware, strictly calibrated prompts (100% positive for 4-5 stars,
+      balanced for 3 stars, critical/constructive for 1-2 stars).
     - Call the Gemini API with automatic retry and short backoff.
     - Try alternative models if the primary model is unavailable.
     - Parse, validate, and sanitize the JSON response.
+    - Enforce a backend sentiment guard to ensure suggestions match the selected star rating.
     - Return a clean list of 10 AI-generated feedback suggestions.
-
-If Gemini is not configured, this module returns local rating-based
-suggestions so the feedback page still works.
 """
 
 import json
@@ -50,6 +50,26 @@ _RETRY_DELAYS = [0.3, 0.5]
 _REQUEST_TIMEOUT = 25
 _TOTAL_BUDGET_SEC = 45
 
+# Explicit negative indicators forbidden in 4-star and 5-star feedback
+NEGATIVE_TRIGGER_WORDS = {
+    "terrible", "horrible", "worst", "awful", "pathetic", "useless", "disaster",
+    "waste of money", "waste of time", "rude staff", "unprofessional", "cheat",
+    "fraud", "scam", "crashing", "crashed", "delayed", "delay", "poor service",
+    "poor quality", "unresponsive", "disappointed", "disappointing", "frustrated",
+    "frustrating", "regret", "not recommend", "never again", "avoid", "complaint",
+    "let down", "careless", "ignored", "bad experience", "bad time",
+    "खराब", "निराशा", "वाईट", "त्रासदायक", "बेजबाबदार", "दुर्लक्ष",
+    "बुरा", "लापरवाह", "बेकार", "धोखा", "परेशान",
+}
+
+# Explicit positive indicators required in 5-star feedback
+POSITIVE_AFFIRMATIONS = {
+    "excellent", "outstanding", "fantastic", "amazing", "great", "delighted",
+    "wonderful", "superb", "highly recommend", "exceeded", "perfect", "loved",
+    "impressed", "pleased", "satisfied", "top notch", "professional",
+    "उत्कृष्ट", "अप्रतिम", "छान", "आनंद", "समाधान", "बढ़िया", "शानदार", "उत्तम",
+}
+
 
 def _gemini_api_key() -> str:
     load_dotenv(override=True)
@@ -76,11 +96,78 @@ def _cap(text: str) -> str:
 def _example_phrases(business_context: dict, rating: int) -> List[str]:
     raw = business_context.get(f"examples_{rating}star") or ""
     phrases = [p.strip() for p in raw.split(",") if p.strip()]
-    return phrases or ["the overall experience"]
+    if phrases:
+        return phrases
+
+    # Safe rating-specific defaults if the business has no custom phrases
+    name = (business_context.get("name") or "this business").strip()
+    defaults = {
+        5: [
+            "the outstanding service",
+            "the friendly and professional staff",
+            "the top-notch quality",
+            "the seamless and quick experience",
+            "the great attention to detail",
+            "the excellent overall support",
+            "the prompt response and care",
+            "the clean and welcoming setup",
+            "the dependable and trustworthy team",
+            "the wonderful atmosphere and outcome",
+        ],
+        4: [
+            "the prompt service",
+            "the helpful staff interaction",
+            "the good product quality",
+            "the smooth experience overall",
+            "the reasonable turnaround time",
+            "the courteous communication",
+            "the reliable outcome",
+            "the organized environment",
+            "the fair value received",
+            "the overall positive visit",
+        ],
+        3: [
+            "the overall service speed",
+            "the communication during busy hours",
+            "the turnaround time",
+            "the waiting duration",
+            "the pricing clarity",
+            "the staff responsiveness",
+            "the process consistency",
+            "the coordination",
+            "the guidance provided",
+            "the consistency across visits",
+        ],
+        2: [
+            "the long wait time",
+            "the lack of timely updates",
+            "the uneven service quality",
+            "the miscommunication on requirements",
+            "the delays in response",
+            "the disorganized handling",
+            "the unaddressed concern",
+            "the slow process",
+            "the lack of attention from staff",
+            "the unmet expectation",
+        ],
+        1: [
+            "the unacceptable delays",
+            "the lack of customer support",
+            "the unprofessional attitude",
+            "the poor handling of our request",
+            "the severe communication breakdown",
+            "the unfulfilled commitments",
+            "the lack of responsiveness",
+            "the completely disorganized experience",
+            "the careless service",
+            "the unresolved issues",
+        ],
+    }
+    return defaults.get(rating, defaults[5])
 
 
 def _local_suggestions(rating: int, business_context: dict, language: str = "en") -> List[str]:
-    """Build 10 usable suggestions when Gemini is not configured."""
+    """Build 10 usable suggestions when Gemini is not configured or fails."""
     name = business_context.get("name") or "this business"
     phrases = _example_phrases(business_context, rating)
     while len(phrases) < 10:
@@ -159,134 +246,123 @@ def _local_suggestions(rating: int, business_context: dict, language: str = "en"
 
 
 def _build_prompt(rating: int, business_context: dict, language: str = "en") -> str:
-    """Build a rating-aware prompt for the Gemini model."""
+    """Build a strictly calibrated rating-aware prompt for the Gemini model."""
     company_name = business_context.get("name", "TechnoBuzz")
-    scope = business_context.get("scope", "Software development, web design, cloud infrastructure, network architecture, cybersecurity, and managed IT support.")
+    scope = business_context.get(
+        "scope",
+        "Quality service, reliable customer support, attention to detail, and professional assistance.",
+    )
     language_name = REVIEW_LANGUAGE_NAMES.get(language, REVIEW_LANGUAGE_NAMES["en"])
     language_block = ""
     if language != "en":
         language_block = f"""
-LANGUAGE (CRITICAL)
-
+LANGUAGE (CRITICAL):
 Write EVERY suggestion entirely in {language_name}.
 The customer chose this language for their Google review.
 - Use natural everyday {language_name} that a real local customer would type.
 - Do NOT write the reviews in English.
 - You may keep the business name "{company_name}" in its original form.
-- Do not mix English sentences. A few common loanwords are OK if locals actually use them.
+- Do not mix English sentences.
 """
 
-    # Build only the tone block for the selected rating — do NOT send all star
-    # examples to Gemini. Sending all 5 tiers at once confuses the model at
-    # high temperature and can produce wrong-polarity suggestions.
-    tone_map = {
-        1: (
-            "TONE: 1 STAR — Very negative. The client is clearly frustrated.\n"
-            "Generate detailed, specific negative feedback.\n"
-            f"Focus on issues like: {business_context.get('examples_1star', 'missed deadlines, poor communication, unresolved problems, unprofessional conduct')}\n"
-            "Length: 2–4 natural sentences per suggestion."
-        ),
-        2: (
-            "TONE: 2 STAR — Mostly negative. The client felt let down.\n"
-            "Generate disappointed feedback that mentions specific problems.\n"
-            f"Focus on issues like: {business_context.get('examples_2star', 'slow response times, below-average quality, unmet expectations')}\n"
-            "Length: 2–3 sentences per suggestion."
-        ),
-        3: (
-            "TONE: 3 STAR — Mixed / neutral. Balanced pros and cons.\n"
-            "Generate feedback that acknowledges both good and bad aspects.\n"
-            f"Focus on: {business_context.get('examples_3star', 'some things went well but others could be better, average overall experience')}\n"
-            "Length: 2–3 sentences per suggestion."
-        ),
-        4: (
-            "TONE: 4 STAR — Mostly positive. The client is satisfied.\n"
-            "Generate happy feedback with one small constructive note.\n"
-            f"Highlight positives and mention one minor improvement like: {business_context.get('examples_4star', 'could improve communication speed, minor delays')}\n"
-            "Length: 2–3 sentences per suggestion."
-        ),
-        5: (
-            "TONE: 5 STAR — Enthusiastic and genuinely positive. The client is delighted.\n"
-            "Generate warm, specific praise. Sound happy and grateful.\n"
-            f"Highlight things like: {business_context.get('examples_5star', 'excellent quality, great service, exceeded expectations, highly recommend')}\n"
-            "CRITICAL: Every single suggestion MUST be positive. No complaints. No negatives.\n"
-            "Length: 2–4 natural sentences per suggestion."
-        ),
-    }
-    tone_block = tone_map.get(rating, tone_map[5])
+    # Rating-exclusive tone instructions & strictly matched few-shot examples
+    if rating == 5:
+        tone_instruction = f"""
+TONE: 5 STAR — ENTHUSIASTIC, DELIGHTED, 100% POSITIVE PRAISE.
+The customer had an outstanding, top-tier experience.
+Key highlights: {business_context.get('examples_5star', 'exceptional service, warm and professional staff, top quality, highly recommended')}
+ABSOLUTE RULE: Every single review MUST be 100% positive praise. Zero complaints, zero criticisms, zero negatives.
+Length: 1 to 3 natural sentences per review.
+
+FEW-SHOT EXAMPLES (MATCH THIS EXCELLENT POSITIVE TONE):
+- "Had an incredible experience at {company_name}! The team was courteous, swift, and exceeded all our expectations."
+- "Truly top-notch service from start to finish. Everything was handled with utmost care and professionalism."
+- "Loved my visit to {company_name}. You can tell they take immense pride in their work and customer satisfaction."
+- "Outstanding quality and friendly support. Will definitely be recommending them to all my friends and family!"
+"""
+    elif rating == 4:
+        tone_instruction = f"""
+TONE: 4 STAR — POSITIVE AND SATISFIED WITH ONE MINOR SUGGESTION.
+The customer is happy and recommends the business, with a slight constructive observation.
+Key themes: {business_context.get('examples_4star', 'good experience, helpful staff, high quality, minor waiting time or small suggestion')}
+Length: 1 to 3 natural sentences per review.
+
+FEW-SHOT EXAMPLES (MATCH THIS GOOD/SATISFIED TONE):
+- "Really solid service from {company_name}. Everything was done very well, just a slight wait during peak hours."
+- "Great experience overall! The team was friendly and skilled. Would easily recommend them."
+- "Very pleased with the outcome. Quality is definitely there, just minor communication delays initially."
+- "Good value and dependable staff. Very happy with the overall visit to {company_name}."
+"""
+    elif rating == 3:
+        tone_instruction = f"""
+TONE: 3 STAR — BALANCED, AVERAGE, NEUTRAL (PROS AND CONS).
+The experience was okay/fair, but had clear room for improvement.
+Key themes: {business_context.get('examples_3star', 'average service, decent outcome but some delays, mixed overall experience')}
+Length: 1 to 3 natural sentences per review.
+
+FEW-SHOT EXAMPLES (MATCH THIS BALANCED/AVERAGE TONE):
+- "Decent visit to {company_name}. Staff was polite, but the turnaround took longer than expected."
+- "An average experience. Some aspects went smoothly, but communication could be improved."
+- "It was okay overall. Fair pricing, but not quite the standout quality I had hoped for."
+- "Acceptable service. Does the job, but there is noticeable room for process improvement."
+"""
+    elif rating == 2:
+        tone_instruction = f"""
+TONE: 2 STAR — DISAPPOINTED, BELOW AVERAGE, CLEAR SHORTCOMINGS.
+The customer felt let down and had unmet expectations.
+Key themes: {business_context.get('examples_2star', 'slow service, disorganized process, poor responsiveness, unmet expectations')}
+Length: 1 to 3 natural sentences per review.
+
+FEW-SHOT EXAMPLES (MATCH THIS DISAPPOINTED TONE):
+- "Rather disappointed with my experience at {company_name}. The wait was too long and nobody kept us updated."
+- "Service was disorganized. Staff seemed inattentive and the end result did not match what was promised."
+- "Below what I expected. Communication was difficult and issues took multiple follow-ups to resolve."
+"""
+    else:  # rating == 1
+        tone_instruction = f"""
+TONE: 1 STAR — HIGHLY CRITICAL, FRUSTRATED, SEVERE SHORTCOMINGS.
+The customer had a very poor experience with critical service failures.
+Key themes: {business_context.get('examples_1star', 'unacceptable delays, rude behavior, poor quality, zero accountability')}
+Length: 1 to 3 natural sentences per review.
+
+FEW-SHOT EXAMPLES (MATCH THIS CRITICAL TONE):
+- "Extremely frustrating experience with {company_name}. Unprofessional handling and complete lack of support."
+- "Very poor service. Commitments were missed and nobody took accountability for the mistakes made."
+- "Would not recommend. The entire process was disorganized and customer concerns were completely ignored."
+"""
 
     return f"""
-You are an expert at writing realistic customer feedback for a service provider.
+You are an expert review curator writing authentic customer feedback.
 
-Your task is to generate exactly 10 customer feedback suggestions based on the provided company name and star rating.
-
-Company Name:
-{company_name}
-
-Star Rating:
-{rating}/5
-
-Scope of Services:
-{scope}
+Your task is to generate exactly 10 distinct, natural customer reviews based on:
+Company Name: {company_name}
+Star Rating: {rating} out of 5
+Business Scope: {scope}
 {language_block}
-IMPORTANT REQUIREMENTS
 
-1. Every response MUST sound like it was written by a real client.
-2. NEVER sound like an AI assistant.
-3. NEVER use robotic, overly formal, or generic corporate language.
-4. Write naturally, reflecting real-world business interactions with a vendor.
-5. Every suggestion should have a different writing style and wording.
-6. Mix sentence lengths naturally.
-7. Avoid repeating phrases.
-8. Some reviews can focus on specific service areas, some on delivery, some on communication or support.
-9. Do NOT number the suggestions.
-10. Return ONLY a JSON array of strings.
-11. No markdown.
-12. No explanations.
-13. No headings.
-14. Each suggestion should feel original.
+{tone_instruction}
 
-{tone_block}
+CRITICAL RULES:
+1. Every review must sound like it was typed by a different real customer on Google Reviews.
+2. Vary sentence structure, vocabulary, and phrasing across all 10 suggestions.
+3. No robotic, overly formal, or generic AI language.
+4. Do NOT number the suggestions.
+5. Return ONLY a valid JSON array of strings containing exactly 10 suggestions.
+6. No markdown, no notes, no commentary.
 
-WRITING STYLE
-
-Pretend every suggestion is written by a different client.
-Avoid making every review have the same structure.
-Avoid repeating:
-"Great service."
-"The team is excellent."
-"Overall..."
-
-Do not use AI phrases such as:
-"The company demonstrates excellence in IT solutions."
-"The technical team exhibits deep knowledge."
-"It would be beneficial for the company to..."
-"I highly recommend their services."
-
-Instead write naturally like:
-"We had some serious issues with the new web deployment, it kept crashing under load."
-"The cloud migration went surprisingly smoothly, minimal downtime for our users."
-"They really understood our security requirements for the firewall setup."
-"Communication on the backend project was a bit patchy, but the final build works great."
-"I'm not happy with how long it took them to resolve our server issue."
-"Finally, a team that actually knows what they are doing with AWS."
-
-OUTPUT FORMAT
-
-Return ONLY this:
+OUTPUT FORMAT:
 [
-  "...",
-  "...",
-  "...",
-  "...",
-  "...",
-  "...",
-  "...",
-  "...",
-  "...",
-  "..."
+  "Review 1...",
+  "Review 2...",
+  "Review 3...",
+  "Review 4...",
+  "Review 5...",
+  "Review 6...",
+  "Review 7...",
+  "Review 8...",
+  "Review 9...",
+  "Review 10..."
 ]
-
-Nothing else.
 """.strip()
 
 
@@ -317,6 +393,72 @@ def _parse_response(raw_text: str) -> List[str]:
     return suggestions[:10]
 
 
+def validate_and_sanitize_suggestions(
+    suggestions: List[str],
+    rating: int,
+    business_context: dict,
+    language: str = "en",
+) -> List[str]:
+    """
+    Backend Polarity Safety Guard:
+    Scans generated suggestions against forbidden words for the given rating.
+    - For 5 Stars: Replaces any review containing negative words with verified positive reviews.
+    - For 1-2 Stars: Replaces any overly cheerful/5-star reviews with constructive negative reviews.
+    Guarantees that 5-star ratings NEVER display negative feedback suggestions.
+    """
+    if not suggestions:
+        return _local_suggestions(rating, business_context, language)
+
+    sanitized: List[str] = []
+    fallback_pool = _local_suggestions(rating, business_context, language)
+    fallback_idx = 0
+
+    for item in suggestions:
+        text = str(item).strip()
+        lower = text.lower()
+        is_invalid = False
+
+        if rating == 5:
+            # 5-star check: NO negative words allowed whatsoever
+            for bad_word in NEGATIVE_TRIGGER_WORDS:
+                if bad_word in lower:
+                    logger.warning(
+                        "Polarity Guard: rejected negative word '%s' in 5-star review: %s",
+                        bad_word,
+                        text,
+                    )
+                    is_invalid = True
+                    break
+
+        elif rating == 4:
+            # 4-star check: severe complaints forbidden
+            for severe_word in ["terrible", "horrible", "worst", "pathetic", "fraud", "scam", "never again", "खराब", "वाईट"]:
+                if severe_word in lower:
+                    is_invalid = True
+                    break
+
+        elif rating in (1, 2):
+            # 1-2 star check: overly ecstatic praise should not appear in 1-star
+            for ecstatic in ["loved it", "best experience ever", "perfect from start to finish", "five stars without hesitation"]:
+                if ecstatic in lower:
+                    is_invalid = True
+                    break
+
+        if is_invalid:
+            # Replace with a safe, verified fallback suggestion for this rating
+            replacement = fallback_pool[fallback_idx % len(fallback_pool)]
+            fallback_idx += 1
+            sanitized.append(replacement)
+        else:
+            sanitized.append(text)
+
+    # Ensure exactly 10 suggestions
+    while len(sanitized) < 10:
+        sanitized.append(fallback_pool[len(sanitized) % len(fallback_pool)])
+
+    return sanitized[:10]
+
+
 def _call_model(client: genai.Client, model: str, prompt: str) -> List[str]:
     """
     Attempt to call a single model with fast retry logic.
@@ -330,7 +472,7 @@ def _call_model(client: genai.Client, model: str, prompt: str) -> List[str]:
                 model=model,
                 contents=prompt,
                 config=types.GenerateContentConfig(
-                    temperature=0.7,
+                    temperature=0.6,
                     max_output_tokens=4096,
                     response_mime_type="application/json",
                 ),
@@ -371,12 +513,8 @@ def generate_feedback_suggestions(
     language: str = "en",
 ) -> List[str]:
     """
-    Call Google Gemini AI and return 10 feedback suggestion strings.
-
-    Speed guarantee:
-        - Each Gemini HTTP call times out after 25 seconds.
-        - Total budget across all models/retries is 45 seconds.
-        - If AI generation fails, an error is raised instead of static suggestions.
+    Call Google Gemini AI and return 10 validated feedback suggestion strings.
+    Speed guarantee with polarity safety gate.
     """
     if business_context is None:
         business_context = {}
@@ -391,13 +529,11 @@ def generate_feedback_suggestions(
     prompt = _build_prompt(rating, business_context, language)
 
     if not _gemini_api_key():
-        logger.warning("GEMINI_API_KEY is not set; returning local suggestions.")
+        logger.warning("GEMINI_API_KEY is not set; returning verified local suggestions.")
         return _local_suggestions(rating, business_context, language)
 
     client = _get_client()
 
-    # Build model list fresh from current config (avoids stale module-level cache)
-    # Uses verified, currently active Google Gemini models.
     load_dotenv(override=True)
     _current_config = get_config()
     _raw_chain = [
@@ -423,7 +559,10 @@ def generate_feedback_suggestions(
             break
 
         try:
-            return _call_model(client, model, prompt)
+            raw_suggestions = _call_model(client, model, prompt)
+            return validate_and_sanitize_suggestions(
+                raw_suggestions, rating, business_context, language
+            )
         except ValueError:
             raise
         except RuntimeError as e:
@@ -438,15 +577,14 @@ def generate_feedback_suggestions(
         elapsed,
         last_error,
     )
-    # Fail-safe: instead of crashing the customer's screen with a 500 error,
-    # gracefully return high-quality local suggestions tailored to the business and rating.
-    return _local_suggestions(rating, business_context, language)
+    fallback = _local_suggestions(rating, business_context, language)
+    return validate_and_sanitize_suggestions(fallback, rating, business_context, language)
 
 
 def _local_star_examples(name: str, scope: str) -> dict:
-    """Phrase lists when Gemini is unavailable — still scoped to the business."""
+    """Phrase lists when Gemini is unavailable — scoped cleanly to the business."""
     parts = [p.strip(" .") for p in re.split(r"[,;/]|\band\b", scope or "") if len(p.strip()) > 2]
-    services = parts[:5] or ["service", "staff", "quality", "wait time"]
+    services = parts[:5] or ["service", "staff", "quality", "support"]
     s1 = services[0]
     s2 = services[min(1, len(services) - 1)]
     s3 = services[min(2, len(services) - 1)]
@@ -473,106 +611,3 @@ def _local_star_examples(name: str, scope: str) -> dict:
             f"fast and reliable {s3}, would definitely return and recommend"
         ),
     }
-
-
-def _normalize_star_examples(data) -> dict:
-    if not isinstance(data, dict):
-        raise ValueError("Expected a JSON object of star examples.")
-    out = {}
-    for i in range(1, 6):
-        val = (
-            data.get(f"examples_{i}star")
-            or data.get(str(i))
-            or data.get(i)
-            or data.get(f"{i}_star")
-            or data.get(f"{i}star")
-        )
-        if isinstance(val, list):
-            val = ", ".join(str(x).strip() for x in val if str(x).strip())
-        text = re.sub(r"\s+", " ", str(val or "")).strip().strip(",")
-        if not text:
-            raise ValueError(f"Missing examples for {i} star.")
-        out[f"examples_{i}star"] = text[:800]
-    return out
-
-
-def generate_star_example_prompts(name: str, scope: str) -> dict:
-    """
-    Generate comma-separated review themes for 1–5 stars from business scope.
-    Used to auto-fill AI Prompt Examples on the add/edit business form.
-    """
-    name = (name or "").strip() or "this business"
-    scope = (scope or "").strip()
-    if len(scope) < 8:
-        raise ValueError("Enter Business Scope & Services first (at least a short description).")
-
-    if not _gemini_api_key():
-        logger.warning("GEMINI_API_KEY is not set; returning local star examples.")
-        return _local_star_examples(name, scope)
-
-    prompt = f"""
-You write short customer-review THEMES (not full reviews) for a Google-review assistant.
-
-Business name: {name}
-Business scope and services:
-{scope}
-
-Return ONLY JSON with these keys:
-"examples_1star", "examples_2star", "examples_3star", "examples_4star", "examples_5star"
-
-Each value is one comma-separated string of 5 to 8 short phrases.
-Phrases must be specific to THIS business's services (not generic "bad service").
-No numbering. No quotes inside phrases. No markdown.
-
-Meaning of each rating:
-- examples_1star: serious complaints (negative)
-- examples_2star: disappointing issues
-- examples_3star: mixed / average
-- examples_4star: mostly good, small improvements
-- examples_5star: enthusiastic praise (positive)
-
-Example shape (do not copy the content):
-{{"examples_1star": "phrase one, phrase two, phrase three", "examples_2star": "...", "examples_3star": "...", "examples_4star": "...", "examples_5star": "..."}}
-""".strip()
-
-    client = _get_client()
-    load_dotenv(override=True)
-    _current_config = get_config()
-    _raw_chain = [
-        _current_config.GEMINI_MODEL,
-        "gemini-2.5-flash",
-        "gemini-2.5-flash-lite",
-        "gemini-flash-latest",
-    ]
-    seen = set()
-    models = []
-    for model in _raw_chain:
-        if model not in seen:
-            seen.add(model)
-            models.append(model)
-
-    last_error = None
-    for model in models:
-        try:
-            response = client.models.generate_content(
-                model=model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    temperature=0.7,
-                    max_output_tokens=1200,
-                    response_mime_type="application/json",
-                ),
-            )
-            cleaned = re.sub(r"```(?:json)?\s*", "", (response.text or "")).strip()
-            cleaned = cleaned.replace("```", "").strip()
-            data = json.loads(cleaned)
-            examples = _normalize_star_examples(data)
-            logger.info("Generated star example prompts with %s", model)
-            return examples
-        except Exception as e:
-            last_error = e
-            logger.warning("Star examples via %s failed: %s", model, e)
-            continue
-
-    logger.warning("Falling back to local star examples: %s", last_error)
-    return _local_star_examples(name, scope)

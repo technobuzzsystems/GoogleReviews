@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session
 
 from config import get_config
 from models.domain_models import BusinessConfigModel, StaticFeedbackResponse, StaticFeedbackUsage
-from services.gemini_service import _get_client, _gemini_api_key, _local_suggestions
+from services.gemini_service import _get_client, _gemini_api_key, _local_suggestions, validate_and_sanitize_suggestions
 
 logger = logging.getLogger(__name__)
 
@@ -215,7 +215,9 @@ def save_static_responses(
     business_key = (business_key or "").strip()
     language = (language or "en").strip().lower()
 
-    clean_responses = [str(r).strip() for r in responses if str(r).strip()]
+    # Enforce polarity safety guard: ensure responses strictly match rating tone
+    sanitized = validate_and_sanitize_suggestions(responses, rating, {"name": business_key}, language)
+    clean_responses = [str(r).strip() for r in sanitized if str(r).strip()]
     added = 0
     for resp in clean_responses:
         # Avoid exact duplicate insertion in same pool

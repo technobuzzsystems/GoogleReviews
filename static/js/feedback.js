@@ -107,6 +107,7 @@ const State = {
   isLoadingAI:       false,   // prevent concurrent AI calls
   language:          'en',
   _fetchController:  null,    // AbortController for in-flight AI request
+  _activeRequestId:  0,       // Monotonic request ID counter to prevent race conditions
 };
 
 /* ============================================================
@@ -245,12 +246,16 @@ const UIState = {
         if (DOM.googleUrlMissing) DOM.googleUrlMissing.style.display = 'none';
 
       } else {
-        // ── 1★/2★/3★: private feedback to management — suppress Google redirect & clipboard copy ──
+        // ── 1★/2★/3★: private feedback submitted to management ──
         if (DOM.autoCopyMsg) DOM.autoCopyMsg.style.display = 'none';
         if (DOM.btnCopyReview) DOM.btnCopyReview.style.display = 'none';
-        if (DOM.btnPostGoogle) DOM.btnPostGoogle.style.display = 'none';
         if (DOM.googleInstructions) DOM.googleInstructions.style.display = 'none';
         if (DOM.googleUrlMissing) DOM.googleUrlMissing.style.display = 'none';
+
+        // Secondary option to post publicly on Google if customer prefers (Google Policy compliance)
+        DOM.btnPostGoogle.href = googleUrl;
+        DOM.btnPostGoogle.classList.remove('disabled');
+        DOM.btnPostGoogle.style.display = 'inline-flex';
       }
 
     } else {
@@ -576,6 +581,7 @@ const API = {
     }
     State._fetchController = new AbortController();
 
+    const reqId = ++State._activeRequestId;
     State.isLoadingAI = true;
     UIState.clearErrorBanner();
     UIState.showLoading();
@@ -589,6 +595,12 @@ const API = {
       });
 
       const data = await response.json();
+
+      // Guard against race conditions: if another request was triggered or rating switched, discard!
+      if (reqId !== State._activeRequestId || (data.rating && data.rating !== State.selectedRating)) {
+        console.warn(`[API] Discarding stale response for rating ${data.rating} (active: ${State.selectedRating})`);
+        return;
+      }
 
       if (!response.ok) {
         const detail = Array.isArray(data.detail) ? data.detail[0] : data.detail;
@@ -606,7 +618,7 @@ const API = {
 
     } catch (error) {
       // If the request was deliberately cancelled (user changed rating), ignore silently.
-      if (error.name === 'AbortError') return;
+      if (error.name === 'AbortError' || reqId !== State._activeRequestId) return;
 
       console.error('[API] fetchSuggestions error:', error);
       DOM.loadingSection.classList.remove('active');

@@ -16,7 +16,7 @@ from services.business_service import find_business_by_route, get_business, qr_f
 from services.storage_service import get_logo_object, public_logo_url
 from models.schemas import GenerateFeedbackRequest, SubmitFeedbackRequest
 from utils.validators import sanitize_string
-from services.gemini_service import generate_feedback_suggestions
+from services.gemini_service import generate_feedback_suggestions, validate_and_sanitize_suggestions
 from services.static_feedback_service import get_available_feedback_suggestions, record_response_usage
 
 router = APIRouter()
@@ -155,28 +155,38 @@ def generate_feedback(payload: GenerateFeedbackRequest, db: Session = Depends(ge
         limit=10,
     )
     if static_items:
-        suggestions = [item["text"] for item in static_items]
+        raw_suggestions = [item["text"] for item in static_items]
         response_ids = [item["id"] for item in static_items]
+        # Enforce backend polarity guard: 5-star must never contain negative feedback
+        suggestions = validate_and_sanitize_suggestions(raw_suggestions, rating, b_config, payload.language)
         logger.info(
-            "generate_feedback: returned %d static suggestions for business=%s rating=%d",
+            "[FEEDBACK_AUDIT] Static pool returned %d items | business=%s | rating=%d | lang=%s",
             len(suggestions),
             biz_key,
             rating,
+            payload.language,
         )
-        return {"suggestions": suggestions, "response_ids": response_ids}
+        return {"rating": rating, "suggestions": suggestions, "response_ids": response_ids, "source": "static_pool"}
 
     # 2. Fallback to Gemini AI if static pool not generated yet
     try:
-        suggestions = generate_feedback_suggestions(
+        raw_suggestions = generate_feedback_suggestions(
             rating,
             business_context=b_config,
             language=payload.language,
         )
-        if not suggestions:
+        if not raw_suggestions:
             raise HTTPException(status_code=500, detail="AI returned no suggestions. Please try again.")
 
-        logger.info("generate_feedback: %d suggestions for rating=%d", len(suggestions), rating)
-        return {"suggestions": suggestions, "response_ids": []}
+        suggestions = validate_and_sanitize_suggestions(raw_suggestions, rating, b_config, payload.language)
+        logger.info(
+            "[FEEDBACK_AUDIT] Gemini AI returned %d items | business=%s | rating=%d | lang=%s",
+            len(suggestions),
+            biz_key,
+            rating,
+            payload.language,
+        )
+        return {"rating": rating, "suggestions": suggestions, "response_ids": [], "source": "gemini_ai"}
 
     except ValueError as e:
         logger.warning("generate_feedback: ValueError — %s", str(e))
