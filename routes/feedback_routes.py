@@ -145,6 +145,9 @@ def generate_feedback(payload: GenerateFeedbackRequest, db: Session = Depends(ge
             detail="This review service is currently unavailable because the subscription has expired. Please renew the plan to continue using this service.",
         )
 
+    # Determine suggestion count: maximum 3 for 1-3 stars, 10 for 4-5 stars
+    limit = 3 if rating in (1, 2, 3) else 10
+
     # 1. Try predefined static responses first (Instant < 5ms, non-repeating, no Gemini delay)
     biz_key = b_config.get("key") or business_id
     static_items = get_available_feedback_suggestions(
@@ -152,13 +155,15 @@ def generate_feedback(payload: GenerateFeedbackRequest, db: Session = Depends(ge
         business_key=biz_key,
         rating=rating,
         language=payload.language,
-        limit=10,
+        limit=limit,
     )
     if static_items:
-        raw_suggestions = [item["text"] for item in static_items]
-        response_ids = [item["id"] for item in static_items]
+        raw_suggestions = [item["text"] for item in static_items][:limit]
+        response_ids = [item["id"] for item in static_items][:limit]
         # Enforce backend polarity guard: 5-star must never contain negative feedback
-        suggestions = validate_and_sanitize_suggestions(raw_suggestions, rating, b_config, payload.language)
+        suggestions = validate_and_sanitize_suggestions(
+            raw_suggestions, rating, b_config, payload.language, target_count=limit
+        )[:limit]
         logger.info(
             "[FEEDBACK_AUDIT] Static pool returned %d items | business=%s | rating=%d | lang=%s",
             len(suggestions),
@@ -174,11 +179,14 @@ def generate_feedback(payload: GenerateFeedbackRequest, db: Session = Depends(ge
             rating,
             business_context=b_config,
             language=payload.language,
+            count=limit,
         )
         if not raw_suggestions:
             raise HTTPException(status_code=500, detail="AI returned no suggestions. Please try again.")
 
-        suggestions = validate_and_sanitize_suggestions(raw_suggestions, rating, b_config, payload.language)
+        suggestions = validate_and_sanitize_suggestions(
+            raw_suggestions, rating, b_config, payload.language, target_count=limit
+        )[:limit]
         logger.info(
             "[FEEDBACK_AUDIT] Gemini AI returned %d items | business=%s | rating=%d | lang=%s",
             len(suggestions),

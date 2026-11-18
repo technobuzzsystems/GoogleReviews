@@ -467,7 +467,11 @@ const SuggestionCards = {
       return;
     }
 
-    suggestions.forEach((text, index) => {
+    // Strict display limit: maximum 3 suggestions for 1–3 star ratings, full list for 4–5 stars
+    const maxSuggestions = (State.selectedRating && State.selectedRating <= 3) ? 3 : suggestions.length;
+    const displayList = suggestions.slice(0, maxSuggestions);
+
+    displayList.forEach((text, index) => {
       const card = SuggestionCards.createCard(text, index);
       DOM.suggestionsGrid.appendChild(card);
     });
@@ -612,7 +616,8 @@ const API = {
       }
 
       // SUCCESS — hide loading, show cards
-      State.responseIds = data.response_ids || [];
+      const maxCount = (rating <= 3) ? 3 : (data.suggestions ? data.suggestions.length : 10);
+      State.responseIds = (data.response_ids || []).slice(0, maxCount);
       UIState.clearErrorBanner();
       SuggestionCards.render(data.suggestions);
 

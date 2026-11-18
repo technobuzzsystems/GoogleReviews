@@ -245,8 +245,9 @@ def _local_suggestions(rating: int, business_context: dict, language: str = "en"
     return lines
 
 
-def _build_prompt(rating: int, business_context: dict, language: str = "en") -> str:
+def _build_prompt(rating: int, business_context: dict, language: str = "en", count: int = None) -> str:
     """Build a strictly calibrated rating-aware prompt for the Gemini model."""
+    target_count = count or (3 if rating in (1, 2, 3) else 10)
     company_name = business_context.get("name", "TechnoBuzz")
     scope = business_context.get(
         "scope",
@@ -331,27 +332,14 @@ FEW-SHOT EXAMPLES (MATCH THIS CRITICAL TONE):
 - "Would not recommend. The entire process was disorganized and customer concerns were completely ignored."
 """
 
-    return f"""
-You are an expert review curator writing authentic customer feedback.
-
-Your task is to generate exactly 10 distinct, natural customer reviews based on:
-Company Name: {company_name}
-Star Rating: {rating} out of 5
-Business Scope: {scope}
-{language_block}
-
-{tone_instruction}
-
-CRITICAL RULES:
-1. Every review must sound like it was typed by a different real customer on Google Reviews.
-2. Vary sentence structure, vocabulary, and phrasing across all 10 suggestions.
-3. No robotic, overly formal, or generic AI language.
-4. Do NOT number the suggestions.
-5. Return ONLY a valid JSON array of strings containing exactly 10 suggestions.
-6. No markdown, no notes, no commentary.
-
-OUTPUT FORMAT:
-[
+    if target_count == 3:
+        format_example = """[
+  "Review 1...",
+  "Review 2...",
+  "Review 3..."
+]"""
+    else:
+        format_example = """[
   "Review 1...",
   "Review 2...",
   "Review 3...",
@@ -362,11 +350,33 @@ OUTPUT FORMAT:
   "Review 8...",
   "Review 9...",
   "Review 10..."
-]
+]"""
+
+    return f"""
+You are an expert review curator writing authentic customer feedback.
+
+Your task is to generate exactly {target_count} distinct, natural customer reviews based on:
+Company Name: {company_name}
+Star Rating: {rating} out of 5
+Business Scope: {scope}
+{language_block}
+
+{tone_instruction}
+
+CRITICAL RULES:
+1. Every review must sound like it was typed by a different real customer on Google Reviews.
+2. Vary sentence structure, vocabulary, and phrasing across all {target_count} suggestions.
+3. No robotic, overly formal, or generic AI language.
+4. Do NOT number the suggestions.
+5. Return ONLY a valid JSON array of strings containing exactly {target_count} suggestions.
+6. No markdown, no notes, no commentary.
+
+OUTPUT FORMAT:
+{format_example}
 """.strip()
 
 
-def _parse_response(raw_text: str) -> List[str]:
+def _parse_response(raw_text: str, expected_count: int = 10) -> List[str]:
     """
     Parse the raw Gemini text response into a clean list of strings.
     Handles markdown code fences and validates the JSON array.
@@ -385,12 +395,13 @@ def _parse_response(raw_text: str) -> List[str]:
 
     suggestions = [str(item).strip() for item in data if str(item).strip()]
 
-    if len(suggestions) < 10:
+    min_needed = 2 if expected_count <= 3 else min(10, expected_count)
+    if len(suggestions) < min_needed:
         raise ValueError(
-            f"Gemini returned only {len(suggestions)} suggestion(s). Expected 10."
+            f"Gemini returned only {len(suggestions)} suggestion(s). Expected at least {min_needed}."
         )
 
-    return suggestions[:10]
+    return suggestions[:expected_count]
 
 
 def validate_and_sanitize_suggestions(
@@ -398,16 +409,20 @@ def validate_and_sanitize_suggestions(
     rating: int,
     business_context: dict,
     language: str = "en",
+    target_count: int = None,
 ) -> List[str]:
     """
     Backend Polarity Safety Guard:
     Scans generated suggestions against forbidden words for the given rating.
     - For 5 Stars: Replaces any review containing negative words with verified positive reviews.
     - For 1-2 Stars: Replaces any overly cheerful/5-star reviews with constructive negative reviews.
+    - Enforces target_count (3 for 1-3 stars, 10 for 4-5 stars).
     Guarantees that 5-star ratings NEVER display negative feedback suggestions.
     """
+    target_count = target_count or (3 if rating in (1, 2, 3) else 10)
     if not suggestions:
-        return _local_suggestions(rating, business_context, language)
+        fallback_all = _local_suggestions(rating, business_context, language)
+        return fallback_all[:target_count]
 
     sanitized: List[str] = []
     fallback_pool = _local_suggestions(rating, business_context, language)
@@ -452,14 +467,14 @@ def validate_and_sanitize_suggestions(
         else:
             sanitized.append(text)
 
-    # Ensure exactly 10 suggestions
-    while len(sanitized) < 10:
+    # Ensure target_count suggestions
+    while len(sanitized) < target_count:
         sanitized.append(fallback_pool[len(sanitized) % len(fallback_pool)])
 
-    return sanitized[:10]
+    return sanitized[:target_count]
 
 
-def _call_model(client: genai.Client, model: str, prompt: str) -> List[str]:
+def _call_model(client: genai.Client, model: str, prompt: str, expected_count: int = 10) -> List[str]:
     """
     Attempt to call a single model with fast retry logic.
     Gives up quickly on 429/503 to preserve the total time budget.
@@ -478,7 +493,7 @@ def _call_model(client: genai.Client, model: str, prompt: str) -> List[str]:
                 ),
             )
 
-            suggestions = _parse_response(response.text)
+            suggestions = _parse_response(response.text, expected_count=expected_count)
             logger.info("Gemini [%s] returned %d suggestions.", model, len(suggestions))
             return suggestions
 
@@ -511,9 +526,12 @@ def generate_feedback_suggestions(
     rating: int,
     business_context: dict = None,
     language: str = "en",
+    count: int = None,
 ) -> List[str]:
     """
-    Call Google Gemini AI and return 10 validated feedback suggestion strings.
+    Call Google Gemini AI and return validated feedback suggestion strings.
+    - 1-3 Stars: returns 3 suggestions.
+    - 4-5 Stars: returns 10 suggestions.
     Speed guarantee with polarity safety gate.
     """
     if business_context is None:
@@ -526,11 +544,12 @@ def generate_feedback_suggestions(
     if language not in REVIEW_LANGUAGE_NAMES:
         language = "en"
 
-    prompt = _build_prompt(rating, business_context, language)
+    target_count = count or (3 if rating in (1, 2, 3) else 10)
+    prompt = _build_prompt(rating, business_context, language, count=target_count)
 
     if not _gemini_api_key():
         logger.warning("GEMINI_API_KEY is not set; returning verified local suggestions.")
-        return _local_suggestions(rating, business_context, language)
+        return _local_suggestions(rating, business_context, language)[:target_count]
 
     client = _get_client()
 
@@ -559,9 +578,9 @@ def generate_feedback_suggestions(
             break
 
         try:
-            raw_suggestions = _call_model(client, model, prompt)
+            raw_suggestions = _call_model(client, model, prompt, expected_count=target_count)
             return validate_and_sanitize_suggestions(
-                raw_suggestions, rating, business_context, language
+                raw_suggestions, rating, business_context, language, target_count=target_count
             )
         except ValueError:
             raise
@@ -578,7 +597,7 @@ def generate_feedback_suggestions(
         last_error,
     )
     fallback = _local_suggestions(rating, business_context, language)
-    return validate_and_sanitize_suggestions(fallback, rating, business_context, language)
+    return validate_and_sanitize_suggestions(fallback, rating, business_context, language, target_count=target_count)
 
 
 def _local_star_examples(name: str, scope: str) -> dict:
