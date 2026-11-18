@@ -122,6 +122,18 @@ const UIState = {
   showSuggestions() {
     DOM.loadingSection.classList.remove('active');
     DOM.suggestionsSection.classList.add('active');
+
+    // For 4★/5★: hide the Write Your Own / manual feedback pane and clear it.
+    // For 1★/2★/3★: always show the manual feedback pane.
+    const isLowRating = State.selectedRating && State.selectedRating <= 3;
+    if (DOM.manualPane) {
+      DOM.manualPane.style.display = isLowRating ? '' : 'none';
+    }
+    // Clear manual state when hiding pane so stale text is never submitted
+    if (!isLowRating) {
+      UIState.resetManual();
+    }
+
     UIState.showSubmit();
   },
 
@@ -140,6 +152,8 @@ const UIState = {
     UIState.resetManual();
     UIState.clearValidation();
     UIState.clearErrorBanner();
+    // Always restore manual pane visibility so it re-appears when user picks 1–3 stars
+    if (DOM.manualPane) DOM.manualPane.style.display = '';
   },
 
   /** Update submit button label and hint text based on mode and rating. */

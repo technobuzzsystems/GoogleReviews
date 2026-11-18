@@ -331,6 +331,7 @@ def list_businesses_page(
                 BusinessConfigModel.franchise_id,
                 BusinessConfigModel.area,
                 BusinessConfigModel.is_active,
+                BusinessConfigModel.logo_filename,
             )
         )
         .order_by(BusinessConfigModel.join_date.desc(), BusinessConfigModel.name.asc())
