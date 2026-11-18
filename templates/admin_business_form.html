@@ -217,7 +217,7 @@
       <div class="logo-upload">
         <div class="logo-preview-wrap" id="logoPreviewWrap">
           {% if business and business.logo_url %}
-          <img id="logoPreview" class="logo-preview" src="{{ business.logo_url }}" alt="Logo preview">
+          <img id="logoPreview" class="logo-preview" src="{{ business.logo_url }}" alt="Logo preview" onerror="this.hidden=true; var e=document.getElementById('logoPreviewEmpty'); if(e) e.hidden=false;">
           <div class="logo-preview-empty" id="logoPreviewEmpty" hidden>No logo yet</div>
           {% else %}
           <img id="logoPreview" class="logo-preview" src="" alt="Logo preview" hidden>

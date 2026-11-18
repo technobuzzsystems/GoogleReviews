@@ -148,27 +148,19 @@ def _validate_image_bytes(data: bytes, content_type: str) -> None:
         raise ValueError("Logo must be a PNG, JPG, WEBP, or GIF file.")
 
 
+def _save_local_logo(data: bytes, ext: str) -> str:
+    local_dir = Path("static/uploads/logos")
+    local_dir.mkdir(parents=True, exist_ok=True)
+    name = f"{uuid.uuid4().hex}{ext}"
+    (local_dir / name).write_bytes(data)
+    logger.info("Saved logo to local storage: uploads/logos/%s", name)
+    return f"uploads/logos/{name}"
+
+
 def save_logo_upload(upload: UploadFile, business_key: str) -> str:
-    """Upload a logo to S3 and return the object key (served via /media/logo/)."""
+    """Upload a logo to S3 with seamless local storage fallback."""
     if not upload or not (upload.filename or "").strip():
         return ""
-    if not s3_configured():
-        LOCAL_UPLOAD_DIR = Path("static/uploads/logos")
-        LOCAL_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-        ext = _detect_extension(upload.filename, upload.content_type or "")
-        if not ext:
-            raise ValueError("Logo must be a PNG, JPG, WEBP, or GIF file.")
-        data = upload.file.read()
-        if not data:
-            raise ValueError("The selected logo file is empty.")
-        max_bytes = _max_logo_bytes()
-        if len(data) > max_bytes:
-            raise ValueError(f"Logo must be {get_config().MAX_FILE_SIZE_MB} MB or smaller.")
-        _validate_image_bytes(data, upload.content_type or "")
-        
-        name = f"{uuid.uuid4().hex}{ext}"
-        (LOCAL_UPLOAD_DIR / name).write_bytes(data)
-        return f"uploads/logos/{name}"
 
     ext = _detect_extension(upload.filename, upload.content_type or "")
     if not ext:
@@ -182,32 +174,41 @@ def save_logo_upload(upload: UploadFile, business_key: str) -> str:
         raise ValueError(f"Logo must be {get_config().MAX_FILE_SIZE_MB} MB or smaller.")
     _validate_image_bytes(data, upload.content_type or "")
 
-    cfg = get_config()
-    prefix = _logo_prefix(cfg)
-    folder = slugify(business_key) or "business"
-    key = f"{prefix}/{folder}/{uuid.uuid4().hex}{ext}"
-    extra = {
-        "ContentType": (upload.content_type or "").lower()
-        if (upload.content_type or "").lower() in ALLOWED_LOGO_TYPES
-        else EXT_CONTENT_TYPES.get(ext, "image/jpeg"),
-        "CacheControl": "public, max-age=31536000",
-    }
-    acl = (cfg.S3_OBJECT_ACL or "").strip()
-    if acl:
-        extra["ACL"] = acl
+    if s3_configured():
+        cfg = get_config()
+        prefix = _logo_prefix(cfg)
+        folder = slugify(business_key) or "business"
+        key = f"{prefix}/{folder}/{uuid.uuid4().hex}{ext}"
+        extra = {
+            "ContentType": (upload.content_type or "").lower()
+            if (upload.content_type or "").lower() in ALLOWED_LOGO_TYPES
+            else EXT_CONTENT_TYPES.get(ext, "image/jpeg"),
+            "CacheControl": "public, max-age=31536000",
+        }
+        acl = (cfg.S3_OBJECT_ACL or "").strip()
+        if acl:
+            extra["ACL"] = acl
 
-    try:
-        _s3_client(cfg).put_object(Bucket=cfg.S3_BUCKET, Key=key, Body=data, **extra)
-    except Exception as exc:
-        logger.exception("S3 logo upload failed")
-        raise ValueError("Could not upload the logo to S3. Check bucket credentials and permissions.") from exc
+        try:
+            _s3_client(cfg).put_object(Bucket=cfg.S3_BUCKET, Key=key, Body=data, **extra)
+            logger.info("Uploaded logo to s3://%s/%s", cfg.S3_BUCKET, key)
+            return key
+        except Exception as exc:
+            logger.warning("S3 logo upload failed (%s). Falling back to local storage.", exc)
 
-    logger.info("Uploaded logo to s3://%s/%s", cfg.S3_BUCKET, key)
-    return key
+    return _save_local_logo(data, ext)
+
+
+def _save_local_transfer(data: bytes, ext: str) -> str:
+    LOCAL_TRANSFER_DIR.mkdir(parents=True, exist_ok=True)
+    name = f"{uuid.uuid4().hex}{ext}"
+    (LOCAL_TRANSFER_DIR / name).write_bytes(data)
+    logger.info("Saved transfer screenshot locally: uploads/transfers/%s", name)
+    return f"uploads/transfers/{name}"
 
 
 def save_transfer_screenshot(upload: UploadFile) -> str:
-    """Store a bank-transfer screenshot on S3, or locally if S3 is not set."""
+    """Store a bank-transfer screenshot on S3 with local storage fallback."""
     if not upload or not (upload.filename or "").strip():
         return ""
     ext = _detect_extension(upload.filename, upload.content_type or "")
@@ -220,12 +221,14 @@ def save_transfer_screenshot(upload: UploadFile) -> str:
     if len(data) > max_bytes:
         raise ValueError(f"Screenshot must be {get_config().MAX_FILE_SIZE_MB} MB or smaller.")
     _validate_image_bytes(data, upload.content_type or "")
+
     name = f"{uuid.uuid4().hex}{ext}"
     content_type = (
         (upload.content_type or "").lower()
         if (upload.content_type or "").lower() in ALLOWED_LOGO_TYPES
         else EXT_CONTENT_TYPES.get(ext, "image/jpeg")
     )
+
     if s3_configured():
         cfg = get_config()
         key = f"transfers/{name}"
@@ -235,13 +238,11 @@ def save_transfer_screenshot(upload: UploadFile) -> str:
             extra["ACL"] = acl
         try:
             _s3_client(cfg).put_object(Bucket=cfg.S3_BUCKET, Key=key, Body=data, **extra)
+            return key
         except Exception as exc:
-            logger.exception("S3 transfer screenshot upload failed")
-            raise ValueError("Could not upload the transfer screenshot.") from exc
-        return key
-    LOCAL_TRANSFER_DIR.mkdir(parents=True, exist_ok=True)
-    (LOCAL_TRANSFER_DIR / name).write_bytes(data)
-    return f"uploads/transfers/{name}"
+            logger.warning("S3 transfer screenshot upload failed (%s). Falling back to local storage.", exc)
+
+    return _save_local_transfer(data, ext)
 
 
 def get_logo_object(key: str) -> tuple[bytes, str]:
@@ -250,10 +251,13 @@ def get_logo_object(key: str) -> tuple[bytes, str]:
     key = (key or "").lstrip("/")
     if ".." in key or not any(key.startswith(prefix + "/") for prefix in MEDIA_PREFIXES):
         raise FileNotFoundError("Invalid media key.")
-    local_path = Path("static") / key
-    if key.startswith("uploads/") and local_path.is_file():
-        ext = Path(key).suffix.lower()
-        return local_path.read_bytes(), EXT_CONTENT_TYPES.get(ext, "image/jpeg")
+
+    # Check local static filesystem first
+    for candidate in (Path("static") / key, Path("static/uploads") / key):
+        if candidate.is_file():
+            ext = candidate.suffix.lower()
+            return candidate.read_bytes(), EXT_CONTENT_TYPES.get(ext, "image/jpeg")
+
     if not s3_configured():
         raise FileNotFoundError("S3 is not configured.")
     try:
