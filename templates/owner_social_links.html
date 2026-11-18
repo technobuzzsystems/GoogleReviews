@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Social & WhatsApp Links — TechnoBuzz</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}?v=20261102c" />
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
+<div class="layout">
+  <aside class="sidebar" id="adminSidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-mark" aria-hidden="true">TB</div>
+        <div>
+          <div class="sidebar-logo-text">TechnoBuzz</div>
+          <div class="sidebar-logo-sub">Business owner</div>
+        </div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/owner" class="nav-item"><span class="nav-icon">💬</span> Customer responses</a>
+      <a href="/owner/social-links" class="nav-item active"><span class="nav-icon">🌐</span> Social &amp; WhatsApp</a>
+      <a href="/owner/export" class="nav-item"><span class="nav-icon">📥</span> Download CSV</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">{{ user.username }}{% if business_name %} · {{ business_name }}{% endif %}</div>
+      <a href="/owner/logout"><span>⎋</span> Logout</a>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-start">
+        <button type="button" class="menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+        <div class="topbar-title">Social Media &amp; Contact Links</div>
+      </div>
+      {% if business %}
+      <div class="topbar-end">
+        <a href="{{ feedback_path }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm">
+          <span>↗</span> View Live Feedback Page
+        </a>
+      </div>
+      {% endif %}
+    </header>
+
+    <div class="page-body">
+      {% if saved %}
+      <div class="alert alert-success" style="background: rgba(37, 211, 102, 0.15); border: 1px solid rgba(37, 211, 102, 0.4); color: #25D366; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-weight: 500;">
+        ✓ Your Social Media and WhatsApp links have been updated successfully! They are now live on your feedback page.
+      </div>
+      {% endif %}
+
+      <p class="page-lede">
+        {% if business %}
+        Manage the social media and WhatsApp contact links displayed to your customers under <strong>"Connect With Us"</strong> on {{ business.name }}'s feedback page.
+        {% else %}
+        No business is currently linked to your owner account. Please contact TechnoBuzz administration.
+        {% endif %}
+      </p>
+
+      {% if business %}
+      <div class="breakdown-card form-card" style="max-width: 680px;">
+        <form action="/owner/social-links" method="POST">
+          <input type="hidden" name="business_key" value="{{ business.key }}">
+
+          {% if businesses and businesses|length > 1 %}
+          <div class="form-group">
+            <label for="select_business">Select Business</label>
+            <select id="select_business" onchange="window.location.href='/owner/social-links?business_key=' + this.value">
+              {% for b in businesses %}
+              <option value="{{ b.key }}" {% if b.key == business.key %}selected{% endif %}>{{ b.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+
+          <div class="form-section">Social Media &amp; WhatsApp Settings</div>
+          <div class="form-hint" style="margin-top:-8px; margin-bottom:18px;">
+            Add your social profiles and WhatsApp number. Use the checkbox to enable or disable any channel whenever you want.
+          </div>
+
+          <!-- Instagram -->
+          <div class="form-group" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label for="instagram_url" style="margin: 0; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #E1306C;"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                Instagram Profile URL
+              </label>
+              <label class="check-label tight" style="margin: 0; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" id="instagram_enabled" name="instagram_enabled" value="1" {% if business.instagram_enabled %}checked{% endif %}>
+                Enable Instagram
+              </label>
+            </div>
+            <input type="url" id="instagram_url" name="instagram_url" value="{{ business.instagram_url or '' }}" placeholder="https://www.instagram.com/yourbusiness/" autocomplete="off">
+            <div class="form-hint">E.g., https://www.instagram.com/yourbusiness/</div>
+          </div>
+
+          <!-- Facebook -->
+          <div class="form-group" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label for="facebook_url" style="margin: 0; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #1877F2;"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
+                Facebook Page URL
+              </label>
+              <label class="check-label tight" style="margin: 0; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" id="facebook_enabled" name="facebook_enabled" value="1" {% if business.facebook_enabled %}checked{% endif %}>
+                Enable Facebook
+              </label>
+            </div>
+            <input type="url" id="facebook_url" name="facebook_url" value="{{ business.facebook_url or '' }}" placeholder="https://www.facebook.com/yourbusiness/" autocomplete="off">
+            <div class="form-hint">E.g., https://www.facebook.com/yourbusiness/</div>
+          </div>
+
+          <!-- WhatsApp -->
+          <div class="form-group" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label for="whatsapp_number" style="margin: 0; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #25D366;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                WhatsApp Contact Number
+              </label>
+              <label class="check-label tight" style="margin: 0; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" id="whatsapp_enabled" name="whatsapp_enabled" value="1" {% if business.whatsapp_enabled %}checked{% endif %}>
+                Enable WhatsApp
+              </label>
+            </div>
+            <input type="text" id="whatsapp_number" name="whatsapp_number" value="{{ business.whatsapp_number or '' }}" placeholder="+91 9876543210" autocomplete="off">
+            <div class="form-hint">E.g., +91 9876543210 or 9876543210. Customers can tap to chat with you directly.</div>
+          </div>
+
+          <div style="margin-top: 24px; display: flex; gap: 12px; align-items: center;">
+            <button type="submit" class="btn btn-primary" style="padding: 10px 24px; font-weight: 600;">Save Changes</button>
+            <a href="{{ feedback_path }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline">Preview Feedback Page</a>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<script>
+  const menuBtn = document.getElementById('menuBtn');
+  const sidebar = document.getElementById('adminSidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  if (menuBtn && sidebar && overlay) {
+    menuBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+      overlay.hidden = !sidebar.classList.contains('open');
+    });
+    overlay.addEventListener('click', () => {
+      sidebar.classList.remove('open');
+      overlay.hidden = true;
+    });
+  }
+</script>
+</body>
+</html>

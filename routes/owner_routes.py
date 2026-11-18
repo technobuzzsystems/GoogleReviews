@@ -2,7 +2,7 @@
 
 from urllib.parse import urlencode, urlparse
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models.domain_models import BusinessConfigModel, User, UserRole
 from services.auth_service import authenticate_user, get_session_user, login_user, logout_user, require_owner
+from services.business_service import feedback_path_for
 from services.feedback_service import export_rows, feedback_stats, list_feedback_page, mark_feedback_read
 
 router = APIRouter(prefix="/owner")
@@ -197,4 +198,89 @@ def owner_export(
         content=output.getvalue(),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=customer_responses.csv"},
+    )
+
+
+def _owner_businesses(db: Session, user: User) -> list[BusinessConfigModel]:
+    return (
+        db.query(BusinessConfigModel)
+        .filter(BusinessConfigModel.owner_user_id == user.id)
+        .order_by(BusinessConfigModel.name.asc())
+        .all()
+    )
+
+
+@router.get("/social-links")
+def owner_social_links_page(
+    request: Request,
+    business_key: str = "",
+    saved: str = "",
+    db: Session = Depends(get_db),
+    user: User = Depends(require_owner),
+):
+    businesses = _owner_businesses(db, user)
+    selected_biz = None
+    if business_key:
+        for b in businesses:
+            if b.key == business_key:
+                selected_biz = b
+                break
+    if not selected_biz and businesses:
+        selected_biz = businesses[0]
+
+    feedback_path = (
+        feedback_path_for(selected_biz.key, selected_biz.route_slug)
+        if selected_biz
+        else "/feedback"
+    )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="owner_social_links.html",
+        context={
+            "request": request,
+            "user": user,
+            "business": selected_biz,
+            "businesses": businesses,
+            "business_name": selected_biz.name if selected_biz else _owner_business_name(db, user),
+            "feedback_path": feedback_path,
+            "saved": saved == "1",
+            "page_title": "Social & WhatsApp Links",
+        },
+    )
+
+
+@router.post("/social-links")
+def owner_save_social_links(
+    request: Request,
+    business_key: str = Form(""),
+    instagram_url: str = Form(""),
+    instagram_enabled: str = Form(""),
+    facebook_url: str = Form(""),
+    facebook_enabled: str = Form(""),
+    whatsapp_number: str = Form(""),
+    whatsapp_enabled: str = Form(""),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_owner),
+):
+    q = db.query(BusinessConfigModel).filter(BusinessConfigModel.owner_user_id == user.id)
+    if business_key.strip():
+        biz = q.filter(BusinessConfigModel.key == business_key.strip()).first()
+    else:
+        biz = q.order_by(BusinessConfigModel.name.asc()).first()
+
+    if not biz:
+        raise HTTPException(status_code=403, detail="No business found for this owner account.")
+
+    biz.instagram_url = (instagram_url or "").strip()
+    biz.instagram_enabled = instagram_enabled in {"1", "on", "true", "yes"}
+    biz.facebook_url = (facebook_url or "").strip()
+    biz.facebook_enabled = facebook_enabled in {"1", "on", "true", "yes"}
+    biz.whatsapp_number = (whatsapp_number or "").strip()
+    biz.whatsapp_enabled = whatsapp_enabled in {"1", "on", "true", "yes"}
+    db.commit()
+
+    return RedirectResponse(
+        url=f"/owner/social-links?business_key={biz.key}&saved=1",
+        status_code=303,
     )
