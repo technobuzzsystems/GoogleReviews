@@ -611,3 +611,106 @@ def _local_star_examples(name: str, scope: str) -> dict:
             f"fast and reliable {s3}, would definitely return and recommend"
         ),
     }
+
+
+def _normalize_star_examples(data) -> dict:
+    if not isinstance(data, dict):
+        raise ValueError("Expected a JSON object of star examples.")
+    out = {}
+    for i in range(1, 6):
+        val = (
+            data.get(f"examples_{i}star")
+            or data.get(str(i))
+            or data.get(i)
+            or data.get(f"{i}_star")
+            or data.get(f"{i}star")
+        )
+        if isinstance(val, list):
+            val = ", ".join(str(x).strip() for x in val if str(x).strip())
+        text = re.sub(r"\s+", " ", str(val or "")).strip().strip(",")
+        if not text:
+            raise ValueError(f"Missing examples for {i} star.")
+        out[f"examples_{i}star"] = text[:800]
+    return out
+
+
+def generate_star_example_prompts(name: str, scope: str) -> dict:
+    """
+    Generate comma-separated review themes for 1–5 stars from business scope.
+    Used to auto-fill AI Prompt Examples on the add/edit business form.
+    """
+    name = (name or "").strip() or "this business"
+    scope = (scope or "").strip()
+    if len(scope) < 8:
+        raise ValueError("Enter Business Scope & Services first (at least a short description).")
+
+    if not _gemini_api_key():
+        logger.warning("GEMINI_API_KEY is not set; returning local star examples.")
+        return _local_star_examples(name, scope)
+
+    prompt = f"""
+You write short customer-review THEMES (not full reviews) for a Google-review assistant.
+
+Business name: {name}
+Business scope and services:
+{scope}
+
+Return ONLY JSON with these keys:
+"examples_1star", "examples_2star", "examples_3star", "examples_4star", "examples_5star"
+
+Each value is one comma-separated string of 5 to 8 short phrases.
+Phrases must be specific to THIS business's services (not generic "bad service").
+No numbering. No quotes inside phrases. No markdown.
+
+Meaning of each rating:
+- examples_1star: serious complaints (negative)
+- examples_2star: disappointing issues
+- examples_3star: mixed / average
+- examples_4star: mostly good, small improvements
+- examples_5star: enthusiastic praise (positive)
+
+Example shape (do not copy the content):
+{{"examples_1star": "phrase one, phrase two, phrase three", "examples_2star": "...", "examples_3star": "...", "examples_4star": "...", "examples_5star": "..."}}
+""".strip()
+
+    client = _get_client()
+    load_dotenv(override=True)
+    _current_config = get_config()
+    _raw_chain = [
+        _current_config.GEMINI_MODEL,
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-flash-latest",
+    ]
+    seen = set()
+    models = []
+    for model in _raw_chain:
+        if model not in seen:
+            seen.add(model)
+            models.append(model)
+
+    last_error = None
+    for model in models:
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.7,
+                    max_output_tokens=1200,
+                    response_mime_type="application/json",
+                ),
+            )
+            cleaned = re.sub(r"```(?:json)?\s*", "", (response.text or "")).strip()
+            cleaned = cleaned.replace("```", "").strip()
+            data = json.loads(cleaned)
+            examples = _normalize_star_examples(data)
+            logger.info("Generated star example prompts with %s", model)
+            return examples
+        except Exception as e:
+            last_error = e
+            logger.warning("Star examples via %s failed: %s", model, e)
+            continue
+
+    logger.warning("Falling back to local star examples: %s", last_error)
+    return _local_star_examples(name, scope)
