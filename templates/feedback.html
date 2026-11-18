@@ -14,7 +14,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v=20261118_v12" />
+  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v=20261118_v13" />
 </head>
 
 <body class="theme-{{ business_id }}">
@@ -122,11 +122,6 @@
         >
           {{ company_name }}
         </h1>
-
-        <p class="welcome-message">
-          <span data-i18n="welcomeLine1">We'd love to hear about your experience!</span><br />
-          <span data-i18n="welcomeLine2">Your feedback helps us grow and serve you better. 💙</span>
-        </p>
 
         {% if has_social_links %}
         <!-- ── Connect With Us (Social Media & WhatsApp) ── -->
