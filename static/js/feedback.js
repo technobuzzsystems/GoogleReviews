@@ -110,11 +110,21 @@ const State = {
    UI STATE MANAGER
    ============================================================ */
 const UIState = {
+  /** Restore submit section to its default position at the end of suggestions section. */
+  resetSubmitPosition() {
+    if (DOM.submitSection && DOM.suggestionsSection) {
+      if (DOM.submitSection.parentNode !== DOM.suggestionsSection || DOM.suggestionsSection.lastElementChild !== DOM.submitSection) {
+        DOM.suggestionsSection.appendChild(DOM.submitSection);
+      }
+    }
+  },
+
   /** Show the AI loading spinner, hide suggestions. */
   showLoading() {
     DOM.loadingSection.classList.add('active');
     DOM.suggestionsSection.classList.remove('active');
     DOM.submitSection.classList.remove('active');
+    UIState.resetSubmitPosition();
     UIState.clearValidation();
     UIState.clearErrorBanner();
   },
@@ -135,7 +145,8 @@ const UIState = {
       UIState.resetManual();
     }
 
-    UIState.showSubmit();
+    // Submit button is intentionally NOT shown here;
+    // it appears dynamically above the selected feedback card once clicked.
   },
 
   /** Show the submit button. */
@@ -153,6 +164,7 @@ const UIState = {
     UIState.resetManual();
     UIState.clearValidation();
     UIState.clearErrorBanner();
+    UIState.resetSubmitPosition();
     // Always restore manual pane visibility so it re-appears when user picks 1–3 stars
     if (DOM.manualPane) DOM.manualPane.style.display = '';
   },
@@ -435,6 +447,7 @@ const StarRating = {
 const SuggestionCards = {
   /** Clear the suggestions grid and reset selection. */
   clear() {
+    UIState.resetSubmitPosition();
     DOM.suggestionsGrid.innerHTML = '';
     State.selectedFeedback = null;
     State.selectedResponseId = null;
@@ -529,7 +542,19 @@ const SuggestionCards = {
       ? State.responseIds[selectedIndex]
       : null;
 
-    // Submit button stays at sequence 9 below cards; show and update texts
+    // Dynamically insert submit section immediately ABOVE selectedCard
+    if (DOM.submitSection && selectedCard && selectedCard.parentNode) {
+      selectedCard.parentNode.insertBefore(DOM.submitSection, selectedCard);
+    }
+
+    // Auto-copy selected feedback to clipboard (for 4★/5★ public review flow)
+    if (!State.selectedRating || State.selectedRating >= 4) {
+      Clipboard.copy(text, () => {
+        Toast.show(I18n.t('copySuccessToast') || 'Review copied successfully.');
+      });
+    }
+
+    // Show submit button immediately above selected card and update texts
     UIState.showSubmit();
     UIState.clearValidation();
     UIState.updateSubmitTexts();
@@ -720,15 +745,22 @@ const ManualFeedback = {
       State.selectedFeedback = trimmed;
       State.selectedResponseId = null;
       ManualFeedback.updateHint(trimmed);
+
+      // Position submit section right below manual pane
+      if (DOM.submitSection && DOM.manualPane && DOM.suggestionsWrapper) {
+        DOM.manualPane.parentNode.insertBefore(DOM.submitSection, DOM.suggestionsWrapper);
+      }
+      UIState.showSubmit();
     } else {
       State.isManual = false;
       State.selectedFeedback = null;
       if (DOM.manualMinHint) {
         DOM.manualMinHint.classList.remove('valid', 'invalid');
       }
+      DOM.submitSection.classList.remove('active');
+      UIState.resetSubmitPosition();
     }
 
-    UIState.showSubmit();
     UIState.updateSubmitTexts();
   },
 
@@ -744,6 +776,10 @@ const ManualFeedback = {
       State.isManual = true;
       State.selectedFeedback = trimmed;
       State.selectedResponseId = null;
+      if (DOM.submitSection && DOM.manualPane && DOM.suggestionsWrapper) {
+        DOM.manualPane.parentNode.insertBefore(DOM.submitSection, DOM.suggestionsWrapper);
+      }
+      UIState.showSubmit();
       UIState.updateSubmitTexts();
     }
   },
