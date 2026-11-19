@@ -14,7 +14,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v=20261119_v5" />
+  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v=20261119_v6" />
 </head>
 
 <body class="theme-{{ business_id }}">
@@ -151,32 +151,8 @@
       <!-- ── Brand / Header ───────────────────────────── -->
       <header class="brand-section">
 
-        <div class="logo-wrapper">
-          {% if logo_url %}
-          <img
-            src="{{ logo_url }}"
-            alt="{{ company_name }} Logo"
-            class="company-logo"
-            width="88"
-            height="88"
-            onerror="this.style.display='none'"
-          />
-          {% endif %}
-        </div>
-
-        <!-- Company name carries data attributes for JS to read -->
-        <h1
-          class="company-name"
-          id="companyName"
-          data-company="{{ company_name }}"
-          data-company-id="{{ company_id }}"
-          data-business-id="{{ business_id }}"
-        >
-          {{ company_name }}
-        </h1>
-
         {% if has_social_links %}
-        <!-- ── Connect With Us (Social Media & WhatsApp) ── -->
+        <!-- ── Connect With Us (Social Media, WhatsApp & Contact Number) ── -->
         <section class="connect-with-us-section" aria-label="Connect With Us">
           <p class="connect-with-us-title">Connect With Us</p>
           <div class="social-links-grid">
@@ -229,9 +205,47 @@
               <span>WhatsApp</span>
             </a>
             {% endif %}
+
+            {% if mobile %}
+            <a
+              href="tel:{{ mobile }}"
+              class="social-link-btn social-phone"
+              title="Call us: {{ mobile }}"
+              aria-label="Call {{ mobile }}"
+            >
+              <svg class="social-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+              </svg>
+              <span>{{ mobile }}</span>
+            </a>
+            {% endif %}
           </div>
         </section>
         {% endif %}
+
+        <div class="logo-wrapper">
+          {% if logo_url %}
+          <img
+            src="{{ logo_url }}"
+            alt="{{ company_name }} Logo"
+            class="company-logo"
+            width="88"
+            height="88"
+            onerror="this.style.display='none'"
+          />
+          {% endif %}
+        </div>
+
+        <!-- Company name carries data attributes for JS to read -->
+        <h1
+          class="company-name"
+          id="companyName"
+          data-company="{{ company_name }}"
+          data-company-id="{{ company_id }}"
+          data-business-id="{{ business_id }}"
+        >
+          {{ company_name }}
+        </h1>
 
         <aside class="paste-hint" role="note">
           <p class="paste-hint-title" data-i18n="pasteHintTitle">How this works</p>
@@ -481,7 +495,7 @@
   </div>
 
   <!-- JavaScript -->
-  <script src="{{ url_for('static', path='js/i18n.js') }}?v=20261119_v5"></script>
-  <script src="{{ url_for('static', path='js/feedback.js') }}?v=20261119_v5" defer></script>
+  <script src="{{ url_for('static', path='js/i18n.js') }}?v=20261119_v6"></script>
+  <script src="{{ url_for('static', path='js/feedback.js') }}?v=20261119_v6" defer></script>
 </body>
 </html>
