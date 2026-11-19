@@ -1,6 +1,7 @@
 'use strict';
 
-const FEATURED_LANGS = ['mr', 'hi', 'en', 'gu'];
+const FEATURED_LANGS = ['mr', 'hi', 'en'];
+const OTHER_LANGS = ['gu', 'ta', 'te', 'kn', 'bn', 'pa', 'ml'];
 
 const LANG_OPTIONS = [
   { code: 'mr', native: 'मराठी', label: 'Marathi' },

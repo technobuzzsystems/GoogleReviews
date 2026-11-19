@@ -14,7 +14,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v=20261119_v4" />
+  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v=20261119_v5" />
 </head>
 
 <body class="theme-{{ business_id }}">
@@ -71,31 +71,81 @@
 
       <div class="lang-bar">
         <p class="lang-bar-label" data-i18n="languageLabel">Review language</p>
-        <div class="lang-chips" id="langChips" role="group" aria-label="Popular languages">
+        <div class="lang-chips" id="langChips" role="group" aria-label="Review language selection">
           <button type="button" class="lang-chip featured" data-lang="mr">मराठी</button>
           <button type="button" class="lang-chip featured" data-lang="hi">हिन्दी</button>
           <button type="button" class="lang-chip featured" data-lang="en">English</button>
-          <button type="button" class="lang-chip featured" data-lang="gu">ગુજરાતી</button>
+
+          <div class="lang-others-dropdown" id="langOthersDropdown">
+            <button
+              type="button"
+              class="lang-chip lang-others-toggle featured"
+              id="btnOthersLang"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              aria-label="Other languages"
+            >
+              <span id="othersBtnText">Others</span>
+              <span class="dropdown-chevron" aria-hidden="true">▼</span>
+            </button>
+            <div
+              class="lang-dropdown-menu"
+              id="langDropdownMenu"
+              role="listbox"
+              aria-label="Additional supported languages"
+            >
+              <button type="button" class="lang-dropdown-option" role="option" data-lang="gu" aria-selected="false">
+                <span class="lang-option-native">ગુજરાતી</span>
+                <span class="lang-option-sep">·</span>
+                <span class="lang-option-eng">Gujarati</span>
+              </button>
+              <button type="button" class="lang-dropdown-option" role="option" data-lang="ta" aria-selected="false">
+                <span class="lang-option-native">தமிழ்</span>
+                <span class="lang-option-sep">·</span>
+                <span class="lang-option-eng">Tamil</span>
+              </button>
+              <button type="button" class="lang-dropdown-option" role="option" data-lang="te" aria-selected="false">
+                <span class="lang-option-native">తెలుగు</span>
+                <span class="lang-option-sep">·</span>
+                <span class="lang-option-eng">Telugu</span>
+              </button>
+              <button type="button" class="lang-dropdown-option" role="option" data-lang="kn" aria-selected="false">
+                <span class="lang-option-native">ಕನ್ನಡ</span>
+                <span class="lang-option-sep">·</span>
+                <span class="lang-option-eng">Kannada</span>
+              </button>
+              <button type="button" class="lang-dropdown-option" role="option" data-lang="bn" aria-selected="false">
+                <span class="lang-option-native">বাংলা</span>
+                <span class="lang-option-sep">·</span>
+                <span class="lang-option-eng">Bengali</span>
+              </button>
+              <button type="button" class="lang-dropdown-option" role="option" data-lang="pa" aria-selected="false">
+                <span class="lang-option-native">ਪੰਜਾਬੀ</span>
+                <span class="lang-option-sep">·</span>
+                <span class="lang-option-eng">Punjabi</span>
+              </button>
+              <button type="button" class="lang-dropdown-option" role="option" data-lang="ml" aria-selected="false">
+                <span class="lang-option-native">മലയാളം</span>
+                <span class="lang-option-sep">·</span>
+                <span class="lang-option-eng">Malayalam</span>
+              </button>
+            </div>
+          </div>
         </div>
-        <label class="lang-select-wrap">
-          <span class="lang-select-icon" aria-hidden="true">🌐</span>
-          <select id="reviewLanguage" class="lang-select" data-i18n-aria="languageLabel" aria-label="Review language">
-            <optgroup id="langGroupPopular" label="Popular">
-              <option value="mr">मराठी · Marathi</option>
-              <option value="hi">हिन्दी · Hindi</option>
-              <option value="en" selected>English</option>
-              <option value="gu">ગુજરાતી · Gujarati</option>
-            </optgroup>
-            <optgroup id="langGroupMore" label="More languages">
-              <option value="ta">தமிழ் · Tamil</option>
-              <option value="te">తెలుగు · Telugu</option>
-              <option value="kn">ಕನ್ನಡ · Kannada</option>
-              <option value="bn">বাংলা · Bengali</option>
-              <option value="pa">ਪੰਜਾਬੀ · Punjabi</option>
-              <option value="ml">മലയാളം · Malayalam</option>
-            </optgroup>
-          </select>
-        </label>
+
+        <!-- Hidden native select for form/state synchronization -->
+        <select id="reviewLanguage" style="display:none;" aria-hidden="true" tabindex="-1">
+          <option value="mr">मराठी · Marathi</option>
+          <option value="hi">हिन्दी · Hindi</option>
+          <option value="en" selected>English</option>
+          <option value="gu">ગુજરાતી · Gujarati</option>
+          <option value="ta">தமிழ் · Tamil</option>
+          <option value="te">తెలుగు · Telugu</option>
+          <option value="kn">ಕನ್ನಡ · Kannada</option>
+          <option value="bn">বাংলা · Bengali</option>
+          <option value="pa">ਪੰਜਾਬੀ · Punjabi</option>
+          <option value="ml">മലയാളം · Malayalam</option>
+        </select>
       </div>
 
       <!-- ── Brand / Header ───────────────────────────── -->
@@ -431,7 +481,7 @@
   </div>
 
   <!-- JavaScript -->
-  <script src="{{ url_for('static', path='js/i18n.js') }}?v=20261119_v4"></script>
-  <script src="{{ url_for('static', path='js/feedback.js') }}?v=20261119_v4" defer></script>
+  <script src="{{ url_for('static', path='js/i18n.js') }}?v=20261119_v5"></script>
+  <script src="{{ url_for('static', path='js/feedback.js') }}?v=20261119_v5" defer></script>
 </body>
 </html>

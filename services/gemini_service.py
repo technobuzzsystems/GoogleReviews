@@ -314,6 +314,51 @@ LANGUAGE: KANNADA (ಕನ್ನಡ) - CRITICAL REQUIREMENTS:
 - Maintain correct Kannada grammar.
 - You may keep the business name "{company_name}" in its original form.
 """,
+        "ta": f"""
+LANGUAGE: TAMIL (தமிழ்) - CRITICAL REQUIREMENTS:
+- Write EVERY suggestion strictly in natural, authentic, grammatically correct Tamil (எளிய, இயல்பான மற்றும் தூய தமிழ்).
+- Do NOT translate word-by-word from English. Write like a real native Tamil customer posting a genuine Google review.
+- Use natural Tamil phrasing (e.g. 'மிகவும் சிறந்த அனுபவம்', 'சேவை மிகவும் திருப்திகரமாக இருந்தது', 'ஊழியர்கள் கனிவாகவும் உதவியாகவும் இருந்தனர்', 'நிச்சயமாக மீண்டும் வருவேன்').
+- Maintain correct Tamil grammar and respectful tone.
+- You may keep the business name "{company_name}" in its original form.
+- Do NOT mix English sentences.
+""",
+        "te": f"""
+LANGUAGE: TELUGU (తెలుగు) - CRITICAL REQUIREMENTS:
+- Write EVERY suggestion strictly in natural, authentic, grammatically correct Telugu (సహజమైన, స్పష్టమైన మరియు సరైన తెలుగు).
+- Do NOT translate word-by-word from English. Write like a real native Telugu customer posting a genuine Google review.
+- Use natural Telugu phrasing (e.g. 'చాలా మంచి అనుభవం', 'సేవ చాలా బాగుంది మరియు సమయానికి అందించారు', 'సిబ్బంది చాలా మర్యాదగా మరియు సహాయకరంగా ఉన్నారు', 'ఖచ్చితంగా సిఫార్సు చేస్తాను').
+- Maintain correct Telugu grammar and respectful tone.
+- You may keep the business name "{company_name}" in its original form.
+- Do NOT mix English sentences.
+""",
+        "bn": f"""
+LANGUAGE: BENGALI (বাংলা) - CRITICAL REQUIREMENTS:
+- Write EVERY suggestion strictly in natural, authentic, grammatically correct Bengali (সহজ, সাবলীল এবং প্রমিত বাংলা).
+- Do NOT translate word-by-word from English. Write like a real native Bengali customer posting a genuine Google review.
+- Use natural Bengali phrasing (e.g. 'খুব সুন্দর অভিজ্ঞতা ছিল', 'পরিষেবা অত্যন্ত চমৎকার এবং সময়োপযোগী', 'কর্মীরা খুবই বিনয়ী ও সহায়ক', 'অবশ্যই আবার আসব').
+- Maintain correct Bengali grammar and respectful tone.
+- You may keep the business name "{company_name}" in its original form.
+- Do NOT mix English sentences.
+""",
+        "pa": f"""
+LANGUAGE: PUNJABI (ਪੰਜਾਬੀ) - CRITICAL REQUIREMENTS:
+- Write EVERY suggestion strictly in natural, authentic, grammatically correct Punjabi (ਸਹਿਜ, ਸ਼ੁੱਧ ਅਤੇ ਸੁਭਾਵਿਕ ਪੰਜਾਬੀ).
+- Do NOT translate word-by-word from English. Write like a real native Punjabi customer posting a genuine Google review.
+- Use natural Punjabi Gurmukhi phrasing (e.g. 'ਬਹੁਤ ਵਧੀਆ ਤਜਰਬਾ ਰਿਹਾ', 'ਸੇਵਾ ਬਹੁਤ ਸ਼ਾਨਦਾਰ ਸੀ', 'ਸਟਾਫ਼ ਬਹੁਤ ਮਦਦਗਾਰ ਅਤੇ ਨਿਮਰ ਹੈ', 'ਜ਼ਰੂਰ ਦੁਬਾਰਾ ਆਵਾਂਗੇ').
+- Maintain correct Punjabi grammar and respectful tone.
+- You may keep the business name "{company_name}" in its original form.
+- Do NOT mix English sentences.
+""",
+        "ml": f"""
+LANGUAGE: MALAYALAM (മലയാളം) - CRITICAL REQUIREMENTS:
+- Write EVERY suggestion strictly in natural, authentic, grammatically correct Malayalam (സ്വാഭാവികവും ലളിതവുമായ മലയാളം).
+- Do NOT translate word-by-word from English. Write like a real native Malayalam customer posting a genuine Google review.
+- Use natural Malayalam phrasing (e.g. 'വളരെ നല്ല അനുഭവം ആയിരുന്നു', 'സേവനം വളരെ മികച്ചതും കാര്യക്ഷമവുമായിരുന്നു', 'ജീവനക്കാർ വളരെ സഹായമനസ്കരും സൗഹാർദ്ദപരവുമായിരുന്നു', 'തീർച്ചയായും വീണ്ടും വരും').
+- Maintain correct Malayalam grammar and sentence flow.
+- You may keep the business name "{company_name}" in its original form.
+- Do NOT mix English sentences.
+""",
         "en": """
 LANGUAGE: ENGLISH - CRITICAL REQUIREMENTS:
 - Write fluent, natural and grammatically correct English.

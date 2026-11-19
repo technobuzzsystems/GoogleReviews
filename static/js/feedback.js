@@ -966,19 +966,47 @@ const Language = {
 
   syncUi(lang) {
     if (DOM.langSelect) DOM.langSelect.value = lang;
-    DOM.langChips.forEach((chip) => {
+
+    // Top direct buttons (mr, hi, en)
+    document.querySelectorAll('#langChips > .lang-chip[data-lang]').forEach((chip) => {
       chip.classList.toggle('active', chip.dataset.lang === lang);
+    });
+
+    // Others dropdown button state and label
+    const otherLangs = ['gu', 'ta', 'te', 'kn', 'bn', 'pa', 'ml'];
+    const isOther = otherLangs.includes(lang);
+    const btnOthers = document.getElementById('btnOthersLang');
+    const othersText = document.getElementById('othersBtnText');
+
+    if (btnOthers) {
+      btnOthers.classList.toggle('active', isOther);
+    }
+
+    if (othersText) {
+      if (isOther) {
+        const match = typeof LANG_OPTIONS !== 'undefined' ? LANG_OPTIONS.find((l) => l.code === lang) : null;
+        othersText.textContent = match ? match.native : 'Others';
+      } else {
+        othersText.textContent = 'Others';
+      }
+    }
+
+    // Dropdown options inside Others menu
+    document.querySelectorAll('.lang-dropdown-option').forEach((opt) => {
+      const isSelected = opt.dataset.lang === lang;
+      opt.classList.toggle('active', isSelected);
+      opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
     });
   },
 
   set(lang, { refetch = true } = {}) {
-    if (!LANG_OPTIONS.some((l) => l.code === lang)) lang = 'en';
+    if (typeof LANG_OPTIONS !== 'undefined' && !LANG_OPTIONS.some((l) => l.code === lang)) lang = 'en';
     const changed = State.language !== lang;
     State.language = lang;
     I18n.lang = lang;
     try { localStorage.setItem('reviewLanguage', lang); } catch (_) { /* ignore */ }
-    Language.syncUi(lang);
     I18n.apply();
+    Language.syncUi(lang);
     if (State.selectedRating && DOM.ratingBadge.classList.contains('visible')) {
       StarRating.updateBadge(State.selectedRating);
     }
@@ -993,12 +1021,67 @@ const Language = {
   init() {
     const lang = Language.detect();
     Language.set(lang, { refetch: false });
+
+    // Top direct language buttons
+    document.querySelectorAll('#langChips > .lang-chip[data-lang]').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const dropdown = document.getElementById('langOthersDropdown');
+        if (dropdown) {
+          dropdown.classList.remove('open');
+          const btn = document.getElementById('btnOthersLang');
+          if (btn) btn.setAttribute('aria-expanded', 'false');
+        }
+        Language.set(chip.dataset.lang);
+      });
+    });
+
+    // Others dropdown toggle
+    const dropdown = document.getElementById('langOthersDropdown');
+    const btnOthers = document.getElementById('btnOthersLang');
+    const menu = document.getElementById('langDropdownMenu');
+
+    if (btnOthers && dropdown) {
+      btnOthers.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = dropdown.classList.toggle('open');
+        btnOthers.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+    }
+
+    // Dropdown items click
+    if (menu && dropdown) {
+      menu.querySelectorAll('.lang-dropdown-option').forEach((opt) => {
+        opt.addEventListener('click', (e) => {
+          e.stopPropagation();
+          dropdown.classList.remove('open');
+          if (btnOthers) btnOthers.setAttribute('aria-expanded', 'false');
+          Language.set(opt.dataset.lang);
+        });
+      });
+    }
+
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+      if (dropdown && !dropdown.contains(e.target)) {
+        dropdown.classList.remove('open');
+        if (btnOthers) btnOthers.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && dropdown && dropdown.classList.contains('open')) {
+        dropdown.classList.remove('open');
+        if (btnOthers) {
+          btnOthers.setAttribute('aria-expanded', 'false');
+          btnOthers.focus();
+        }
+      }
+    });
+
     if (DOM.langSelect) {
       DOM.langSelect.addEventListener('change', () => Language.set(DOM.langSelect.value));
     }
-    DOM.langChips.forEach((chip) => {
-      chip.addEventListener('click', () => Language.set(chip.dataset.lang));
-    });
   },
 };
 
