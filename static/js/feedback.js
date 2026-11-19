@@ -62,6 +62,7 @@ const DOM = {
   // Success screen
   successStars:      document.getElementById('successStars'),
   successScreen:     document.getElementById('successScreen'),
+  successActions:    document.querySelector('.success-actions'),
   successReviewText: document.getElementById('successReviewText'),
   successReviewCard: document.getElementById('successReviewCard'),
   btnCopyReview:     document.getElementById('btnCopyReview'),
@@ -197,23 +198,17 @@ const UIState = {
       DOM.successReviewText.textContent = State.selectedFeedback;
     }
 
-    // ── Google Review — Clipboard-First, Then Open Tab ──────────────────────
-    // IMPORTANT: Google's review page does NOT support any URL parameter to
-    // pre-fill the text box. The ONLY supported approach is:
-    //   1. Copy the review text to clipboard FIRST (before tab opens).
-    //   2. Open the Google review page in a new tab.
-    //   3. User clicks in the text box and presses Ctrl+V (one action).
-    // This is enforced by browser same-origin security — no script on our
-    // domain can interact with a page on google.com.
+    // ── Google Review Redirection & Buttons (Rating-Gated) ──────────────────
+    // 4★/5★: Keep existing Google Review workflow (copy clipboard, redirect tab, show buttons).
+    // 1★/2★/3★: Strictly private feedback (no Google button, no redirection, no Google instructions).
+    const isHighRating = State.selectedRating >= 4;
     const googleUrl = (DOM.successScreen.dataset.googleReviewUrl || '').trim();
 
-    if (googleUrl) {
+    if (isHighRating) {
+      // ── 4★/5★: Public Google Review Flow ──────────────────────────────────
+      if (DOM.successActions) DOM.successActions.style.display = '';
 
-      // ── Conditional redirect: Google tab only for 4★/5★; suppressed for 1★/2★/3★ ──
-      const shouldRedirectToGoogle = State.selectedRating >= 4;
-
-      if (shouldRedirectToGoogle) {
-        // ── 4★/5★: clipboard-first, then open Google tab (existing behaviour) ───
+      if (googleUrl) {
         Clipboard.copy(
           State.selectedFeedback,
           () => {
@@ -238,36 +233,39 @@ const UIState = {
         if (DOM.googleUrlMissing) DOM.googleUrlMissing.style.display = 'none';
 
       } else {
-        // ── 1★/2★/3★: private feedback submitted to management ──
-        if (DOM.autoCopyMsg) DOM.autoCopyMsg.style.display = 'none';
-        if (DOM.btnCopyReview) DOM.btnCopyReview.style.display = 'none';
-        if (DOM.googleInstructions) DOM.googleInstructions.style.display = 'none';
-        if (DOM.googleUrlMissing) DOM.googleUrlMissing.style.display = 'none';
-
-        // Secondary option to post publicly on Google if customer prefers (Google Policy compliance)
-        DOM.btnPostGoogle.href = googleUrl;
-        DOM.btnPostGoogle.classList.remove('disabled');
+        // No Google Review URL configured — disable the button
+        DOM.btnPostGoogle.removeAttribute('href');
+        DOM.btnPostGoogle.classList.add('disabled');
+        DOM.btnPostGoogle.setAttribute('aria-disabled', 'true');
+        DOM.btnPostGoogle.addEventListener('click', (e) => e.preventDefault());
         DOM.btnPostGoogle.style.display = 'inline-flex';
+        if (DOM.btnCopyReview) DOM.btnCopyReview.style.display = 'none';
+        if (DOM.googleUrlMissing) DOM.googleUrlMissing.style.display = 'block';
+        if (DOM.googleInstructions) DOM.googleInstructions.style.display = 'none';
+        if (DOM.autoCopyMsg) DOM.autoCopyMsg.style.display = 'none';
+      }
+
+      // Wire Copy Review button (manual backup for 4★/5★)
+      if (DOM.btnCopyReview) {
+        DOM.btnCopyReview.addEventListener('click', () => {
+          Clipboard.copy(State.selectedFeedback, () => {
+            Toast.show(I18n.t('copySuccessToast'));
+          });
+        });
       }
 
     } else {
-      // No Google Review URL configured — disable the button
-      DOM.btnPostGoogle.removeAttribute('href');
-      DOM.btnPostGoogle.classList.add('disabled');
-      DOM.btnPostGoogle.setAttribute('aria-disabled', 'true');
-      DOM.btnPostGoogle.addEventListener('click', (e) => e.preventDefault());
-      if (DOM.googleUrlMissing) DOM.googleUrlMissing.style.display = 'block';
-      if (DOM.googleInstructions) DOM.googleInstructions.style.display = 'none';
+      // ── 1★/2★/3★: Private Feedback Only (Zero Google Redirection / Buttons) ──
+      if (DOM.btnPostGoogle) {
+        DOM.btnPostGoogle.removeAttribute('href');
+        DOM.btnPostGoogle.classList.add('disabled');
+        DOM.btnPostGoogle.style.display = 'none';
+      }
+      if (DOM.btnCopyReview) DOM.btnCopyReview.style.display = 'none';
+      if (DOM.successActions) DOM.successActions.style.display = 'none';
       if (DOM.autoCopyMsg) DOM.autoCopyMsg.style.display = 'none';
-    }
-
-    // ── Wire Copy Review button (manual backup) ─────────────────────────────
-    if (DOM.btnCopyReview) {
-      DOM.btnCopyReview.addEventListener('click', () => {
-        Clipboard.copy(State.selectedFeedback, () => {
-          Toast.show(I18n.t('copySuccessToast'));
-        });
-      });
+      if (DOM.googleInstructions) DOM.googleInstructions.style.display = 'none';
+      if (DOM.googleUrlMissing) DOM.googleUrlMissing.style.display = 'none';
     }
   },
 
