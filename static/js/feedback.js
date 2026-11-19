@@ -542,10 +542,8 @@ const SuggestionCards = {
       ? State.responseIds[selectedIndex]
       : null;
 
-    // Dynamically insert submit section immediately ABOVE selectedCard
-    if (DOM.submitSection && selectedCard && selectedCard.parentNode) {
-      selectedCard.parentNode.insertBefore(DOM.submitSection, selectedCard);
-    }
+    // Dynamically insert submit section immediately BELOW the entire row containing selectedCard
+    SuggestionCards.positionSubmitSection(selectedCard);
 
     // Auto-copy selected feedback to clipboard (for 4★/5★ public review flow)
     if (!State.selectedRating || State.selectedRating >= 4) {
@@ -554,10 +552,33 @@ const SuggestionCards = {
       });
     }
 
-    // Show submit button immediately above selected card and update texts
+    // Show submit button below the selected row and update texts
     UIState.showSubmit();
     UIState.clearValidation();
     UIState.updateSubmitTexts();
+  },
+
+  /**
+   * Dynamically insert the submit button immediately BELOW the entire row
+   * containing the selected feedback card, spanning the full width of both columns.
+   * @param {HTMLElement} selectedCard — The currently selected card element.
+   */
+  positionSubmitSection(selectedCard) {
+    if (!DOM.submitSection || !selectedCard || !DOM.suggestionsGrid) return;
+    const cards = Array.from(DOM.suggestionsGrid.querySelectorAll('.suggestion-card'));
+    const selectedIndex = cards.indexOf(selectedCard);
+    if (selectedIndex === -1) return;
+
+    // Desktop/tablet (>= 480px) has 2 columns; mobile (< 480px) has 1 column
+    const isTwoCol = window.matchMedia ? window.matchMedia('(min-width: 480px)').matches : true;
+    const cols = isTwoCol ? 2 : 1;
+    const rowIndex = Math.floor(selectedIndex / cols);
+    const lastCardIndex = Math.min((rowIndex + 1) * cols - 1, cards.length - 1);
+    const targetCard = cards[lastCardIndex];
+
+    if (targetCard && targetCard.parentNode) {
+      targetCard.parentNode.insertBefore(DOM.submitSection, targetCard.nextSibling);
+    }
   },
 };
 
@@ -993,6 +1014,14 @@ document.addEventListener('DOMContentLoaded', () => {
   if (DOM.btnSubmit) {
     DOM.btnSubmit.addEventListener('click', onSubmitClick);
   }
+
+  // Handle responsive rearrangement of submit button below selected row on screen resize
+  window.addEventListener('resize', () => {
+    const selectedCard = DOM.suggestionsGrid ? DOM.suggestionsGrid.querySelector('.suggestion-card.selected') : null;
+    if (selectedCard) {
+      SuggestionCards.positionSubmitSection(selectedCard);
+    }
+  });
 
   console.info('[TechnoBuzz] Feedback app initialised — all phases ready.');
 });
