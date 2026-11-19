@@ -60,6 +60,29 @@ NEGATIVE_TRIGGER_WORDS = {
     "let down", "careless", "ignored", "bad experience", "bad time",
     "खराब", "निराशा", "वाईट", "त्रासदायक", "बेजबाबदार", "दुर्लक्ष",
     "बुरा", "लापरवाह", "बेकार", "धोखा", "परेशान",
+    "કચરો", "કંટાળાજનક",
+    "ಕಳಪೆ", "ಕೆಟ್ಟ", "ನಿರಾಶೆ",
+}
+
+# Improvement, criticism, or shortcoming phrases forbidden in 4-star and 5-star reviews
+# (4-star must be strictly and exclusively positive customer praise)
+IMPROVEMENT_TRIGGER_WORDS = {
+    "could be better", "needs improvement", "need improvement", "room for improvement",
+    "not perfect", "could improve", "small delay", "slight delay", "minor delay",
+    "slight wait", "small wait", "long wait", "waiting time", "one nitpick", "small nitpick",
+    "only thing i would tweak", "only complain", "only complaint", "small miss", "minor issue",
+    "could be smoother", "hope they improve", "room to improve", "tweak", "nitpick",
+    "shortcoming", "shortcomings", "one minor note", "one minor suggestion", "below expectations",
+    # Marathi
+    "सुधारणा", "सुधारता येईल", "कमतरता", "तक्रार", "त्रुटी", "अडथळा", "अजून चांगलं", "थोडा वेळ",
+    "विलंब", "उशीर", "सुधारावे", "अजून सुधारावे",
+    # Hindi
+    "सुधार", "कमी", "शिकायत", "बेहतर हो सकता", "सुधार सकते", "और अच्छा हो सकता", "और बेहतर हो सकता", "देरी", "इंतज़ार",
+    "सुधारने की जरूरत",
+    # Gujarati
+    "સુધારો", "સુધારી શકાય", "ખામી", "તકલીફ", "સુધારવાની જરૂર",
+    # Kannada
+    "ಸುಧಾರಣೆ", "ದೂರು", "ಕಾಯುವ ಸಮಯ", "ಸುಧಾರಿಸಬೇಕಾಗಿದೆ",
 }
 
 # Explicit positive indicators required in 5-star feedback
@@ -211,16 +234,16 @@ def _local_suggestions(rating: int, business_context: dict, language: str = "en"
             "Three stars because {issue} balanced out the good parts.",
         ],
         4: [
-            "Good experience at {name}. Only thing I would tweak is {issue}.",
-            "Pretty happy with the visit. {issue} was a small miss.",
-            "Solid service. {issue} is the one area they could improve.",
-            "I liked {name}. A little more attention to {issue} would make it perfect.",
-            "Went well overall. {issue} was minor compared to the rest.",
-            "Would recommend {name}. Just a note on {issue}.",
-            "Really close to excellent. {issue} is the only nitpick.",
-            "Positive visit. {issue} did not spoil it, but it is worth mentioning.",
-            "Good value and friendly team. {issue} could be smoother next time.",
-            "Enjoyed it. If they sort {issue}, I would give five stars.",
+            "Had a wonderful experience at {name}! The service was prompt and the staff was very helpful.",
+            "Really happy with the overall experience at {name}. Everything was handled professionally.",
+            "Great service, friendly staff and a smooth experience at {name}. Highly recommended!",
+            "Very satisfied with the quality of service at {name}. Would definitely visit again.",
+            "A really pleasant experience with {name}. The team was supportive and professional.",
+            "Solid and dependable service from {name}. Thoroughly satisfied with the visit.",
+            "Courteous staff, well-organized environment, and good quality overall at {name}.",
+            "Very pleased with how professionally everything was managed. Great visit to {name}.",
+            "Good value, polite staff, and reliable support from {name}. Glad I chose them.",
+            "Thoroughly enjoyed the experience at {name}. Professional and efficient team.",
         ],
         5: [
             "Excellent visit to {name}. {highlight} and I will definitely return.",
@@ -254,82 +277,127 @@ def _build_prompt(rating: int, business_context: dict, language: str = "en", cou
         "Quality service, reliable customer support, attention to detail, and professional assistance.",
     )
     language_name = REVIEW_LANGUAGE_NAMES.get(language, REVIEW_LANGUAGE_NAMES["en"])
-    language_block = ""
-    if language != "en":
-        language_block = f"""
+
+    # Language-specific prompt blocks ensuring natural grammar, correct sentence flow, and zero robotic translation
+    lang_rules = {
+        "mr": f"""
+LANGUAGE: MARATHI (मराठी) - CRITICAL REQUIREMENTS:
+- Write EVERY suggestion strictly in natural, authentic, grammatically correct Marathi (शुद्ध, सहज आणि अस्खलित मराठी).
+- Do NOT translate literally from English. Write like a real native Marathi speaker in Maharashtra posting a genuine Google review.
+- Use natural Marathi sentence patterns (उदा. 'खूप छान अनुभव आला', 'उत्कृष्ट सेवा आणि सहकार्य', 'स्टाफ अत्यंत नम्र आणि तत्पर आहे', 'नक्की पुन्हा भेट देईन').
+- Maintain correct gender and verbal agreements in Marathi.
+- You may keep the business name "{company_name}" in its original or Devanagari script.
+- Do NOT mix English sentences.
+""",
+        "hi": f"""
+LANGUAGE: HINDI (हिन्दी) - CRITICAL REQUIREMENTS:
+- Write EVERY suggestion strictly in natural, authentic, grammatically correct Hindi (सहज, स्पष्ट और प्रामाणिक हिंदी).
+- Do NOT translate word-by-word from English. Write like a real native Hindi speaker posting a genuine Google review.
+- Use natural Hindi phrasing (e.g. 'बहुत बढ़िया अनुभव रहा', 'सेवा बहुत अच्छी और समय पर थी', 'स्टाफ काफी मददगार और विनम्र है', 'निश्चित रूप से सिफारिश करूँगा').
+- Maintain correct Hindi grammar, sentence structure, and respectful tone.
+- You may keep the business name "{company_name}" in its original or Devanagari script.
+- Do NOT mix English sentences.
+""",
+        "gu": f"""
+LANGUAGE: GUJARATI (ગુજરાતી) - CRITICAL REQUIREMENTS:
+- Write EVERY suggestion strictly in natural, authentic, grammatically correct Gujarati (સરળ, શુદ્ધ અને અસલ ગુજરાતી).
+- Write like a real native Gujarati speaker posting a genuine Google review.
+- Use natural Gujarati expressions (e.g. 'ખૂબ જ સારો અનુભવ રહ્યો', 'સેવા ઉત્તમ અને સમયસર હતી', 'સ્ટાફ ખૂબ મદદરૂપ છે').
+- Maintain correct Gujarati grammar.
+- You may keep the business name "{company_name}" in its original form.
+""",
+        "kn": f"""
+LANGUAGE: KANNADA (ಕನ್ನಡ) - CRITICAL REQUIREMENTS:
+- Write EVERY suggestion strictly in natural, authentic, grammatically correct Kannada (ಸಹಜ ಮತ್ತು ವ್ಯಾಕರಣಬದ್ಧ ಕನ್ನಡ).
+- Write like a real native Kannada speaker posting a genuine Google review.
+- Use natural Kannada expressions (e.g. 'ತುಂಬಾ ಉತ್ತಮವಾದ ಅನುಭವ', 'ಸೇವೆ ಅತ್ಯುತ್ತಮವಾಗಿದೆ', 'ಸಿಬ್ಬಂದಿ ತುಂಬಾ ಸಹಕಾರಿಯಾಗಿದ್ದಾರೆ').
+- Maintain correct Kannada grammar.
+- You may keep the business name "{company_name}" in its original form.
+""",
+        "en": """
+LANGUAGE: ENGLISH - CRITICAL REQUIREMENTS:
+- Write fluent, natural and grammatically correct English.
+- Write like a genuine real customer sharing their authentic experience.
+""",
+    }
+
+    language_block = lang_rules.get(language, f"""
 LANGUAGE (CRITICAL):
 Write EVERY suggestion entirely in {language_name}.
-The customer chose this language for their Google review.
 - Use natural everyday {language_name} that a real local customer would type.
-- Do NOT write the reviews in English.
+- Do NOT write in English. Do NOT mix English sentences.
 - You may keep the business name "{company_name}" in its original form.
-- Do not mix English sentences.
-"""
+""")
 
     # Rating-exclusive tone instructions & strictly matched few-shot examples
     if rating == 5:
         tone_instruction = f"""
-TONE: 5 STAR — ENTHUSIASTIC, DELIGHTED, 100% POSITIVE PRAISE.
-The customer had an outstanding, top-tier experience.
+TONE: 5 STAR — EXCELLENT, DELIGHTED, 100% ENTHUSIASTIC PRAISE.
+The customer had an outstanding, flawless experience.
 Key highlights: {business_context.get('examples_5star', 'exceptional service, warm and professional staff, top quality, highly recommended')}
 ABSOLUTE RULE: Every single review MUST be 100% positive praise. Zero complaints, zero criticisms, zero negatives.
-Length: 1 to 3 natural sentences per review.
+Length: 1 to 2 natural sentences per review.
 
 FEW-SHOT EXAMPLES (MATCH THIS EXCELLENT POSITIVE TONE):
-- "Had an incredible experience at {company_name}! The team was courteous, swift, and exceeded all our expectations."
-- "Truly top-notch service from start to finish. Everything was handled with utmost care and professionalism."
-- "Loved my visit to {company_name}. You can tell they take immense pride in their work and customer satisfaction."
-- "Outstanding quality and friendly support. Will definitely be recommending them to all my friends and family!"
+- "Absolutely fantastic experience at {company_name}! Excellent service and outstanding customer support."
+- "One of the best experiences I have had. Top-notch quality and professional staff. Highly recommended!"
+- "Completely satisfied! Everything was perfect from start to finish. Truly impressive work."
+- "Loved my visit to {company_name}. Outstanding quality and friendly support. Will definitely recommend them!"
 """
     elif rating == 4:
         tone_instruction = f"""
-TONE: 4 STAR — POSITIVE AND SATISFIED WITH ONE MINOR SUGGESTION.
-The customer is happy and recommends the business, with a slight constructive observation.
-Key themes: {business_context.get('examples_4star', 'good experience, helpful staff, high quality, minor waiting time or small suggestion')}
-Length: 1 to 3 natural sentences per review.
+TONE: 4 STAR — VERY GOOD EXPERIENCE, EXCLUSIVELY POSITIVE FEEDBACK.
+CRITICAL MANDATE:
+- The customer is VERY HAPPY with the business.
+- Generate ONLY positive feedback that highlights a great experience.
+- ABSOLUTELY FORBIDDEN: Do NOT mention any improvement suggestions, shortcomings, complaints, criticisms, or statements such as "could be better", "needs improvement", "not perfect", "room for improvement", "only small delay", or "slight wait".
+- The review must make the business look good and reflect a very good, pleasant customer experience.
+Key highlights: {business_context.get('examples_4star', 'great service, helpful staff, high quality, smooth experience, professional team')}
+Length: 1 to 2 natural sentences per review.
 
-FEW-SHOT EXAMPLES (MATCH THIS GOOD/SATISFIED TONE):
-- "Really solid service from {company_name}. Everything was done very well, just a slight wait during peak hours."
-- "Great experience overall! The team was friendly and skilled. Would easily recommend them."
-- "Very pleased with the outcome. Quality is definitely there, just minor communication delays initially."
-- "Good value and dependable staff. Very happy with the overall visit to {company_name}."
+FEW-SHOT EXAMPLES (MATCH THIS VERY GOOD POSITIVE TONE — ZERO COMPLAINTS, ZERO IMPROVEMENT SUGGESTIONS):
+- "Had a wonderful experience at {company_name}! The service was excellent, and the staff was very helpful."
+- "Really happy with the overall experience. Everything was handled professionally and smoothly."
+- "Great service, friendly staff and a smooth experience at {company_name}. Highly recommended!"
+- "Very satisfied with the service and quality. Would definitely visit again."
+- "A really pleasant experience with {company_name}. The team was supportive and attentive."
 """
     elif rating == 3:
         tone_instruction = f"""
-TONE: 3 STAR — BALANCED, AVERAGE, NEUTRAL (PROS AND CONS).
-The experience was okay/fair, but had clear room for improvement.
-Key themes: {business_context.get('examples_3star', 'average service, decent outcome but some delays, mixed overall experience')}
-Length: 1 to 3 natural sentences per review.
+TONE: 3 STAR — BALANCED, AVERAGE, NEUTRAL (SATISFACTORY WITH ROOM FOR IMPROVEMENT).
+The experience was average or okay, with minor areas that could be better.
+Key themes: {business_context.get('examples_3star', 'average service, satisfactory outcome, some room for improvement')}
+Length: 1 to 2 natural sentences per review.
 
 FEW-SHOT EXAMPLES (MATCH THIS BALANCED/AVERAGE TONE):
-- "Decent visit to {company_name}. Staff was polite, but the turnaround took longer than expected."
-- "An average experience. Some aspects went smoothly, but communication could be improved."
-- "It was okay overall. Fair pricing, but not quite the standout quality I had hoped for."
-- "Acceptable service. Does the job, but there is noticeable room for process improvement."
+- "The experience at {company_name} was average. There is some room for improvement."
+- "The service was okay, but I expected a little more from the team."
+- "Overall it was a satisfactory experience, although some aspects could be better."
+- "Decent service for the price. Does the job, but there is noticeable room for process improvement."
 """
     elif rating == 2:
         tone_instruction = f"""
 TONE: 2 STAR — DISAPPOINTED, BELOW AVERAGE, CLEAR SHORTCOMINGS.
 The customer felt let down and had unmet expectations.
 Key themes: {business_context.get('examples_2star', 'slow service, disorganized process, poor responsiveness, unmet expectations')}
-Length: 1 to 3 natural sentences per review.
+Length: 1 to 2 natural sentences per review.
 
 FEW-SHOT EXAMPLES (MATCH THIS DISAPPOINTED TONE):
-- "Rather disappointed with my experience at {company_name}. The wait was too long and nobody kept us updated."
-- "Service was disorganized. Staff seemed inattentive and the end result did not match what was promised."
-- "Below what I expected. Communication was difficult and issues took multiple follow-ups to resolve."
+- "The overall experience at {company_name} was below my expectations."
+- "I expected better service and was disappointed with the delays and lack of updates."
+- "The service quality could have been much better. The process felt quite disorganized."
 """
     else:  # rating == 1
         tone_instruction = f"""
-TONE: 1 STAR — HIGHLY CRITICAL, FRUSTRATED, SEVERE SHORTCOMINGS.
-The customer had a very poor experience with critical service failures.
-Key themes: {business_context.get('examples_1star', 'unacceptable delays, rude behavior, poor quality, zero accountability')}
-Length: 1 to 3 natural sentences per review.
+TONE: 1 STAR — HIGHLY CRITICAL, FRUSTRATED, VERY POOR EXPERIENCE.
+The customer had a very disappointing experience with critical service failures.
+Key themes: {business_context.get('examples_1star', 'unacceptable service, rude behavior, poor quality, zero accountability')}
+Length: 1 to 2 natural sentences per review.
 
 FEW-SHOT EXAMPLES (MATCH THIS CRITICAL TONE):
-- "Extremely frustrating experience with {company_name}. Unprofessional handling and complete lack of support."
-- "Very poor service. Commitments were missed and nobody took accountability for the mistakes made."
-- "Would not recommend. The entire process was disorganized and customer concerns were completely ignored."
+- "Very disappointing experience with {company_name}. The service did not meet my expectations at all."
+- "I was not satisfied with the overall experience. Communication and customer support were very poor."
+- "The service quality needs significant improvement. Would not recommend."
 """
 
     if target_count == 3:
@@ -433,24 +501,30 @@ def validate_and_sanitize_suggestions(
         lower = text.lower()
         is_invalid = False
 
-        if rating == 5:
-            # 5-star check: NO negative words allowed whatsoever
+        if rating in (4, 5):
+            # 4-star and 5-star check: NO negative words and NO improvement/shortcoming phrases allowed
             for bad_word in NEGATIVE_TRIGGER_WORDS:
                 if bad_word in lower:
                     logger.warning(
-                        "Polarity Guard: rejected negative word '%s' in 5-star review: %s",
+                        "Polarity Guard: rejected negative word '%s' in %d-star review: %s",
                         bad_word,
+                        rating,
                         text,
                     )
                     is_invalid = True
                     break
 
-        elif rating == 4:
-            # 4-star check: severe complaints forbidden
-            for severe_word in ["terrible", "horrible", "worst", "pathetic", "fraud", "scam", "never again", "खराब", "वाईट"]:
-                if severe_word in lower:
-                    is_invalid = True
-                    break
+            if not is_invalid:
+                for imp_phrase in IMPROVEMENT_TRIGGER_WORDS:
+                    if imp_phrase in lower:
+                        logger.warning(
+                            "Polarity Guard: rejected improvement phrase '%s' in %d-star review: %s",
+                            imp_phrase,
+                            rating,
+                            text,
+                        )
+                        is_invalid = True
+                        break
 
         elif rating in (1, 2):
             # 1-2 star check: overly ecstatic praise should not appear in 1-star
@@ -622,8 +696,8 @@ def _local_star_examples(name: str, scope: str) -> dict:
             f"pricing felt high for what we got, decent but forgettable visit to {label}"
         ),
         "examples_4star": (
-            f"good {s1}, helpful staff, solid {s2}, only a small delay on {s3}, "
-            f"would recommend {label} with a minor improvement"
+            f"good {s1}, helpful staff, solid {s2}, smooth {s3}, "
+            f"thoroughly satisfied and would recommend {label}"
         ),
         "examples_5star": (
             f"excellent {s1}, outstanding {s2}, professional team at {label}, "
@@ -685,7 +759,7 @@ Meaning of each rating:
 - examples_1star: serious complaints (negative)
 - examples_2star: disappointing issues
 - examples_3star: mixed / average
-- examples_4star: mostly good, small improvements
+- examples_4star: very good experience, positive praise (no complaints or improvement notes)
 - examples_5star: enthusiastic praise (positive)
 
 Example shape (do not copy the content):

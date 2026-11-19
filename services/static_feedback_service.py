@@ -53,13 +53,8 @@ def get_available_feedback_suggestions(
         StaticFeedbackResponse.business_key == business_key,
         StaticFeedbackResponse.rating == rating,
         StaticFeedbackResponse.is_active == True,
+        StaticFeedbackResponse.language == language,
     )
-
-    # Try requested language first; if none, fall back to any language (usually 'en')
-    lang_count = base_query.filter(StaticFeedbackResponse.language == language).count()
-    active_lang = language if lang_count > 0 else None
-    if active_lang:
-        base_query = base_query.filter(StaticFeedbackResponse.language == active_lang)
 
     total_pool = base_query.count()
     if total_pool == 0:
@@ -263,7 +258,7 @@ def _generate_star_responses_gemini(
         1: "Very negative, frustrated customer complaints focusing on critical service failures, delays, or poor quality.",
         2: "Disappointed, dissatisfied customer feedback mentioning specific unmet expectations or poor service.",
         3: "Average, mixed, neutral review mentioning both positive points and areas needing improvement.",
-        4: "Positive and satisfied customer review highlighting good service with one minor note.",
+        4: "Very good, positive, and satisfied customer review highlighting good service, quality, and pleasant experience with zero complaints.",
         5: "Highly enthusiastic, delighted customer praise highlighting outstanding service, quality, and strong recommendation.",
     }
 

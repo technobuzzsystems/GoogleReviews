@@ -29,7 +29,7 @@ def _get_default_businesses() -> dict:
             "examples_1star": "buggy deployments or broken code, critical downtime due to poor infrastructure planning, missed project deadlines, lack of communication from the support team, security vulnerabilities left unpatched, unprofessional conduct or incompetence",
             "examples_2star": "slow response to support tickets, complex UI/UX in web design",
             "examples_3star": "technical team is skilled but the project management is disorganized, billing confusion or slow response",
-            "examples_4star": "better documentation, more frequent status updates",
+            "examples_4star": "prompt code delivery, helpful technical support, solid system reliability, professional team",
             "examples_5star": "seamless cloud migration, reliable network uptime, intuitive design interface, proactive security measures, knowledgeable engineering team, project delivered ahead of schedule",
         },
         "boardwale": {
@@ -48,7 +48,7 @@ def _get_default_businesses() -> dict:
             "examples_1star": "poor material quality, delayed installation, spelling errors on prints, peeling signs, unresponsive customer service",
             "examples_2star": "incorrect colors used, rough finishing on edges, slow communication",
             "examples_3star": "design is good but installation was messy, decent boards but pricing was confusing",
-            "examples_4star": "better communication during the design phase, faster installation",
+            "examples_4star": "creative sign designs, quality materials, polite installation team, good value for money",
             "examples_5star": "excellent 3D signage quality, professional finishing, on-time installation, great custom design, high-quality materials, team understood requirements perfectly",
         },
         "jawa_showroom": {
@@ -62,7 +62,7 @@ def _get_default_businesses() -> dict:
             "examples_1star": "rude sales executives, terrible customer service, bikes unavailable for test ride, extremely delayed delivery, finance team was unhelpful, zero product knowledge",
             "examples_2star": "showroom was too crowded and disorganized, sales staff ignored us for a long time, booking process was confusing, test ride was rushed",
             "examples_3star": "average experience, staff was polite but didn't know much about the bike specs, delivery took longer than promised but the bike is good",
-            "examples_4star": "great test ride experience, helpful staff during the finance process, good overall showroom ambiance, just a slight delay in paperwork",
+            "examples_4star": "great test ride experience, helpful staff during the finance process, pleasant showroom ambiance, courteous executives",
             "examples_5star": "excellent dealership experience, very knowledgeable and polite sales executives, smooth EMI and exchange process, fantastic test ride arrangements, memorable delivery ceremony",
         },
         "rutuja_battery": {
