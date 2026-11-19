@@ -94,8 +94,7 @@ def render_business_feedback(request: Request, business_id: str, db: Session, b_
     instagram_enabled = bool(b_config.get("instagram_enabled", False)) and bool(instagram_url)
     facebook_enabled = bool(b_config.get("facebook_enabled", False)) and bool(facebook_url)
     whatsapp_enabled = bool(b_config.get("whatsapp_enabled", False)) and bool(whatsapp_link)
-    mobile = (b_config.get("mobile") or "").strip()
-    has_social_links = bool(instagram_enabled or facebook_enabled or whatsapp_enabled or mobile)
+    has_social_links = bool(instagram_enabled or facebook_enabled or whatsapp_enabled)
 
     context = {
         "request": request,
@@ -116,7 +115,6 @@ def render_business_feedback(request: Request, business_id: str, db: Session, b_
         "facebook_enabled":  facebook_enabled,
         "whatsapp_link":     whatsapp_link,
         "whatsapp_enabled":  whatsapp_enabled,
-        "mobile":            mobile,
         "has_social_links":  has_social_links,
     }
     return templates.TemplateResponse(
