@@ -359,9 +359,12 @@
         <button type="button" class="btn btn-outline" style="padding: 10px 14px; font-size: 12px; color: #fbbf24; border-color: rgba(251, 191, 36, 0.4);" onclick="triggerServerLogin('{{ business_id }}')" title="Sign into Google once so server can post replies">
           <span>🔑 1-Time Google Login</span>
         </button>
-        <a href="/auth/google/connect?business={{ business_id }}" class="btn btn-outline" style="padding: 10px 14px; font-size: 12px; text-decoration: none;">
+        <button type="button" class="btn btn-outline" style="padding: 10px 14px; font-size: 12px; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);" onclick="handleConnectOAuth('{{ business_id }}', {{ 'true' if google_configured else 'false' }})">
           <span>🔗 Connect OAuth</span>
-        </a>
+        </button>
+        <button type="button" class="btn btn-outline" style="padding: 10px 14px; font-size: 12px; color: #94a3b8;" onclick="openCredsModal()" title="Configure Google Cloud OAuth 2.0 Credentials">
+          <span>⚙️ API Keys</span>
+        </button>
       </div>
       {% endif %}
     </div>
@@ -1165,12 +1168,26 @@
     }
   }
 
+  function handleConnectOAuth(bizKey, isConfigured) {
+    if (!isConfigured) {
+      alert("ℹ️ Google Cloud OAuth 2.0 Credentials (Client ID & Secret) are not set yet.\n\nPlease enter them in the API Keys popup.");
+      openCredsModal();
+      return;
+    }
+    window.location.href = "/api/google-business/auth/" + bizKey;
+  }
+
   function openCredsModal() {
     document.getElementById("credsModal").style.display = "flex";
   }
 
   function closeCredsModal() {
     document.getElementById("credsModal").style.display = "none";
+  }
+
+  // Auto-open modal if redirected with ?setup_creds=1
+  if (new URLSearchParams(window.location.search).get("setup_creds") === "1") {
+    setTimeout(openCredsModal, 300);
   }
 
   async function saveGoogleCredsFromModal(e) {

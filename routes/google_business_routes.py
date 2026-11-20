@@ -59,9 +59,9 @@ def start_google_oauth(
         raise HTTPException(status_code=404, detail="Business not found.")
 
     if not is_google_api_configured():
-        raise HTTPException(
-            status_code=503,
-            detail="Google OAuth is not configured on this server. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.",
+        return RedirectResponse(
+            url=f"/admin/auto-reply?business={business_key}&setup_creds=1",
+            status_code=302,
         )
 
     auth_url = get_google_auth_url(business_key)
