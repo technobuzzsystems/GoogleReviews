@@ -485,6 +485,43 @@ def api_reviews_logs_get(
     return get_business_reply_logs(business_key, limit, db)
 
 
+@reviews_router.get("/history")
+def api_reviews_history(
+    business_id: Optional[str] = Query(None),
+    business_key: Optional[str] = Query(None),
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    """Retrieve auto-reply logs formatted for the admin dashboard logs table."""
+    target = business_id or business_key
+    target = None if target == "all" else target
+    logs = get_review_reply_logs(db, business_key=target, limit=limit)
+    return [
+        {
+            "id": l.id,
+            "business_key": l.business_key,
+            "reviewer_name": l.reviewer_name,
+            "rating": l.rating,
+            "review_text": l.review_text,
+            "reply_text": l.reply_text,
+            "language": l.language,
+            "status": l.status,
+            "source": l.source,
+            "created_at": l.created_at.isoformat() if l.created_at else "",
+        }
+        for l in logs
+    ]
+
+
+@reviews_router.get("/extension/download")
+def api_reviews_extension_download():
+    """Information endpoint for legacy extension."""
+    return JSONResponse(
+        status_code=200,
+        content={"message": "Cloud-based auto-reply is active. The browser extension is optional and no longer required."},
+    )
+
+
 @reviews_router.post("/logs/clear")
 def api_reviews_logs_clear(
     business_id: Optional[str] = Query(None),
