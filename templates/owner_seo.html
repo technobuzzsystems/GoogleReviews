@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Google &amp; SEO Settings — TechnoBuzz</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}?v=20261102c" />
+  <style>
+    .serp-preview-box {
+      background: #202124;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 24px;
+      font-family: Arial, sans-serif;
+    }
+    .serp-preview-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #9aa0a6;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .serp-site-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .serp-favicon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #303134;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+    .serp-site-name {
+      font-size: 12px;
+      color: #dadce0;
+      line-height: 1.3;
+    }
+    .serp-url {
+      font-size: 11px;
+      color: #9aa0a6;
+      word-break: break-all;
+    }
+    .serp-title {
+      font-size: 18px;
+      color: #8ab4f8;
+      line-height: 1.3;
+      margin: 4px 0 6px;
+      font-weight: 400;
+      cursor: pointer;
+    }
+    .serp-title:hover {
+      text-decoration: underline;
+    }
+    .serp-snippet {
+      font-size: 13px;
+      color: #bdc1c6;
+      line-height: 1.5;
+      margin: 0;
+    }
+    .char-count {
+      font-size: 0.78rem;
+      color: var(--clr-text-subtle, #888);
+      float: right;
+    }
+    .char-count.good {
+      color: #25d366;
+    }
+    .char-count.warn {
+      color: #ffb830;
+    }
+  </style>
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
+<div class="layout">
+  <aside class="sidebar" id="adminSidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-mark" aria-hidden="true">TB</div>
+        <div>
+          <div class="sidebar-logo-text">TechnoBuzz</div>
+          <div class="sidebar-logo-sub">Business owner</div>
+        </div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/owner" class="nav-item"><span class="nav-icon">💬</span> Customer responses</a>
+      <a href="/owner/social-links" class="nav-item"><span class="nav-icon">🌐</span> Social &amp; WhatsApp</a>
+      <a href="/owner/seo" class="nav-item active"><span class="nav-icon">🔍</span> Google &amp; SEO</a>
+      <a href="/owner/export" class="nav-item"><span class="nav-icon">📥</span> Download CSV</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">{{ user.username }}{% if business_name %} · {{ business_name }}{% endif %}</div>
+      <a href="/owner/logout"><span>⎋</span> Logout</a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-start">
+        <button type="button" class="menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+        <div class="topbar-title">Google Search &amp; SEO Settings</div>
+      </div>
+      {% if business %}
+      <div class="topbar-end">
+        <a href="{{ feedback_path }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm">
+          <span>↗</span> View Live Page
+        </a>
+      </div>
+      {% endif %}
+    </header>
+
+    <div class="page-body">
+      {% if saved %}
+      <div class="alert alert-success" style="background: rgba(37, 211, 102, 0.15); border: 1px solid rgba(37, 211, 102, 0.4); color: #25D366; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-weight: 500;">
+        ✓ Your Google &amp; SEO settings have been updated successfully! Search engines will use this metadata on their next crawl.
+      </div>
+      {% endif %}
+
+      <p class="page-lede">
+        {% if business %}
+        Customize how <strong>{{ business.name }}</strong> appears on Google search results and Google Maps.
+        Leave fields blank to use our smart automatic SEO generation.
+        {% else %}
+        No business is currently linked to your owner account. Please contact TechnoBuzz administration.
+        {% endif %}
+      </p>
+
+      {% if business %}
+      <!-- Live Google SERP Preview Card -->
+      <div class="serp-preview-box">
+        <div class="serp-preview-label">
+          <span>🔍</span> Live Google Search Preview (How customers see your shop on Google)
+        </div>
+        <div class="serp-site-row">
+          <div class="serp-favicon">⚡</div>
+          <div>
+            <div class="serp-site-name">{{ business.name }}</div>
+            <div class="serp-url" id="previewUrl">{{ seo.canonical_url or 'https://reviewhub.technobuzzsystems.com/feedback' }}</div>
+          </div>
+        </div>
+        <div class="serp-title" id="previewTitle">{{ seo.title or business.name }}</div>
+        <p class="serp-snippet" id="previewSnippet">{{ seo.description or 'Rate your experience and share feedback...' }}</p>
+      </div>
+
+      <div class="breakdown-card form-card" style="max-width: 720px;">
+        <form action="/owner/seo" method="POST">
+          <input type="hidden" name="business_key" value="{{ business.key }}">
+
+          {% if businesses and businesses|length > 1 %}
+          <div class="form-group">
+            <label for="select_business">Select Business</label>
+            <select id="select_business" onchange="window.location.href='/owner/seo?business_key=' + this.value">
+              {% for b in businesses %}
+              <option value="{{ b.key }}" {% if b.key == business.key %}selected{% endif %}>{{ b.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+
+          <div class="form-section">1. Google Search Snippet</div>
+          <div class="form-hint" style="margin-top:-8px; margin-bottom:18px;">
+            The title and description that appear in Google search results when people search for your services.
+          </div>
+
+          <!-- SEO Title -->
+          <div class="form-group">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <label for="seo_title">Google Page Title</label>
+              <span class="char-count" id="titleCount">0 / 60</span>
+            </div>
+            <input
+              type="text"
+              id="seo_title"
+              name="seo_title"
+              value="{{ business.seo_title or '' }}"
+              placeholder="{{ seo.title }}"
+              maxlength="100"
+              autocomplete="off"
+            >
+            <div class="form-hint">
+              Recommended: 50–60 characters. E.g., <em>{{ business.name }} | Best Car Battery Dealer in {{ business.area or 'Pune' }}</em>.
+            </div>
+          </div>
+
+          <!-- Meta Description -->
+          <div class="form-group">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <label for="seo_description">Meta Description</label>
+              <span class="char-count" id="descCount">0 / 160</span>
+            </div>
+            <textarea
+              id="seo_description"
+              name="seo_description"
+              rows="3"
+              maxlength="300"
+              placeholder="{{ seo.description }}"
+            >{{ business.seo_description or '' }}</textarea>
+            <div class="form-hint">
+              Recommended: 140–160 characters. A concise 2-sentence summary of your shop, services, and location.
+            </div>
+          </div>
+
+          <div class="form-section" style="margin-top: 28px;">2. Local Business Profile &amp; Schema Data</div>
+          <div class="form-hint" style="margin-top:-8px; margin-bottom:18px;">
+            Helps Google categorize your business correctly for Google Maps and local search queries.
+          </div>
+
+          <!-- Category -->
+          <div class="form-group">
+            <label for="business_category">Business Category</label>
+            <select id="business_category" name="business_category">
+              {% set curr_cat = business.business_category or 'LocalBusiness' %}
+              <option value="LocalBusiness" {% if curr_cat == 'LocalBusiness' %}selected{% endif %}>General Local Business</option>
+              <option value="Automobile / Battery" {% if curr_cat in ['Automobile / Battery', 'AutoRepair'] %}selected{% endif %}>Automobile, Battery &amp; Vehicle Services</option>
+              <option value="Restaurant / Cafe" {% if curr_cat in ['Restaurant / Cafe', 'Restaurant', 'CafeOrCoffeeShop'] %}selected{% endif %}>Restaurant, Cafe &amp; Food Services</option>
+              <option value="Retail / Store" {% if curr_cat in ['Retail / Store', 'Store'] %}selected{% endif %}>Retail Store &amp; Shop</option>
+              <option value="Doctor / Clinic" {% if curr_cat in ['Doctor / Clinic', 'MedicalBusiness'] %}selected{% endif %}>Healthcare, Doctor &amp; Clinic</option>
+              <option value="Professional Services" {% if curr_cat in ['Professional Services', 'ProfessionalService'] %}selected{% endif %}>Professional &amp; Business Services</option>
+              <option value="Salon / Spa" {% if curr_cat in ['Salon / Spa', 'BeautySalon'] %}selected{% endif %}>Beauty Salon &amp; Spa</option>
+            </select>
+            <div class="form-hint">Select the category that best matches your primary business activities.</div>
+          </div>
+
+          <!-- Opening Hours -->
+          <div class="form-group">
+            <label for="opening_hours">Opening Hours</label>
+            <input
+              type="text"
+              id="opening_hours"
+              name="opening_hours"
+              value="{{ business.opening_hours or '' }}"
+              placeholder="Monday to Saturday: 9:00 AM – 9:00 PM"
+              autocomplete="off"
+            >
+            <div class="form-hint">E.g., Monday to Saturday: 9:00 AM – 9:00 PM (Sunday Closed)</div>
+          </div>
+
+          <!-- About Us Text (Indexable Content) -->
+          <div class="form-group">
+            <label for="about_text">About Our Business (Crawlable Website Content)</label>
+            <textarea
+              id="about_text"
+              name="about_text"
+              rows="5"
+              placeholder="Describe your history, specialties, authorized brands, key services, and why customers choose you..."
+            >{{ business.about_text or '' }}</textarea>
+            <div class="form-hint">
+              This text is displayed on your public page so Google’s search bots can read what your business does and rank you for relevant local keywords.
+            </div>
+          </div>
+
+          <div style="margin-top: 28px; display: flex; gap: 12px; align-items: center;">
+            <button type="submit" class="btn btn-primary" style="padding: 10px 26px; font-weight: 600;">Save SEO Settings</button>
+            <a href="{{ feedback_path }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline">Preview Live Page</a>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var titleInput = document.getElementById('seo_title');
+  var descInput = document.getElementById('seo_description');
+  var previewTitle = document.getElementById('previewTitle');
+  var previewSnippet = document.getElementById('previewSnippet');
+  var titleCount = document.getElementById('titleCount');
+  var descCount = document.getElementById('descCount');
+
+  var defaultTitle = "{{ seo.title | replace('\"', '\\\"') }}";
+  var defaultDesc = "{{ seo.description | replace('\"', '\\\"') }}";
+
+  function updatePreview() {
+    if (titleInput) {
+      var val = titleInput.value.trim();
+      previewTitle.textContent = val || defaultTitle;
+      var len = titleInput.value.length;
+      titleCount.textContent = len + ' / 60';
+      titleCount.className = 'char-count ' + (len >= 45 && len <= 65 ? 'good' : (len > 65 ? 'warn' : ''));
+    }
+    if (descInput) {
+      var dval = descInput.value.trim();
+      previewSnippet.textContent = dval || defaultDesc;
+      var dlen = descInput.value.length;
+      descCount.textContent = dlen + ' / 160';
+      descCount.className = 'char-count ' + (dlen >= 120 && dlen <= 160 ? 'good' : (dlen > 160 ? 'warn' : ''));
+    }
+  }
+
+  if (titleInput) titleInput.addEventListener('input', updatePreview);
+  if (descInput) descInput.addEventListener('input', updatePreview);
+  updatePreview();
+
+  var menuBtn = document.getElementById('menuBtn');
+  var sidebar = document.getElementById('adminSidebar');
+  var overlay = document.getElementById('sidebarOverlay');
+  if (menuBtn && sidebar && overlay) {
+    menuBtn.addEventListener('click', function() {
+      sidebar.classList.toggle('open');
+      overlay.hidden = !sidebar.classList.contains('open');
+    });
+    overlay.addEventListener('click', function() {
+      sidebar.classList.remove('open');
+      overlay.hidden = true;
+    });
+  }
+})();
+</script>
+</body>
+</html>

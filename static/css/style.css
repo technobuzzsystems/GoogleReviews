@@ -1932,3 +1932,105 @@ body.theme-rutuja_battery .suggestions-title { color: var(--clr-accent); }
   border-color: var(--clr-primary);
   transform: translateY(-1px);
 }
+
+/* ─── Business Profile & SEO Crawlable Section ─────────────────────────────── */
+.business-profile-card {
+  width: 100%;
+  max-width: 480px;
+  margin: 16px auto 32px;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--r-xl);
+  padding: 20px 24px;
+  box-shadow: var(--shadow-card);
+  color: var(--clr-text-muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.business-profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--clr-border);
+}
+
+.business-profile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 229, 255, 0.1);
+  color: var(--clr-primary);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border-radius: var(--r-full);
+}
+
+.business-profile-category {
+  font-size: 0.76rem;
+  color: var(--clr-text-subtle);
+  font-weight: 500;
+}
+
+.business-profile-title {
+  color: var(--clr-text);
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.business-profile-about {
+  color: var(--clr-text-muted);
+  font-size: 0.84rem;
+  margin-bottom: 16px;
+  white-space: pre-line;
+}
+
+.business-details-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+}
+
+.business-detail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+.business-detail-icon {
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  line-height: 1.3;
+}
+
+.business-detail-text {
+  color: var(--clr-text);
+}
+
+.business-profile-footer {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--clr-text-subtle);
+}
+
+.business-profile-footer a {
+  color: var(--clr-primary);
+  text-decoration: none;
+}
+.business-profile-footer a:hover {
+  text-decoration: underline;
+}

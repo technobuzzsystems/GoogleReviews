@@ -110,6 +110,11 @@ class BusinessConfigModel(Base):
     facebook_enabled = Column(Boolean, default=False, nullable=False)
     whatsapp_number = Column(String, default="")
     whatsapp_enabled = Column(Boolean, default=False, nullable=False)
+    seo_title = Column(String, default="")
+    seo_description = Column(String, default="")
+    business_category = Column(String, default="")
+    about_text = Column(Text, default="")
+    opening_hours = Column(String, default="")
 
 
 class SalesExecutive(Base):

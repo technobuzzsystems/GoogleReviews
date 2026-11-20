@@ -10,8 +10,9 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models.domain_models import BusinessConfigModel, User, UserRole
 from services.auth_service import authenticate_user, get_session_user, login_user, logout_user, require_owner
-from services.business_service import feedback_path_for
+from services.business_service import feedback_path_for, get_business
 from services.feedback_service import export_rows, feedback_stats, list_feedback_page, mark_feedback_read
+from services.seo_service import build_business_seo
 
 router = APIRouter(prefix="/owner")
 templates = Jinja2Templates(directory="templates")
@@ -282,5 +283,85 @@ def owner_save_social_links(
 
     return RedirectResponse(
         url=f"/owner/social-links?business_key={biz.key}&saved=1",
+        status_code=303,
+    )
+
+
+# ─── GET /owner/seo ────────────────────────────────────────────────────────────
+@router.get("/seo")
+def owner_seo_page(
+    request: Request,
+    business_key: str = "",
+    saved: str = "",
+    db: Session = Depends(get_db),
+    user: User = Depends(require_owner),
+):
+    businesses = _owner_businesses(db, user)
+    selected_biz = None
+    if business_key:
+        for b in businesses:
+            if b.key == business_key:
+                selected_biz = b
+                break
+    if not selected_biz and businesses:
+        selected_biz = businesses[0]
+
+    feedback_path = (
+        feedback_path_for(selected_biz.key, selected_biz.route_slug)
+        if selected_biz
+        else "/feedback"
+    )
+
+    b_dict = get_business(db, selected_biz.key) if selected_biz else {}
+    seo_data = build_business_seo(b_dict, request=request) if b_dict else {}
+
+    return templates.TemplateResponse(
+        request=request,
+        name="owner_seo.html",
+        context={
+            "request": request,
+            "user": user,
+            "business": selected_biz,
+            "businesses": businesses,
+            "business_name": selected_biz.name if selected_biz else _owner_business_name(db, user),
+            "feedback_path": feedback_path,
+            "seo": seo_data,
+            "saved": saved == "1",
+            "page_title": "Google & SEO Settings",
+        },
+    )
+
+
+# ─── POST /owner/seo ───────────────────────────────────────────────────────────
+@router.post("/seo")
+def owner_save_seo(
+    request: Request,
+    business_key: str = Form(""),
+    seo_title: str = Form(""),
+    seo_description: str = Form(""),
+    business_category: str = Form(""),
+    about_text: str = Form(""),
+    opening_hours: str = Form(""),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_owner),
+):
+    q = db.query(BusinessConfigModel).filter(BusinessConfigModel.owner_user_id == user.id)
+    if business_key.strip():
+        biz = q.filter(BusinessConfigModel.key == business_key.strip()).first()
+    else:
+        biz = q.order_by(BusinessConfigModel.name.asc()).first()
+
+    if not biz:
+        raise HTTPException(status_code=403, detail="No business found for this owner account.")
+
+    biz.seo_title = (seo_title or "").strip()[:200]
+    biz.seo_description = (seo_description or "").strip()[:500]
+    biz.business_category = (business_category or "").strip()[:100]
+    biz.about_text = (about_text or "").strip()[:3000]
+    biz.opening_hours = (opening_hours or "").strip()[:200]
+    db.commit()
+
+    return RedirectResponse(
+        url=f"/owner/seo?business_key={biz.key}&saved=1",
         status_code=303,
     )

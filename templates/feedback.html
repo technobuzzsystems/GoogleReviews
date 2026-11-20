@@ -4,17 +4,50 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-  <!-- SEO -->
-  <title>Share Your Feedback — {{ company_name }}</title>
-  <meta name="description"
-        content="We value your opinion! Rate your experience at {{ company_name }} and help us serve you better." />
-  <meta name="robots" content="noindex, nofollow" />
+  <!-- Primary SEO Metadata -->
+  <title>{{ seo.title if seo and seo.title else ('Share Your Feedback — ' ~ company_name) }}</title>
+  <meta name="description" content="{{ seo.description if seo and seo.description else ('Rate your experience at ' ~ company_name ~ '. Share verified feedback and connect directly.') }}" />
+  <meta name="robots" content="{{ seo.meta_robots if seo and seo.meta_robots else 'index, follow' }}" />
+  {% if seo and seo.canonical_url %}
+  <link rel="canonical" href="{{ seo.canonical_url }}" />
+  {% endif %}
+
+  <!-- Open Graph / WhatsApp / Facebook Preview -->
+  <meta property="og:type" content="business.business" />
+  <meta property="og:title" content="{{ seo.title if seo and seo.title else ('Share Your Feedback — ' ~ company_name) }}" />
+  <meta property="og:description" content="{{ seo.description if seo and seo.description else ('Rate your experience at ' ~ company_name) }}" />
+  {% if seo and seo.canonical_url %}
+  <meta property="og:url" content="{{ seo.canonical_url }}" />
+  {% endif %}
+  {% if seo and seo.og_image %}
+  <meta property="og:image" content="{{ seo.og_image }}" />
+  {% elif logo_url %}
+  <meta property="og:image" content="{{ logo_url }}" />
+  {% endif %}
+  <meta property="og:site_name" content="TechnoBuzz ReviewHub" />
+
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="{{ seo.title if seo and seo.title else ('Share Your Feedback — ' ~ company_name) }}" />
+  <meta name="twitter:description" content="{{ seo.description if seo and seo.description else ('Rate your experience at ' ~ company_name) }}" />
+  {% if seo and seo.og_image %}
+  <meta name="twitter:image" content="{{ seo.og_image }}" />
+  {% elif logo_url %}
+  <meta name="twitter:image" content="{{ logo_url }}" />
+  {% endif %}
+
+  <!-- Schema.org JSON-LD Structured Data -->
+  {% if seo and seo.schema_json_ld %}
+  <script type="application/ld+json">
+{{ seo.schema_json_ld | safe }}
+  </script>
+  {% endif %}
 
   <!-- Favicon (emoji fallback) -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v=20261119_v8" />
+  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v=20261120_v1" />
 </head>
 
 <body class="theme-{{ business_id }}">
@@ -472,6 +505,53 @@
 
     </main><!-- /feedback-card -->
 
+    {% if not is_blocked %}
+    <!-- ── Verified Business Profile & Crawlable SEO Section ── -->
+    <section class="business-profile-card" aria-label="Business Information and Profile">
+      <div class="business-profile-header">
+        <span class="business-profile-badge">
+          <span>✓</span> Verified Business
+        </span>
+        {% if seo and seo.business_category %}
+        <span class="business-profile-category">{{ seo.business_category }}</span>
+        {% endif %}
+      </div>
+
+      <h2 class="business-profile-title">{{ company_name }}</h2>
+
+      {% if seo and seo.about_text %}
+      <p class="business-profile-about">{{ seo.about_text }}</p>
+      {% endif %}
+
+      <div class="business-details-grid">
+        {% if seo and (seo.address or seo.area) %}
+        <div class="business-detail-row">
+          <span class="business-detail-icon" aria-hidden="true">📍</span>
+          <span class="business-detail-text">{{ seo.address if seo.address else seo.area }}</span>
+        </div>
+        {% endif %}
+
+        {% if seo and seo.opening_hours %}
+        <div class="business-detail-row">
+          <span class="business-detail-icon" aria-hidden="true">🕒</span>
+          <span class="business-detail-text">{{ seo.opening_hours }}</span>
+        </div>
+        {% endif %}
+
+        {% if google_review_url %}
+        <div class="business-detail-row">
+          <span class="business-detail-icon" aria-hidden="true">⭐</span>
+          <span class="business-detail-text">Official Google Reviews Partner Listing</span>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="business-profile-footer">
+        Powered by <a href="/" target="_blank" rel="noopener">TechnoBuzz ReviewHub</a> · Verified Client Profile
+      </div>
+    </section>
+    {% endif %}
+
   </div><!-- /page-wrapper -->
 
   <!-- Toast / Snackbar -->
@@ -481,7 +561,7 @@
   </div>
 
   <!-- JavaScript -->
-  <script src="{{ url_for('static', path='js/i18n.js') }}?v=20261119_v8"></script>
-  <script src="{{ url_for('static', path='js/feedback.js') }}?v=20261119_v8" defer></script>
+  <script src="{{ url_for('static', path='js/i18n.js') }}?v=20261120_v1"></script>
+  <script src="{{ url_for('static', path='js/feedback.js') }}?v=20261120_v1" defer></script>
 </body>
 </html>

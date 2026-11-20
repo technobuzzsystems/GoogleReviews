@@ -19,6 +19,7 @@ from models.schemas import GenerateFeedbackRequest, SubmitFeedbackRequest
 from utils.validators import sanitize_string
 from services.gemini_service import generate_feedback_suggestions, validate_and_sanitize_suggestions
 from services.static_feedback_service import get_available_feedback_suggestions, record_response_usage
+from services.seo_service import build_business_seo, generate_robots_txt, generate_sitemap_xml
 
 router = APIRouter()
 config = get_config()
@@ -60,6 +61,21 @@ def index():
     return RedirectResponse(url="/feedback")
 
 
+# ─── SEO: robots.txt & sitemap.xml ─────────────────────────────────────────────
+@router.get("/robots.txt", response_class=Response)
+def robots_txt(request: Request):
+    """Dynamic robots.txt allowing search engines to index business feedback pages."""
+    content = generate_robots_txt(request=request)
+    return Response(content=content, media_type="text/plain; charset=utf-8", headers={"Cache-Control": "public, max-age=86400"})
+
+
+@router.get("/sitemap.xml", response_class=Response)
+def sitemap_xml(request: Request, db: Session = Depends(get_db)):
+    """Dynamic XML sitemap listing all active, unexpired business pages for Google."""
+    content = generate_sitemap_xml(db, request=request)
+    return Response(content=content, media_type="application/xml; charset=utf-8", headers={"Cache-Control": "public, max-age=3600"})
+
+
 # ─── GET /feedback and /boardwale ──────────────────────────────────────────────
 def render_business_feedback(request: Request, business_id: str, db: Session, b_config: dict = None):
     """Internal helper to render the feedback page with specific business context."""
@@ -96,6 +112,8 @@ def render_business_feedback(request: Request, business_id: str, db: Session, b_
     whatsapp_enabled = bool(b_config.get("whatsapp_enabled", False)) and bool(whatsapp_link)
     has_social_links = bool(instagram_enabled or facebook_enabled or whatsapp_enabled)
 
+    seo = build_business_seo(b_config, request=request)
+
     context = {
         "request": request,
         "business_id":       b_config.get("key") or business_id,
@@ -116,6 +134,7 @@ def render_business_feedback(request: Request, business_id: str, db: Session, b_
         "whatsapp_link":     whatsapp_link,
         "whatsapp_enabled":  whatsapp_enabled,
         "has_social_links":  has_social_links,
+        "seo":               seo,
     }
     return templates.TemplateResponse(
         request=request,

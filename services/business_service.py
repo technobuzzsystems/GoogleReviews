@@ -150,6 +150,11 @@ def _serialize_business(b: BusinessConfigModel, salesman_names: dict = None) -> 
         "facebook_enabled": bool(getattr(b, "facebook_enabled", False)),
         "whatsapp_number": getattr(b, "whatsapp_number", "") or "",
         "whatsapp_enabled": bool(getattr(b, "whatsapp_enabled", False)),
+        "seo_title": getattr(b, "seo_title", "") or "",
+        "seo_description": getattr(b, "seo_description", "") or "",
+        "business_category": getattr(b, "business_category", "") or "",
+        "about_text": getattr(b, "about_text", "") or "",
+        "opening_hours": getattr(b, "opening_hours", "") or "",
     }
 
 
@@ -677,6 +682,16 @@ def save_business(db: Session, business_key: str, data: dict):
         b.whatsapp_number = (data.get("whatsapp_number") or "").strip()
     if "whatsapp_enabled" in data:
         b.whatsapp_enabled = bool(data["whatsapp_enabled"])
+    if "seo_title" in data:
+        b.seo_title = (data.get("seo_title") or "").strip()
+    if "seo_description" in data:
+        b.seo_description = (data.get("seo_description") or "").strip()
+    if "business_category" in data:
+        b.business_category = (data.get("business_category") or "").strip()
+    if "about_text" in data:
+        b.about_text = (data.get("about_text") or "").strip()
+    if "opening_hours" in data:
+        b.opening_hours = (data.get("opening_hours") or "").strip()
     raw_fr = data.get("franchise_id")
     if raw_fr not in (None, "", 0, "0"):
         b.franchise_id = int(raw_fr)
