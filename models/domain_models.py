@@ -115,6 +115,11 @@ class BusinessConfigModel(Base):
     business_category = Column(String, default="")
     about_text = Column(Text, default="")
     opening_hours = Column(String, default="")
+    reply_tone = Column(String, default="professional_warm")
+    reply_signature = Column(String, default="")
+    reply_language_mode = Column(String, default="auto")
+    auto_reply_enabled = Column(Boolean, default=True, nullable=False)
+    seo_keywords = Column(Text, default="")
 
 
 class SalesExecutive(Base):
@@ -303,4 +308,42 @@ class StaticFeedbackUsage(Base):
     rating = Column(Integer, nullable=False, index=True)
     private_feedback_id = Column(Integer, ForeignKey("private_feedback.id", ondelete="SET NULL"), nullable=True, index=True)
     used_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class GoogleBusinessAccount(Base):
+    __tablename__ = "google_business_accounts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    business_key = Column(String, ForeignKey("businesses.key"), nullable=False, unique=True, index=True)
+    google_account_id = Column(String, default="")       # e.g., accounts/1029384756
+    google_location_id = Column(String, default="")      # e.g., locations/987654321
+    location_name = Column(String, default="")           # e.g., Prathmesh Hotel
+    account_email = Column(String, default="")           # Google account email
+    access_token = Column(Text, default="")
+    refresh_token = Column(Text, default="")
+    token_expiry = Column(DateTime, nullable=True)
+    is_connected = Column(Boolean, default=False, nullable=False)
+    auto_reply_enabled = Column(Boolean, default=True, nullable=False)
+    last_synced_at = Column(DateTime, nullable=True)
+    last_sync_status = Column(String, default="never")   # success | error | never
+    error_message = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ReviewReplyLog(Base):
+    __tablename__ = "review_reply_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    business_key = Column(String, nullable=False, index=True)
+    reviewer_name = Column(String, default="")
+    rating = Column(Integer, default=5, nullable=False)
+    review_text = Column(Text, default="")
+    reply_text = Column(Text, default="")
+    language = Column(String, default="auto")
+    tone = Column(String, default="professional_warm")
+    status = Column(String, default="sent", index=True)  # generated | sent | failed
+    source = Column(String, default="cloud_api")        # cloud_api | manual | simulation
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
 

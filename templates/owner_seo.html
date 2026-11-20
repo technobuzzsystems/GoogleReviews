@@ -265,6 +265,96 @@
             </div>
           </div>
 
+          <div class="form-section" style="margin-top: 28px;">3. Google Business Profile &amp; AI Auto-Reply</div>
+          <div class="form-hint" style="margin-top:-8px; margin-bottom:18px;">
+            Automatically detects new customer reviews on Google and posts SEO-friendly, personalized Gemini AI replies in Marathi, Hindi, or English.
+          </div>
+
+          <!-- Connection Status Card -->
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 14px 16px; margin-bottom: 20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+              <div>
+                <div style="font-size:0.85rem; font-weight:600; color:#dadce0;">
+                  Google Account Connection:
+                  {% if google_account and google_account.is_connected %}
+                  <span style="color: #25d366; font-weight:700;">🟢 Connected</span>
+                  {% else %}
+                  <span style="color: #ea4335; font-weight:700;">🔴 Not Connected</span>
+                  {% endif %}
+                </div>
+                {% if google_account and google_account.is_connected %}
+                <div style="font-size:0.78rem; color:#9aa0a6; margin-top:3px;">
+                  Profile: <strong>{{ google_account.location_name or business.name }}</strong> ({{ google_account.account_email }})
+                </div>
+                {% endif %}
+              </div>
+              <div>
+                {% if google_account and google_account.is_connected %}
+                <button type="button" class="btn btn-outline btn-sm" onclick="disconnectGoogleOwner('{{ business.key }}')" style="color:#ea4335; border-color:rgba(234,67,53,0.4);">
+                  Disconnect
+                </button>
+                {% else %}
+                <a href="/api/google-business/auth/{{ business.key }}" class="btn btn-primary btn-sm" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                  <span>🔗 Connect Google Profile</span>
+                </a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Enable Auto-Reply Toggle -->
+          <div class="form-group" style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:8px;">
+            <div>
+              <label for="auto_reply_enabled" style="margin-bottom:2px; cursor:pointer;">Automatic Review Replies</label>
+              <div class="form-hint" style="margin:0;">Automatically reply to new 4-star and 5-star Google Reviews via Gemini AI</div>
+            </div>
+            <input type="checkbox" id="auto_reply_enabled" name="auto_reply_enabled" value="true" {% if business.auto_reply_enabled %}checked{% endif %} style="width:20px; height:20px; cursor:pointer;">
+          </div>
+
+          <!-- SEO Keywords for Reviews -->
+          <div class="form-group">
+            <label for="seo_keywords">SEO Keywords for Review Replies</label>
+            <input
+              type="text"
+              id="seo_keywords"
+              name="seo_keywords"
+              value="{{ business.seo_keywords or '' }}"
+              placeholder="e.g. Best car battery in Pune, Exide dealer, emergency jumpstart, genuine inverter battery"
+              maxlength="500"
+              autocomplete="off"
+            >
+            <div class="form-hint">
+              Comma-separated target keywords. The AI will naturally incorporate relevant keywords into Google Review replies to boost your local SEO ranking.
+            </div>
+          </div>
+
+          <!-- Reply Tone -->
+          <div class="form-group">
+            <label for="reply_tone">Review Reply Tone</label>
+            <select id="reply_tone" name="reply_tone">
+              {% set curr_tone = business.reply_tone or 'professional_warm' %}
+              <option value="professional_warm" {% if curr_tone == 'professional_warm' %}selected{% endif %}>Professional &amp; Warm (Recommended)</option>
+              <option value="casual_friendly" {% if curr_tone == 'casual_friendly' %}selected{% endif %}>Friendly &amp; Cheerful</option>
+              <option value="formal" {% if curr_tone == 'formal' %}selected{% endif %}>Executive Formal</option>
+              <option value="short" {% if curr_tone == 'short' %}selected{% endif %}>Short &amp; Crisp</option>
+            </select>
+          </div>
+
+          <!-- Reply Signature -->
+          <div class="form-group">
+            <label for="reply_signature">Sign-Off Signature</label>
+            <input
+              type="text"
+              id="reply_signature"
+              name="reply_signature"
+              value="{{ business.reply_signature or '' }}"
+              placeholder="e.g. — Team {{ business.name }}"
+              maxlength="150"
+              autocomplete="off"
+            >
+            <div class="form-hint">Signature appended at the end of every reply.</div>
+          </div>
+
           <div style="margin-top: 28px; display: flex; gap: 12px; align-items: center;">
             <button type="submit" class="btn btn-primary" style="padding: 10px 26px; font-weight: 600;">Save SEO Settings</button>
             <a href="{{ feedback_path }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline">Preview Live Page</a>
@@ -322,6 +412,17 @@
       overlay.hidden = true;
     });
   }
+  async function disconnectGoogleOwner(bizKey) {
+    if (!confirm("Are you sure you want to disconnect Google Business Profile?")) return;
+    try {
+      const res = await fetch("/api/google-business/disconnect/" + bizKey, { method: "POST" });
+      if (!res.ok) throw new Error("Disconnect failed");
+      window.location.reload();
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+  }
+  window.disconnectGoogleOwner = disconnectGoogleOwner;
 })();
 </script>
 </body>

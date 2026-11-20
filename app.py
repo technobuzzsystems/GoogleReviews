@@ -18,6 +18,12 @@ from config import get_config
 from database import init_db
 from routes.admin_routes import router as admin_router
 from routes.feedback_routes import router as feedback_router
+from routes.google_business_routes import (
+    connect_router,
+    router as google_business_router,
+    reviews_router,
+    server_engine_router,
+)
 from routes.owner_routes import router as owner_router
 from routes.payment_routes import router as payment_router
 from services.auth_service import AuthRedirect
@@ -63,8 +69,12 @@ def create_app() -> FastAPI:
     app.include_router(payment_router)
     app.include_router(admin_router)
     app.include_router(owner_router)
+    app.include_router(google_business_router)
+    app.include_router(reviews_router)
+    app.include_router(connect_router)
+    app.include_router(server_engine_router)
 
-    logger.info("[OK] Routers registered: feedback_router, payment_router, admin_router, owner_router")
+    logger.info("[OK] Routers registered: feedback_router, payment_router, admin_router, owner_router, google_business_router, reviews_router, connect_router, server_engine_router")
 
     @app.exception_handler(AuthRedirect)
     async def auth_redirect_handler(request: Request, exc: AuthRedirect):

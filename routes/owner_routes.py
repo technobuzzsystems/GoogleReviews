@@ -8,7 +8,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models.domain_models import BusinessConfigModel, User, UserRole
+from models.domain_models import BusinessConfigModel, GoogleBusinessAccount, User, UserRole
 from services.auth_service import authenticate_user, get_session_user, login_user, logout_user, require_owner
 from services.business_service import feedback_path_for, get_business
 from services.feedback_service import export_rows, feedback_stats, list_feedback_page, mark_feedback_read
@@ -315,6 +315,14 @@ def owner_seo_page(
     b_dict = get_business(db, selected_biz.key) if selected_biz else {}
     seo_data = build_business_seo(b_dict, request=request) if b_dict else {}
 
+    from services.google_business_service import is_google_api_configured
+    google_configured = is_google_api_configured()
+    google_account = (
+        db.query(GoogleBusinessAccount).filter_by(business_key=selected_biz.key).first()
+        if selected_biz
+        else None
+    )
+
     return templates.TemplateResponse(
         request=request,
         name="owner_seo.html",
@@ -327,6 +335,8 @@ def owner_seo_page(
             "feedback_path": feedback_path,
             "seo": seo_data,
             "saved": saved == "1",
+            "google_account": google_account,
+            "google_configured": google_configured,
             "page_title": "Google & SEO Settings",
         },
     )
@@ -342,6 +352,10 @@ def owner_save_seo(
     business_category: str = Form(""),
     about_text: str = Form(""),
     opening_hours: str = Form(""),
+    seo_keywords: str = Form(""),
+    reply_tone: str = Form("professional_warm"),
+    reply_signature: str = Form(""),
+    auto_reply_enabled: bool = Form(False),
     db: Session = Depends(get_db),
     user: User = Depends(require_owner),
 ):
@@ -359,6 +373,15 @@ def owner_save_seo(
     biz.business_category = (business_category or "").strip()[:100]
     biz.about_text = (about_text or "").strip()[:3000]
     biz.opening_hours = (opening_hours or "").strip()[:200]
+    biz.seo_keywords = (seo_keywords or "").strip()[:500]
+    biz.reply_tone = (reply_tone or "professional_warm").strip()[:50]
+    biz.reply_signature = (reply_signature or "").strip()[:150]
+    biz.auto_reply_enabled = bool(auto_reply_enabled)
+
+    account = db.query(GoogleBusinessAccount).filter_by(business_key=biz.key).first()
+    if account:
+        account.auto_reply_enabled = bool(auto_reply_enabled)
+
     db.commit()
 
     return RedirectResponse(

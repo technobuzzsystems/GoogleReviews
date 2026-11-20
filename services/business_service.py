@@ -155,6 +155,11 @@ def _serialize_business(b: BusinessConfigModel, salesman_names: dict = None) -> 
         "business_category": getattr(b, "business_category", "") or "",
         "about_text": getattr(b, "about_text", "") or "",
         "opening_hours": getattr(b, "opening_hours", "") or "",
+        "reply_tone": getattr(b, "reply_tone", "professional_warm") or "professional_warm",
+        "reply_signature": getattr(b, "reply_signature", "") or (f"— Team {b.name}" if b.name else ""),
+        "reply_language_mode": getattr(b, "reply_language_mode", "auto") or "auto",
+        "auto_reply_enabled": bool(getattr(b, "auto_reply_enabled", True) if getattr(b, "auto_reply_enabled", None) is not None else True),
+        "seo_keywords": getattr(b, "seo_keywords", "") or "",
     }
 
 
@@ -692,6 +697,16 @@ def save_business(db: Session, business_key: str, data: dict):
         b.about_text = (data.get("about_text") or "").strip()
     if "opening_hours" in data:
         b.opening_hours = (data.get("opening_hours") or "").strip()
+    if "reply_tone" in data:
+        b.reply_tone = (data.get("reply_tone") or "professional_warm").strip()
+    if "reply_signature" in data:
+        b.reply_signature = (data.get("reply_signature") or "").strip()
+    if "reply_language_mode" in data:
+        b.reply_language_mode = (data.get("reply_language_mode") or "auto").strip()
+    if "auto_reply_enabled" in data:
+        b.auto_reply_enabled = bool(data["auto_reply_enabled"])
+    if "seo_keywords" in data:
+        b.seo_keywords = (data.get("seo_keywords") or "").strip()
     raw_fr = data.get("franchise_id")
     if raw_fr not in (None, "", 0, "0"):
         b.franchise_id = int(raw_fr)

@@ -309,6 +309,92 @@ def admin_dashboard(
     )
 
 
+# ─── GET /admin/auto-reply ───────────────────────────────────────────────────
+@router.get("/auto-reply")
+def auto_reply_dashboard(
+    request: Request,
+    business: str = "",
+    db: Session = Depends(get_db),
+    user: User = Depends(require_login),
+):
+    """Render the AI Review Auto-Replier management dashboard."""
+    from models.domain_models import BusinessConfigModel, GoogleBusinessAccount, UserRole
+    from services.business_service import get_businesses_for_user, user_owns_business
+    from services.google_business_service import is_google_api_configured
+    from services.reply_service import get_review_reply_logs
+
+    google_configured = is_google_api_configured()
+    visible_businesses = get_businesses_for_user(db, user)
+
+    # Resolve default business for user
+    if not business:
+        if user.role == UserRole.ADMIN:
+            business = "technobuzz" if "technobuzz" in visible_businesses else (next(iter(visible_businesses.keys())) if visible_businesses else "technobuzz")
+        elif visible_businesses:
+            business = next(iter(visible_businesses.keys()))
+        else:
+            business = "technobuzz"
+
+    # Enforce permissions for non-admin users
+    if business != "all" and not user_owns_business(db, user, business):
+        if visible_businesses:
+            business = next(iter(visible_businesses.keys()))
+        else:
+            business = "technobuzz"
+
+    if business == "all" and user.role == UserRole.ADMIN:
+        b_config = {"name": "All Organizations", "key": "all", "scope": "All multi-tenant client businesses"}
+        settings = {
+            "business_key": "all",
+            "company_name": "All Organizations",
+            "reply_tone": "professional_warm",
+            "reply_signature": "",
+            "reply_language_mode": "auto",
+            "auto_send_enabled": True,
+            "auto_send_delay": 2,
+            "auto_reply_enabled": True,
+            "seo_keywords": "",
+        }
+        reply_logs = get_review_reply_logs(db, business_key=None, limit=100)
+        google_account = None
+    else:
+        if business == "all":
+            business = next(iter(visible_businesses.keys())) if visible_businesses else "technobuzz"
+        b_config = visible_businesses.get(business) or get_business(db, business) or {}
+        biz_model = db.query(BusinessConfigModel).filter_by(key=business).first()
+        settings = {
+            "business_key": business,
+            "company_name": b_config.get("name", business),
+            "reply_tone": getattr(biz_model, "reply_tone", "professional_warm") or "professional_warm",
+            "reply_signature": getattr(biz_model, "reply_signature", "") or f"— Team {b_config.get('name', business)}",
+            "reply_language_mode": getattr(biz_model, "reply_language_mode", "auto") or "auto",
+            "auto_send_enabled": getattr(biz_model, "auto_reply_enabled", True) if biz_model else True,
+            "auto_reply_enabled": getattr(biz_model, "auto_reply_enabled", True) if biz_model else True,
+            "auto_send_delay": 2,
+            "seo_keywords": getattr(biz_model, "seo_keywords", "") or "",
+        }
+        reply_logs = get_review_reply_logs(db, business_key=business, limit=50)
+        google_account = db.query(GoogleBusinessAccount).filter_by(business_key=business).first()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="admin_auto_reply.html",
+        context=_admin_context(
+            request,
+            user,
+            selected_business=b_config,
+            settings=settings,
+            reply_logs=reply_logs,
+            google_account=google_account,
+            google_configured=google_configured,
+            business_id=business,
+            businesses=visible_businesses,
+            page_title="AI Auto-Reply Hub",
+            active_nav="auto_reply",
+        ),
+    )
+
+
 # ─── GET /admin/api/stats ──────────────────────────────────────────────────────
 @router.get("/api/stats")
 def api_stats(
