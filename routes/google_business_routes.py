@@ -550,15 +550,13 @@ def api_server_engine_sync(
     business_key: str,
     db: Session = Depends(get_db),
 ):
-    return sync_and_auto_reply_for_business(db, business_key)
+    from services.server_reply_engine import sync_business_server_side
+    return sync_business_server_side(db, business_key)
 
 
 @server_engine_router.post("/login/{business_key}")
 def api_server_engine_login(
     business_key: str,
 ):
-    return {
-        "success": True,
-        "redirect_url": f"/api/google-business/auth/{business_key}",
-        "message": "Redirect to Google OAuth login",
-    }
+    from services.server_reply_engine import launch_business_login
+    return launch_business_login(business_key)
