@@ -184,6 +184,25 @@ def fetch_accounts_and_locations(access_token: str) -> List[Dict[str, Any]]:
         with urllib.request.urlopen(req, timeout=15) as resp:
             accounts_data = json.loads(resp.read().decode("utf-8"))
             accounts = accounts_data.get("accounts", [])
+    except urllib.error.HTTPError as e:
+        err_body = ""
+        try:
+            err_body = e.read().decode("utf-8")
+        except Exception:
+            pass
+        logger.warning("Could not list Google Business Accounts (HTTP %s): %s", e.code, err_body)
+        if "ACCESS_TOKEN_SCOPE_INSUFFICIENT" in err_body:
+            raise RuntimeError(
+                "Google Business Profile permissions were not granted during login.\n\n"
+                "👉 Please click Disconnect, then click Connect OAuth again. On Google's permission screen, "
+                "make sure to CHECK the box: 'See, edit, create and delete your Google business listings'."
+            )
+        elif "PERMISSION_DENIED" in err_body:
+            raise RuntimeError(
+                "Google Cloud API permission denied. Please ensure 'My Business Account Management API' "
+                "and 'My Business Business Information API' are enabled in Google Cloud Console."
+            )
+        return []
     except Exception as e:
         logger.warning("Could not list Google Business Accounts: %s", e)
         return []
@@ -325,7 +344,14 @@ def sync_and_auto_reply_for_business(db: Session, business_key: str) -> Dict[str
         return {"success": False, "error": f"Authentication failed: {str(e)}"}
 
     if not account.google_account_id or not account.google_location_id:
-        locs = fetch_accounts_and_locations(access_token)
+        try:
+            locs = fetch_accounts_and_locations(access_token)
+        except Exception as e:
+            account.last_sync_status = "error"
+            account.error_message = str(e)
+            db.commit()
+            return {"success": False, "error": str(e)}
+
         if locs:
             account.google_account_id = locs[0]["account_id"]
             account.google_location_id = locs[0]["location_id"]
@@ -335,7 +361,7 @@ def sync_and_auto_reply_for_business(db: Session, business_key: str) -> Dict[str
             account.last_sync_status = "error"
             account.error_message = "No verified Google Business location found in connected Google Account."
             db.commit()
-            return {"success": False, "error": "No verified Google Business location found."}
+            return {"success": False, "error": "No verified Google Business location found for this account. Ensure this Google account is an Owner or Manager of the business on Google."}
 
     unreplied = fetch_unreplied_reviews(account.google_account_id, account.google_location_id, access_token)
     replied_count = 0
