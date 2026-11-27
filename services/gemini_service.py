@@ -45,10 +45,10 @@ REVIEW_LANGUAGE_NAMES = {
     "ml": "Malayalam (മലയാളം)",
 }
 
-_MAX_RETRIES = 1
-_RETRY_DELAYS = [0.3]
-_REQUEST_TIMEOUT = 8
-_TOTAL_BUDGET_SEC = 10
+_MAX_RETRIES = 2
+_RETRY_DELAYS = [0.3, 0.5]
+_REQUEST_TIMEOUT = 25
+_TOTAL_BUDGET_SEC = 45
 
 # Explicit negative indicators forbidden in 4-star and 5-star feedback
 NEGATIVE_TRIGGER_WORDS = {

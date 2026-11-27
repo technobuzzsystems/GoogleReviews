@@ -36,7 +36,6 @@ from routes.payment_routes import router as payment_router
 from routes.review_reply_routes import router as review_reply_router
 from routes.server_engine_routes import router as server_engine_router
 from services.auth_service import AuthRedirect
-from services.google_business_service import sync_all_active_businesses as sync_google_api_businesses
 from services.server_reply_engine import sync_all_active_businesses as sync_server_engine_businesses
 from utils.network import build_lan_url
 
@@ -59,10 +58,8 @@ def _run_periodic_sync_in_thread():
 
     db = SessionLocal()
     try:
-        # 1. Check server-side headless engine for all authenticated businesses
+        # Check server-side headless engine for all authenticated businesses (zero API quota)
         sync_server_engine_businesses(db)
-        # 2. Check direct Google Cloud API for connected OAuth accounts
-        sync_google_api_businesses(db)
     except Exception as e:
         logger.error("[ServerEngine] Error in 24/7 sync thread: %s", str(e), exc_info=True)
     finally:
