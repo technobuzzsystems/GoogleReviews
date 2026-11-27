@@ -61,7 +61,10 @@ def _get_client() -> genai.Client:
     api_key = _gemini_api_key()
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY is not configured in .env file.")
-    return genai.Client(api_key=api_key)
+    return genai.Client(
+        api_key=api_key,
+        http_options=types.HttpOptions(timeout=8000),
+    )
 
 
 def _detect_is_devanagari(text: str) -> bool:
@@ -116,9 +119,11 @@ def sanitize_reviewer_name(name: Optional[str]) -> str:
         "review", "reviews", "photo", "photos", "guide", "local guide",
         "press", "enter", "owner", "reply", "replying", "publicly",
         "google", "search", "customer", "valued customer", "client",
+        "user", "anonymous", "null", "undefined", "translate", "view full",
+        "share", "like", "feedback", "post", "comment",
     ]
     for token in forbidden_tokens:
-        if re.search(r"\b" + re.escape(token) + r"\b", lower):
+        if re.search(r"\b" + re.escape(token) + r"\b", lower) or token in lower:
             return ""
 
     return clean
@@ -246,8 +251,37 @@ def _local_fallback_reply(
     return {"reply": body, "language": "en", "detected_language": "English", "sentiment": "positive" if rating >= 4 else "negative", "source": "local_fallback"}
 
 
+def find_matching_business(db: Session, query_str: str) -> Optional[Dict[str, Any]]:
+    """
+    Find business by key, ID, or name (case-insensitive fuzzy match).
+    Allows the auto-replier to work for ANY organization in the system!
+    """
+    if not query_str:
+        return None
+
+    q = str(query_str).strip().lower()
+
+    # 1. Exact key match
+    biz = db.query(BusinessConfigModel).filter(BusinessConfigModel.key == q).first()
+    if biz:
+        from services.business_service import _serialize_business
+        return _serialize_business(biz)
+
+    # 2. Match by exact or partial name / ID
+    all_bizs = db.query(BusinessConfigModel).all()
+    for b in all_bizs:
+        b_name = (b.name or "").lower()
+        b_key = (b.key or "").lower()
+        b_id = str(b.id or "").lower()
+        if q in b_name or b_name in q or q in b_key or q in b_id:
+            from services.business_service import _serialize_business
+            return _serialize_business(b)
+
+    return None
+
+
 def generate_review_reply(
-    business_name: str,
+    business_name: str = "",
     reviewer_name: str = "",
     rating: int = 5,
     review_text: str = "",
@@ -255,6 +289,7 @@ def generate_review_reply(
     language: str = "auto",
     tone: str = "professional_warm",
     auto_sign: bool = True,
+    signature: str = "",
 ) -> Dict[str, Any]:
     """
     Generate an AI-powered, SEO-friendly Google Review reply using Gemini.
@@ -263,13 +298,14 @@ def generate_review_reply(
     b_ctx = business_context or {}
     company_name = business_name or b_ctx.get("name") or "Our Business"
     clean_name = sanitize_reviewer_name(reviewer_name)
-    signature = (b_ctx.get("reply_signature") or "").strip() or f"— Team {company_name}"
+    custom_sign = (signature or "").strip()
+    signature_val = custom_sign or (b_ctx.get("reply_signature") or "").strip() or f"— Team {company_name}"
 
     try:
         client = _get_client()
     except Exception as e:
         logger.warning("Could not initialize Gemini client: %s. Using local fallback.", e)
-        return _local_fallback_reply(review_text, clean_name, rating, company_name, language, signature)
+        return _local_fallback_reply(review_text, clean_name, rating, company_name, language, signature_val)
 
     prompt = _build_seo_reply_prompt(
         business_name=company_name,
@@ -321,7 +357,7 @@ def generate_review_reply(
             continue
 
     logger.warning("All Gemini models failed (%s). Falling back to local template.", last_error)
-    return _local_fallback_reply(review_text, clean_name, rating, company_name, language, signature)
+    return _local_fallback_reply(review_text, clean_name, rating, company_name, language, signature_val)
 
 
 def log_review_reply(
@@ -376,3 +412,50 @@ def clear_review_reply_logs(db: Session, business_key: Optional[str] = None) -> 
     count = query.delete(synchronize_session=False)
     db.commit()
     return count
+
+
+def get_business_reply_settings(db: Session, business_key: str) -> Dict[str, Any]:
+    """Get reply preferences for a business."""
+    biz = db.query(BusinessConfigModel).filter(BusinessConfigModel.key == business_key).first()
+    if not biz:
+        return {
+            "business_key": business_key,
+            "company_name": "TechnoBuzz Systems",
+            "reply_tone": "professional_warm",
+            "reply_signature": "— Team TechnoBuzz Systems",
+            "reply_language_mode": "auto",
+            "auto_send_enabled": True,
+            "auto_send_delay": 2,
+        }
+    return {
+        "business_key": biz.key,
+        "company_name": biz.name,
+        "reply_tone": getattr(biz, "reply_tone", "professional_warm") or "professional_warm",
+        "reply_signature": getattr(biz, "reply_signature", "") or f"— Team {biz.name}",
+        "reply_language_mode": getattr(biz, "reply_language_mode", "auto") or "auto",
+        "auto_send_enabled": getattr(biz, "auto_send_enabled", True) if getattr(biz, "auto_send_enabled", True) is not None else True,
+        "auto_send_delay": getattr(biz, "auto_send_delay", 2) if getattr(biz, "auto_send_delay", 2) is not None else 2,
+    }
+
+
+def save_business_reply_settings(
+    db: Session,
+    business_key: str,
+    reply_tone: str = "professional_warm",
+    reply_signature: str = "",
+    reply_language_mode: str = "auto",
+    auto_send_enabled: bool = True,
+    auto_send_delay: int = 2,
+) -> bool:
+    """Update review reply preferences for a business."""
+    biz = db.query(BusinessConfigModel).filter(BusinessConfigModel.key == business_key).first()
+    if not biz:
+        return False
+    biz.reply_tone = reply_tone
+    biz.reply_signature = reply_signature
+    biz.reply_language_mode = reply_language_mode
+    biz.auto_send_enabled = auto_send_enabled
+    biz.auto_send_delay = auto_send_delay
+    db.commit()
+    return True
+

@@ -121,6 +121,10 @@ class BusinessConfigModel(Base):
     auto_reply_enabled = Column(Boolean, default=True, nullable=False)
     seo_keywords = Column(Text, default="")
 
+    auto_send_enabled = Column(Boolean, default=True)
+    auto_send_delay = Column(Integer, default=2)
+
+
 
 class SalesExecutive(Base):
     __tablename__ = "sales_executives"

@@ -45,10 +45,10 @@ REVIEW_LANGUAGE_NAMES = {
     "ml": "Malayalam (മലയാളം)",
 }
 
-_MAX_RETRIES = 2
-_RETRY_DELAYS = [0.3, 0.5]
-_REQUEST_TIMEOUT = 25
-_TOTAL_BUDGET_SEC = 45
+_MAX_RETRIES = 1
+_RETRY_DELAYS = [0.3]
+_REQUEST_TIMEOUT = 8
+_TOTAL_BUDGET_SEC = 10
 
 # Explicit negative indicators forbidden in 4-star and 5-star feedback
 NEGATIVE_TRIGGER_WORDS = {
@@ -709,7 +709,7 @@ def generate_feedback_suggestions(
             continue
 
     elapsed = round(time.monotonic() - (deadline - _TOTAL_BUDGET_SEC), 2)
-    logger.error(
+    logger.warning(
         "All AI models failed for rating=%d after %.2fs. Last error: %s. Falling back to local templates.",
         rating,
         elapsed,

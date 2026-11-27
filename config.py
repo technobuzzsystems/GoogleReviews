@@ -45,11 +45,12 @@ class Config:
     # Public site URL used on QR codes and shareable client links
     APP_BASE_URL: str = os.getenv("APP_BASE_URL", "https://reviewhub.technobuzzsystems.com")
 
-    # ─── Google Business Profile ───────────────────────────────────────────────
+    # ─── Google Business Profile & OAuth 2.0 ──────────────────────────────────
     # URL where customers can post their review on Google.
-    # Set this to the Google Review link for your business.
-    # Leave blank to disable the "Post on Google" button on the success page.
     GOOGLE_REVIEW_URL: str = os.getenv("GOOGLE_REVIEW_URL", "")
+    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI", "")
 
     # ─── Amazon S3 (business logos) ──────────────────────────────────────────
     AWS_ACCESS_KEY_ID: str = os.getenv("AWS_ACCESS_KEY_ID", "")

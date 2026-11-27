@@ -35,3 +35,7 @@ itsdangerous>=2.2.0
 
 # Production WSGI server (optional, for deployment)
 gunicorn==22.0.0
+
+# 24/7 Server-Side Headless Review Engine
+playwright>=1.40.0
+

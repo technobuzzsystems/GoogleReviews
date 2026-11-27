@@ -434,6 +434,47 @@ def api_reviews_generate_reply(
     return result
 
 
+class BatchReviewsGenerateReplyRequest(BaseModel):
+    reviews: list[ReviewsGenerateReplyRequest]
+
+
+@reviews_router.post("/batch-generate")
+def api_reviews_batch_generate(
+    payload: BatchReviewsGenerateReplyRequest,
+    db: Session = Depends(get_db),
+):
+    results = []
+    for item in payload.reviews:
+        biz_key = item.business_key or item.business_id or "technobuzz"
+        biz = db.query(BusinessConfigModel).filter_by(key=biz_key).first()
+        b_dict = {
+            "name": (biz.name if biz else item.business_name) or biz_key,
+            "business_category": getattr(biz, "business_category", "") or "Local Business",
+            "area": getattr(biz, "area", "") or "",
+            "scope": getattr(biz, "scope", "") or "",
+            "seo_keywords": getattr(biz, "seo_keywords", "") or "",
+            "mobile": getattr(biz, "mobile", "") or "",
+            "reply_signature": getattr(biz, "reply_signature", "") or (f"— Team {biz.name}" if biz else ""),
+        }
+        res = generate_review_reply(
+            business_name=b_dict["name"],
+            reviewer_name=item.reviewer_name or "Valued Customer",
+            rating=item.rating or 5,
+            review_text=item.review_text or "",
+            business_context=b_dict,
+            language=item.language or "auto",
+            tone=item.tone or "professional_warm",
+            auto_sign=item.auto_sign if item.auto_sign is not None else True,
+        )
+        results.append({
+            "reviewer_name": item.reviewer_name,
+            "rating": item.rating,
+            "reply_result": res,
+        })
+    return {"success": True, "results": results}
+
+
+
 class LogReplyRequest(BaseModel):
     business_key: Optional[str] = "technobuzz"
     business_id: Optional[str] = None
@@ -545,6 +586,12 @@ def google_connect_alias(business: str = "technobuzz"):
 server_engine_router = APIRouter(prefix="/api/server-engine", tags=["Server Engine Compatibility"])
 
 
+@server_engine_router.get("/status/{business_key}")
+def api_server_engine_status(business_key: str):
+    from services.server_reply_engine import get_browser_login_status
+    return get_browser_login_status(business_key)
+
+
 @server_engine_router.post("/sync/{business_key}")
 def api_server_engine_sync(
     business_key: str,
@@ -560,3 +607,10 @@ def api_server_engine_login(
 ):
     from services.server_reply_engine import launch_business_login
     return launch_business_login(business_key)
+
+
+@server_engine_router.post("/sync-all")
+def api_server_engine_sync_all(db: Session = Depends(get_db)):
+    from services.server_reply_engine import sync_all_active_businesses
+    return sync_all_active_businesses(db)
+

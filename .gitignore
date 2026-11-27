@@ -26,3 +26,8 @@ static/uploads/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Headless Browser persistent session & cache data
+.server_browser_data/
+*.pma
+*-journal

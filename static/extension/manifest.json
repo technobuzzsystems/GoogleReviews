@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "TechnoBuzz Google Reviews AI Auto-Replier",
+  "version": "1.0.0",
+  "description": "Automatically reads Google Reviews in Marathi, English, or Hindi, generates intelligent AI replies with Gemini, auto-fills, and auto-sends them.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "*://*.google.com/*",
+    "*://*.google.co.in/*",
+    "*://business.google.com/*",
+    "http://localhost:*/*",
+    "http://127.0.0.1:*/*",
+    "*://*.technobuzzsystems.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "TechnoBuzz AI Review Replier"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.google.com/*",
+        "*://*.google.co.in/*",
+        "*://business.google.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle",
+      "all_frames": true,
+      "match_about_blank": true
+    }
+  ]
+}
+
